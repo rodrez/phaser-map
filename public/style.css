@@ -1,0 +1,73 @@
+body {
+    margin: 0;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #000000;
+    font-family: Arial, sans-serif;
+}
+
+#app {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20; /* Game container above map */
+    pointer-events: none; /* Allow clicks to pass through to map by default */
+}
+
+/* Make Phaser canvas receive pointer events only for game objects */
+canvas {
+    pointer-events: none !important; /* By default, pass clicks through to map */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 30 !important; /* Canvas above everything */
+}
+
+/* Only specific game elements should receive pointer events */
+.phaser-input, 
+.phaser-button,
+.player-hitarea {
+    pointer-events: auto !important;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10; /* Map below game container */
+}
+
+/* Make sure all Leaflet elements are clickable */
+.leaflet-container,
+.leaflet-control,
+.leaflet-pane,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-popup,
+.leaflet-tooltip {
+    pointer-events: auto !important;
+    z-index: 15 !important; /* Above map but below canvas */
+}
+
+/* Custom marker styles */
+.flag-marker {
+    cursor: pointer !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    #app {
+        flex-direction: column;
+    }
+}
