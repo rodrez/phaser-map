@@ -3,6 +3,7 @@ import { MapManager } from "../utils/MapManager";
 import { PlayerManager } from "../utils/PlayerManager";
 import { UIManager } from "../utils/UIManager";
 import { FlagManager } from "../utils/FlagManager";
+import { logger, LogCategory } from "../utils/Logger";
 
 export class Game extends Scene {
   constructor() {
@@ -11,7 +12,7 @@ export class Game extends Scene {
 
   create() {
     // Set the scene to be transparent so we can see the map underneath
-    this.cameras.main.setBackgroundColor("rgba(0,0,0,0)");
+    this.cameras.main.setBackgroundColor("rgba(0,0,0,0.1)");
 
     // Initialize map manager with default location (London)
     this.mapManager = new MapManager({
@@ -44,9 +45,9 @@ export class Game extends Scene {
     this.setupDOMEventListeners();
 
     // Log debug info
-    console.log("Game scene created");
-    console.log("Map:", this.mapManager.getMap());
-    console.log("Player:", this.playerManager.getPlayer());
+    logger.info(LogCategory.GAME, "Game scene created");
+    logger.info(LogCategory.GAME, "Map:", this.mapManager.getMap());
+    logger.info(LogCategory.GAME, "Player:", this.playerManager.getPlayer());
   }
 
   setupEventListeners() {
@@ -74,7 +75,7 @@ export class Game extends Scene {
         clickY >= bounds.top &&
         clickY <= bounds.bottom
       ) {
-        console.log("Player clicked via DOM event");
+        logger.info(LogCategory.GAME, "Player clicked via DOM event");
         this.handlePlayerClick();
         e.stopPropagation();
       }
@@ -107,6 +108,14 @@ export class Game extends Scene {
     if (this.playerManager) {
       this.playerManager.update(delta);
     }
+    
+    // Update flag positions
+    if (this.flagManager) {
+      this.flagManager.update();
+    }
+    
+    // Ensure the map is properly invalidated to handle any size changes
+    this.mapManager?.getMap()?.invalidateSize();
   }
 
   shutdown() {
@@ -124,7 +133,11 @@ export class Game extends Scene {
     if (this.uiManager) {
       this.uiManager.destroy();
     }
+    
+    if (this.flagManager) {
+      this.flagManager.destroy();
+    }
 
-    console.log("Game scene shutdown");
+    logger.info(LogCategory.GAME, "Game scene shutdown");
   }
 }

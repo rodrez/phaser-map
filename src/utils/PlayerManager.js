@@ -1,9 +1,5 @@
 import { Scene } from "phaser";
-// Add J key for debugging key states
-this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.J).on("down", () => {
-  logger.info(LogCategory.GENERAL, "J key pressed - debugging key states");
-  this.debugCheckKeyStates();
-});
+import { logger, LogCategory } from "./Logger";
 
 /**
  * PlayerManager class to handle all player-related functionality
@@ -24,6 +20,9 @@ export class PlayerManager {
     // Initialize player
     this.createPlayer();
 
+    // Create player animations
+    this.createPlayerAnimations();
+
     // Set up player callbacks
     this.setupPlayerCallbacks();
 
@@ -37,32 +36,112 @@ export class PlayerManager {
   createPlayer() {
     // Get initial player position in pixels
     const pixelPos = this.mapManager.getPlayerPixelPosition();
-    console.log("Player pixel position:", pixelPos);
+    logger.info(LogCategory.PLAYER, "Player pixel position:", pixelPos);
 
     // Create a simple colored circle as the player
-    this.player = this.scene.add.circle(
-      pixelPos.x,
-      pixelPos.y,
-      20,
-      0x4285f4,
-      1,
-    );
-    this.player.setStrokeStyle(2, 0x2a56c6);
+    this.player = this.scene.add.sprite(pixelPos.x, pixelPos.y, 'player');
 
     // Set a very high depth to ensure it's on top of everything
     this.player.setDepth(2000);
 
-    // Add a shadow effect to make the player stand out against the map
-    this.addShadowEffect(this.player);
-
-    // Add a glow effect
-    this.addGlowEffect(this.player);
-
     // Log player creation for debugging
-    console.log("Player created at position:", pixelPos.x, pixelPos.y);
-    console.log("Player dimensions:", this.player.width, this.player.height);
+    logger.info(LogCategory.PLAYER, "Player created at position:", pixelPos.x, pixelPos.y);
+    logger.info(LogCategory.PLAYER, "Player dimensions:", this.player.width, this.player.height);
   }
 
+   /**
+   * Creates animations for the player character.
+   */
+  createPlayerAnimations() {
+    const frameRate = 8;
+
+    // Avoid recreating animations if they already exist
+    if (this.scene.anims.exists("player-idle")) {
+      return;
+    }
+
+    // Idle animation (frames 0-2)
+    this.scene.anims.create({
+      key: "player-idle",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 0,
+        end: 2,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+
+    // Movement animations (frames 3-5)
+    this.scene.anims.create({
+      key: "player-move",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 3,
+        end: 5,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+
+    // Directional movement animations
+    this.scene.anims.create({
+      key: "player-move-down",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 3,
+        end: 5,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+    this.scene.anims.create({
+      key: "player-move-up",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 3,
+        end: 5,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+    this.scene.anims.create({
+      key: "player-move-right",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 3,
+        end: 5,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+    this.scene.anims.create({
+      key: "player-move-left",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 3,
+        end: 5,
+      }),
+      frameRate: frameRate,
+      repeat: -1,
+    });
+
+    // Attack animation (frames 6-8)
+    this.scene.anims.create({
+      key: "player-attack",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 6,
+        end: 8,
+      }),
+      frameRate: frameRate,
+      repeat: 0,
+    });
+
+    // Death animation (frame 9)
+    this.scene.anims.create({
+      key: "player-death",
+      frames: this.scene.anims.generateFrameNumbers("player", {
+        start: 9,
+        end: 9,
+      }),
+      frameRate: frameRate,
+      repeat: 0,
+    });
+  }
   /**
    * Create a DOM hitarea for the player
    */
@@ -89,7 +168,7 @@ export class PlayerManager {
 
     // Add a click event listener to the hitarea
     hitarea.addEventListener("click", (e) => {
-      console.log("Player hitarea clicked");
+      logger.info(LogCategory.PLAYER, "Player hitarea clicked");
       this.handleClick();
       e.stopPropagation();
     });
@@ -121,7 +200,7 @@ export class PlayerManager {
         position.lat,
         position.lng,
       );
-      console.log("Player moved to pixel position:", pixelPos);
+      logger.info(LogCategory.PLAYER, "Player moved to pixel position:", pixelPos);
 
       if (this.player) {
         // Update player position immediately
@@ -145,7 +224,7 @@ export class PlayerManager {
     // Set callback for when player reaches target
     this.mapManager.setPlayerReachTargetCallback((position) => {
       // Player has reached the target position
-      console.log("Player reached target:", position);
+      logger.info(LogCategory.PLAYER, "Player reached target:", position);
 
       // Force an update of the player position
       const pixelPos = this.mapManager.latLngToPixel(
@@ -169,67 +248,7 @@ export class PlayerManager {
     });
   }
 
-  /**
-   * Add a shadow effect to the player
-   * @param {Phaser.GameObjects.GameObject} target - The target object to add shadow to
-   */
-  addShadowEffect(target) {
-    // Create a shadow beneath the player
-    const shadow = this.scene.add.circle(
-      target.x,
-      target.y + 2,
-      target.radius,
-      0x000000,
-      0.3,
-    );
-    shadow.setDepth(target.depth - 1);
 
-    // Link the shadow to follow the player
-    this.scene.tweens.add({
-      targets: shadow,
-      alpha: { from: 0.2, to: 0.4 },
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
-
-    // Store reference to shadow
-    target.shadow = shadow;
-
-    // Update shadow position when player moves
-    this.scene.events.on("update", () => {
-      if (target.active && shadow.active) {
-        shadow.x = target.x;
-        shadow.y = target.y + 2;
-      }
-    });
-  }
-
-  /**
-   * Add a glow effect to the player
-   * @param {Phaser.GameObjects.GameObject} target - The target object to add glow to
-   */
-  addGlowEffect(target) {
-    // Create a post-pipeline glow effect if supported
-    if (this.scene.renderer.type === Phaser.WEBGL) {
-      try {
-        // Add a slight pulsing animation to simulate a glow
-        this.scene.tweens.add({
-          targets: target,
-          scaleX: { from: 1, to: 1.05 },
-          scaleY: { from: 1, to: 1.05 },
-          alpha: { from: 0.9, to: 1 },
-          duration: 800,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut",
-        });
-      } catch (error) {
-        console.warn("Could not add glow effect:", error);
-      }
-    }
-  }
 
   /**
    * Handle player click event
@@ -345,4 +364,3 @@ export class PlayerManager {
     return this.player;
   }
 }
-

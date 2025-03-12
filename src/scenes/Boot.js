@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { logger, LogCategory } from '../utils/Logger';
 
 export class Boot extends Scene
 {
@@ -20,6 +21,8 @@ export class Boot extends Scene
         
         // Load background for loading screen
         this.load.image('background', 'assets/bg.png');
+
+        this.load.spritesheet('player', 'assets/characters/player.png', { frameWidth: 48, frameHeight: 48 });
     }
 
     create ()
@@ -27,32 +30,24 @@ export class Boot extends Scene
         // Create a texture from the player SVG
         this.createPlayerTexture();
         
+        // Create a texture from the flag SVG
+        this.createFlagTexture();
+        
         // Move to the next scene
         this.scene.start('Preloader');
     }
     
     createPlayerTexture() {
         try {
-            // Get the SVG source image
-            const svg = this.textures.get('player_svg').getSourceImage();
+            // Create a sprite from the player texture
+            const playerSprite = this.add.sprite(0, 0, 'player');
             
-            // Create a canvas to draw the SVG
-            const canvas = document.createElement('canvas');
-            canvas.width = 40;
-            canvas.height = 40;
+            // Create a texture from the sprite
+            this.textures.addSpriteSheet('player', playerSprite);
             
-            // Get the 2D context
-            const ctx = canvas.getContext('2d');
-            
-            // Draw the SVG to the canvas
-            ctx.drawImage(svg, 0, 0, 40, 40);
-            
-            // Create a new texture from the canvas
-            this.textures.addCanvas('player', canvas);
-            
-            console.log('Player texture created successfully');
+            logger.info(LogCategory.BOOT, 'Player texture created successfully');
         } catch (error) {
-            console.error('Error creating player texture:', error);
+            logger.error(LogCategory.BOOT, 'Error creating player texture:', error);
             
             // Create a fallback texture
             this.createFallbackPlayerTexture();
@@ -87,6 +82,55 @@ export class Boot extends Scene
         graphics.generateTexture('player', 40, 40);
         graphics.destroy();
         
-        console.log('Fallback player texture created');
+        logger.info(LogCategory.BOOT, 'Fallback player texture created');
+    }
+    
+    createFlagTexture() {
+        try {
+            // Get the SVG source image
+            const svg = this.textures.get('flag').getSourceImage();
+            
+            // Create a canvas to draw the SVG
+            const canvas = document.createElement('canvas');
+            canvas.width = 40;
+            canvas.height = 50;
+            
+            // Get the 2D context
+            const ctx = canvas.getContext('2d');
+            
+            // Draw the SVG to the canvas
+            ctx.drawImage(svg, 0, 0, 40, 50);
+            
+            // Create a new texture from the canvas
+            this.textures.addCanvas('flag_texture', canvas);
+            
+            logger.info(LogCategory.BOOT, 'Flag texture created successfully');
+        } catch (error) {
+            logger.error(LogCategory.BOOT, 'Error creating flag texture:', error);
+            
+            // Create a fallback texture
+            this.createFallbackFlagTexture();
+        }
+    }
+    
+    createFallbackFlagTexture() {
+        // Create a graphics object
+        const graphics = this.add.graphics();
+        
+        // Draw a flag pole
+        graphics.fillStyle(0x333333, 1);
+        graphics.fillRect(18, 10, 4, 40);
+        
+        // Draw a flag
+        graphics.fillStyle(0xFF5252, 1);
+        graphics.fillTriangle(22, 10, 22, 30, 40, 20);
+        graphics.lineStyle(1, 0xDD2222, 1);
+        graphics.strokeTriangle(22, 10, 22, 30, 40, 20);
+        
+        // Generate a texture
+        graphics.generateTexture('flag_texture', 40, 50);
+        graphics.destroy();
+        
+        logger.info(LogCategory.BOOT, 'Fallback flag texture created');
     }
 }

@@ -1,4 +1,4 @@
-import L from "leaflet";
+import { logger, LogCategory } from "./Logger"; 
 
 /**
  * MapManager class to handle Leaflet map integration
@@ -58,7 +58,7 @@ export class MapManager {
         if (container) {
           container.appendChild(mapDiv);
         } else {
-          console.error(`Container with ID '${containerId}' not found`);
+          logger.error(LogCategory.MAP, `Container with ID '${containerId}' not found`);
           return null;
         }
       }
@@ -93,10 +93,10 @@ export class MapManager {
       // Add click handler for map to move player
       this.map.on("click", (e) => {
         if (this.debug) {
-          console.log("Map clicked at:", e.latlng);
-          console.log("Current map center:", this.map.getCenter());
-          console.log("Current player position:", this.playerPosition);
-          console.log("Current boundary center:", this.config);
+          logger.info(LogCategory.MAP, "Map clicked at:", e.latlng);
+          logger.info(LogCategory.MAP, "Current map center:", this.map.getCenter());
+          logger.info(LogCategory.MAP, "Current player position:", this.playerPosition);
+          logger.info(LogCategory.MAP, "Current boundary center:", this.config);
         }
 
         // Get the click coordinates
@@ -115,15 +115,15 @@ export class MapManager {
           this.setTargetPosition(clickLat, clickLng);
 
           if (this.debug) {
-            console.log(
+            logger.info(LogCategory.MAP,
               "Click within boundary, setting target to:",
               clickLat,
               clickLng,
             );
-            console.log("Distance from boundary center:", distance);
+            logger.info(LogCategory.MAP, "Distance from boundary center:", distance);
           }
         } else if (this.debug) {
-          console.log("Click outside boundary, ignoring. Distance:", distance);
+          logger.info(LogCategory.MAP, "Click outside boundary, ignoring. Distance:", distance);
         }
       });
 
@@ -140,13 +140,13 @@ export class MapManager {
       setTimeout(() => {
         this.map.invalidateSize();
         if (this.debug) {
-          console.log("Map size invalidated");
+          logger.info(LogCategory.MAP, "Map size invalidated");
         }
       }, 100);
 
       return this.map;
     } catch (error) {
-      console.error("Error initializing map:", error);
+      logger.error(LogCategory.MAP, "Error initializing map:", error);
       return null;
     }
   }
@@ -179,10 +179,10 @@ export class MapManager {
       };
 
       if (this.debug) {
-        console.log("Player marker initialized at:", this.playerPosition);
+        logger.info(LogCategory.MAP, "Player marker initialized at:", this.playerPosition);
       }
     } catch (error) {
-      console.error("Error initializing player marker:", error);
+      logger.error(LogCategory.MAP, "Error initializing player marker:", error);
     }
   }
 
@@ -218,7 +218,7 @@ export class MapManager {
    */
   setTargetPosition(lat, lng) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return false;
     }
 
@@ -230,7 +230,7 @@ export class MapManager {
       );
       if (distance > this.config.boundaryRadius) {
         if (this.debug) {
-          console.log(
+          logger.info(LogCategory.MAP,
             "Target outside boundary:",
             distance,
             ">",
@@ -244,13 +244,13 @@ export class MapManager {
       this.targetPosition = { lat, lng };
 
       if (this.debug) {
-        console.log("Target position set:", this.targetPosition);
-        console.log("Distance from boundary center:", distance);
+        logger.info(LogCategory.MAP, "Target position set:", this.targetPosition);
+        logger.info(LogCategory.MAP, "Distance from boundary center:", distance);
       }
 
       return true;
     } catch (error) {
-      console.error("Error setting target position:", error);
+      logger.error(LogCategory.MAP, "Error setting target position:", error);
       return false;
     }
   }
@@ -274,7 +274,7 @@ export class MapManager {
       const endPos = this.targetPosition;
 
       if (this.debug) {
-        console.log("Starting player movement from", startPos, "to", endPos);
+        logger.info(LogCategory.MAP, "Starting player movement from", startPos, "to", endPos);
       }
 
       const distance = this.map.distance(
@@ -286,7 +286,7 @@ export class MapManager {
       const moveDuration = Math.min(1000, distance * 2); // 2ms per meter, max 1 second
 
       if (this.debug) {
-        console.log("Movement distance:", distance, "duration:", moveDuration);
+        logger.info(LogCategory.MAP, "Movement distance:", distance, "duration:", moveDuration);
       }
 
       // Animate player movement
@@ -302,7 +302,7 @@ export class MapManager {
 
       return true;
     } catch (error) {
-      console.error("Error updating player position:", error);
+      logger.error(LogCategory.MAP, "Error updating player position:", error);
       this.isPlayerMoving = false;
       return false;
     }
@@ -359,7 +359,7 @@ export class MapManager {
           }
         }
       } catch (error) {
-        console.error("Error in animation frame:", error);
+        logger.error(LogCategory.MAP, "Error in animation frame:", error);
         if (onComplete) {
           onComplete();
         }
@@ -387,13 +387,13 @@ export class MapManager {
       }).addTo(this.map);
 
       if (this.debug) {
-        console.log(
+        logger.info(LogCategory.MAP,
           "Boundary circle initialized with radius:",
           this.config.boundaryRadius,
         );
       }
     } catch (error) {
-      console.error("Error initializing boundary circle:", error);
+      logger.error(LogCategory.MAP, "Error initializing boundary circle:", error);
     }
   }
 
@@ -413,7 +413,7 @@ export class MapManager {
    */
   addFlag(lat, lng) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return null;
     }
 
@@ -421,7 +421,7 @@ export class MapManager {
       // Check if flag can be placed (not within territory of another flag)
       if (!this.canPlaceFlag(lat, lng)) {
         if (this.debug) {
-          console.log("Cannot place flag at:", lat, lng);
+          logger.info(LogCategory.MAP, "Cannot place flag at:", lat, lng);
         }
         return null;
       }
@@ -456,7 +456,7 @@ export class MapManager {
       // Add click handler to flag
       flagMarker.on("click", (e) => {
         if (this.debug) {
-          console.log("Flag clicked at:", lat, lng);
+          logger.info(LogCategory.MAP, "Flag clicked at:", lat, lng);
         }
 
         // Jump to flag
@@ -478,13 +478,13 @@ export class MapManager {
       this.territories.push(territoryCircle);
 
       if (this.debug) {
-        console.log("Flag added at:", lat, lng);
-        console.log("Total flags:", this.flags.length);
+        logger.info(LogCategory.MAP, "Flag added at:", lat, lng);
+        logger.info(LogCategory.MAP, "Total flags:", this.flags.length);
       }
 
       return flag;
     } catch (error) {
-      console.error("Error adding flag:", error);
+      logger.error(LogCategory.MAP, "Error adding flag:", error);
       return null;
     }
   }
@@ -523,7 +523,7 @@ export class MapManager {
 
       return true;
     } catch (error) {
-      console.error("Error checking if flag can be placed:", error);
+      logger.error(LogCategory.MAP, "Error checking if flag can be placed:", error);
       return false;
     }
   }
@@ -535,14 +535,14 @@ export class MapManager {
    */
   jumpToFlag(lat, lng) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return;
     }
 
     try {
       if (this.debug) {
-        console.log("Starting jump to flag at:", lat, lng);
-        console.log(
+        logger.info(LogCategory.MAP, "Starting jump to flag at:", lat, lng);
+        logger.info(LogCategory.MAP,
           "Current player position before jump:",
           this.playerPosition,
         );
@@ -569,64 +569,27 @@ export class MapManager {
         this.boundaryCircle.setLatLng([lat, lng]);
       }
 
-      // Center map on new location
-      this.map.panTo([lat, lng]);
+      // Center map on new location with animation
+      this.map.flyTo([lat, lng], this.map.getZoom(), {
+        duration: 0.5, // Animation duration in seconds
+        easeLinearity: 0.5
+      });
 
       // Force an immediate update of the player's visual position
       if (this.onPlayerMove) {
         this.onPlayerMove(this.playerPosition);
       }
 
-      // Show a visual feedback
-      this.showJumpEffect(lat, lng);
-
       if (this.debug) {
-        console.log("Completed jump to flag at:", lat, lng);
-        console.log("Player position after jump:", this.playerPosition);
-        console.log(
+        logger.info(LogCategory.MAP, "Completed jump to flag at:", lat, lng);
+        logger.info(LogCategory.MAP, "Player position after jump:", this.playerPosition);
+        logger.info(LogCategory.MAP,
           "Player pixel position after jump:",
           this.latLngToPixel(lat, lng),
         );
       }
     } catch (error) {
-      console.error("Error jumping to flag:", error);
-    }
-  }
-
-  /**
-   * Show a visual effect when jumping to a flag
-   * @param {number} lat - Latitude
-   * @param {number} lng - Longitude
-   */
-  showJumpEffect(lat, lng) {
-    try {
-      // Create a temporary circle for the effect
-      const jumpCircle = L.circle([lat, lng], {
-        radius: 10,
-        color: "#4285F4",
-        fillColor: "#4285F4",
-        fillOpacity: 0.5,
-        weight: 2,
-      }).addTo(this.map);
-
-      // Animate the circle
-      let size = 10;
-      let opacity = 0.5;
-      const interval = setInterval(() => {
-        size += 20;
-        opacity -= 0.05;
-
-        if (size >= 200 || opacity <= 0) {
-          clearInterval(interval);
-          this.map.removeLayer(jumpCircle);
-          return;
-        }
-
-        jumpCircle.setRadius(size);
-        jumpCircle.setStyle({ fillOpacity: opacity });
-      }, 50);
-    } catch (error) {
-      console.error("Error showing jump effect:", error);
+      logger.error(LogCategory.MAP, "Error jumping to flag:", error);
     }
   }
 
@@ -637,7 +600,7 @@ export class MapManager {
    */
   getAvailableFlagPositions(count = 5) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return [];
     }
 
@@ -664,12 +627,12 @@ export class MapManager {
       }
 
       if (this.debug) {
-        console.log("Generated flag positions:", positions.length);
+        logger.info(LogCategory.MAP, "Generated flag positions:", positions.length);
       }
 
       return positions;
     } catch (error) {
-      console.error("Error getting available flag positions:", error);
+      logger.error(LogCategory.MAP, "Error getting available flag positions:", error);
       return [];
     }
   }
@@ -682,7 +645,7 @@ export class MapManager {
    */
   latLngToPixel(lat, lng) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return { x: 0, y: 0 };
     }
 
@@ -693,7 +656,7 @@ export class MapManager {
         y: point.y,
       };
     } catch (error) {
-      console.error("Error converting lat/lng to pixel:", error);
+      logger.error(LogCategory.MAP, "Error converting lat/lng to pixel:", error);
       return { x: 0, y: 0 };
     }
   }
@@ -706,7 +669,7 @@ export class MapManager {
    */
   pixelToLatLng(x, y) {
     if (!this.map) {
-      console.warn("Map not initialized");
+      logger.warn(LogCategory.MAP, "Map not initialized");
       return { lat: this.config.lat, lng: this.config.lng };
     }
 
@@ -717,7 +680,7 @@ export class MapManager {
         lng: latLng.lng,
       };
     } catch (error) {
-      console.error("Error converting pixel to lat/lng:", error);
+      logger.error(LogCategory.MAP, "Error converting pixel to lat/lng:", error);
       return { lat: this.config.lat, lng: this.config.lng };
     }
   }
@@ -764,8 +727,7 @@ export class MapManager {
   setDebug(enabled) {
     this.debug = enabled;
     if (enabled) {
-      console.log("Debug mode enabled");
+      logger.info(LogCategory.MAP, "Debug mode enabled");
     }
   }
 }
-
