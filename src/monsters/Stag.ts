@@ -8,9 +8,21 @@ export class Stag extends BaseMonster {
     private criticallyWounded = false;
     private readonly ENRAGE_DURATION = 8000; // 8 seconds of rage
 
-    
+    constructor(scene, x, y, monsterData, playerSprite, itemSystem) {
+        super(scene, x, y, monsterData, playerSprite, itemSystem);
+        
+        // Log creation
+        logger.info(LogCategory.MONSTER, `Stag created with sprite key: ${monsterData.spriteKey}`);
+    }
+
     public takeDamage(amount: number): void {
+        // Call parent method to handle basic damage logic
         super.takeDamage(amount);
+        
+        // If the monster died from this damage, don't proceed with Stag-specific behavior
+        if (this.attributes.health <= 0) {
+            return;
+        }
         
         // Check if critically wounded (below 30% health)
         if (this.attributes.health < this.attributes.maxHealth * 0.3) {
@@ -40,8 +52,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleIdleState(time: number, delta: number, distToPlayer: number): void {
-        // No animations to play - using static image
-        
         // Stand still
         this.setVelocity(0, 0);
         
@@ -60,8 +70,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleWanderingState(time: number, delta: number, distToPlayer: number): void {
-        // No animations to play - using static image
-        
         // Check if player is too close
         if (distToPlayer < this.attributes.detectionRadius) {
             this.changeState(MonsterState.FLEEING);
@@ -107,8 +115,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleFleeingState(time: number, delta: number, distToPlayer: number): void {
-        // No animations to play - using static image
-        
         // If we're far enough from the player, go back to idle
         if (this.attributes.fleeRadius && distToPlayer > this.attributes.fleeRadius) {
             this.changeState(MonsterState.IDLE);
@@ -149,8 +155,6 @@ export class Stag extends BaseMonster {
             return;
         }
         
-        // No animations to play - using static image
-        
         // Move toward player
         const dx = this.playerSprite.x - this.x;
         const dy = this.playerSprite.y - this.y;
@@ -184,8 +188,6 @@ export class Stag extends BaseMonster {
             this.changeState(MonsterState.FLEEING);
             return;
         }
-        
-        // No animations to play - using static image
         
         // If player is too far, chase them
         if (distToPlayer > this.ATTACK_RANGE) {
@@ -224,8 +226,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleReturningState(time: number, delta: number): void {
-        // No animations to play - using static image
-        
         // Calculate direction to spawn point
         const dx = this.spawnPoint.x - this.x;
         const dy = this.spawnPoint.y - this.y;

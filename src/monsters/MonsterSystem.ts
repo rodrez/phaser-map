@@ -1,6 +1,6 @@
 import type { Scene, Physics, GameObjects } from 'phaser';
 import type { MapManager } from '../utils/MapManager';
-import type { PlayerManager } from '../utils/PlayerManager';
+import type { PlayerManager } from '../utils/player/PlayerManager';
 import type { ItemSystem } from '../items/item';
 import type { BaseMonster } from './BaseMonster';
 import { MonsterType, MonsterBehavior } from './MonsterTypes';

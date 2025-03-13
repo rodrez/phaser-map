@@ -1,6 +1,7 @@
 import { type Scene, Physics, GameObjects, Math as PhaserMath } from 'phaser';
 import { ItemSystem } from '../items/item';
 import { MonsterType, MonsterBehavior, MonsterAttributes, MonsterLoot, MonsterState, MonsterData } from './MonsterTypes';
+import { logger, LogCategory } from '../utils/Logger';
 
 export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public monsterType: MonsterType;
@@ -66,7 +67,20 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     }
 
     protected updateHealthBar(): void {
+        if (!this.healthBar) return;
+        
         this.healthBar.clear();
+        
+        // Validate health values to prevent NaN
+        if (isNaN(this.attributes.health) || this.attributes.health === undefined) {
+            logger.error(LogCategory.MONSTER, `Invalid health value: ${this.attributes.health}, resetting to 0`);
+            this.attributes.health = 0;
+        }
+        
+        if (isNaN(this.attributes.maxHealth) || this.attributes.maxHealth <= 0) {
+            logger.error(LogCategory.MONSTER, `Invalid maxHealth value: ${this.attributes.maxHealth}, resetting to 1`);
+            this.attributes.maxHealth = 1;
+        }
         
         // Position the health bar above the monster
         const barX = this.x - 20;
@@ -80,8 +94,17 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         this.healthBar.fillStyle(0xff0000);
         this.healthBar.fillRect(barX, barY, 40, 5);
         
+        // Calculate health percentage safely
+        let healthPercentage = this.attributes.health / this.attributes.maxHealth;
+        
+        // Validate health percentage
+        if (isNaN(healthPercentage) || healthPercentage < 0) {
+            healthPercentage = 0;
+        } else if (healthPercentage > 1) {
+            healthPercentage = 1;
+        }
+        
         // Health (green)
-        const healthPercentage = this.attributes.health / this.attributes.maxHealth;
         this.healthBar.fillStyle(0x00ff00);
         this.healthBar.fillRect(barX, barY, 40 * healthPercentage, 5);
         
@@ -108,11 +131,29 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     }
 
     public takeDamage(amount: number): void {
+        // Validate amount to ensure it's a number
+        if (isNaN(amount) || amount === undefined) {
+            logger.error(LogCategory.MONSTER, `Invalid damage amount: ${amount}`);
+            amount = 0;
+        }
+        
         // Calculate actual damage after defense
-        const actualDamage = Math.max(1, amount - this.attributes.defense);
+        const actualDamage = Math.max(1, amount - (this.attributes.defense || 0));
+        
+        // Ensure health is a valid number before reducing it
+        if (isNaN(this.attributes.health)) {
+            logger.error(LogCategory.MONSTER, 'Health is NaN, resetting to 1');
+            this.attributes.health = 1;
+        }
         
         // Reduce health
-        this.attributes.health -= actualDamage;
+        this.attributes.health = Math.max(0, this.attributes.health - actualDamage);
+        
+        // Ensure health is still a valid number after calculation
+        if (isNaN(this.attributes.health)) {
+            logger.error(LogCategory.MONSTER, 'Health became NaN after damage calculation, setting to 0');
+            this.attributes.health = 0;
+        }
         
         // Update health bar
         this.updateHealthBar();
@@ -194,6 +235,11 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         // Clear auto-attacking flag and hide indicator
         this.isAutoAttacking = false;
         this.hideAttackIndicator();
+        
+        // Destroy the health bar
+        if (this.healthBar) {
+            this.healthBar.destroy();
+        }
         
         // Drop loot
         this.dropLoot();
@@ -444,5 +490,26 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
             this.attackIndicator.lineStyle(2, 0xff0000, 1);
             this.attackIndicator.lineBetween(this.x, this.y, this.playerSprite.x, this.playerSprite.y);
         }
+    }
+
+    /**
+     * Override the destroy method to ensure proper cleanup
+     * @param fromScene Whether this Game Object is being destroyed by the Scene
+     */
+    public destroy(fromScene?: boolean): void {
+        // Clean up health bar if it exists
+        if (this.healthBar) {
+            this.healthBar.destroy();
+            this.healthBar = undefined as unknown as GameObjects.Graphics;
+        }
+        
+        // Clean up attack indicator if it exists
+        if (this.attackIndicator) {
+            this.attackIndicator.destroy();
+            this.attackIndicator = undefined as unknown as GameObjects.Graphics;
+        }
+        
+        // Call the parent destroy method
+        super.destroy(fromScene);
     }
 } 

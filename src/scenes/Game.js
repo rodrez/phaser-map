@@ -294,6 +294,11 @@ export class Game extends Scene {
       this.registry.set('player', this.playerManager.getPlayer());
     }
     
+    // Update combat system for player retaliation
+    if (this.combatSystem) {
+      this.combatSystem.update(time, delta);
+    }
+    
     // Apply god mode healing if enabled and health is below 50%
     if (this.playerStats?.godMode && this.playerStats.health < this.playerStats.maxHealth * 0.5) {
       // Heal to full health immediately when in god mode and health is below 50%

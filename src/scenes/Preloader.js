@@ -48,10 +48,9 @@ export class Preloader extends Scene {
 		});
 
 		// Load monster sprites
-		this.load.image('stag', 'assets/monsters/stag.png');
-		this.load.image('wolf', 'assets/monsters/wolf.png');
-		this.load.image('bear', 'assets/monsters/bear.png');
-		this.load.image('boar', 'assets/monsters/boar.png');
+		this.load.image('stag', '/monsters/stag.png');
+		this.load.image('wolf', '/monsters/wolf.png');
+		this.load.image('deer', '/monsters/deer.png');
 	}
 
 	create() {
