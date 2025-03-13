@@ -257,13 +257,13 @@ export class UIManager {
         button.style.backgroundColor = textObject.style.backgroundColor || '#4285F4';
         button.style.color = textObject.style.color || '#ffffff';
         button.style.fontFamily = textObject.style.fontFamily || 'Arial';
-        button.style.fontSize = textObject.style.fontSize + 'px' || '16px';
+        button.style.fontSize = `${textObject.style.fontSize}px` || '16px';
         button.style.borderRadius = '4px';
         button.innerText = textObject.text;
         
         // Position the button
         button.style.right = '10px';
-        button.style.top = textObject.y + 'px';
+        button.style.top = `${textObject.y}px`;
         
         // Add the button to the game container
         document.getElementById('game-container').appendChild(button);
@@ -331,11 +331,11 @@ export class UIManager {
      */
     resizeUI() {
         // Update button positions
-        if (this.uiContainer && this.uiContainer.list) {
+        if (this.uiContainer?.list) {
             for (let i = 0; i < this.uiContainer.list.length; i++) {
                 const item = this.uiContainer.list[i];
-                if (item && item.domElement) {
-                    item.domElement.style.top = item.y + 'px';
+                if (item?.domElement) {
+                    item.domElement.style.top = `${item.y}px`;
                 }
             }
         }
@@ -445,17 +445,17 @@ export class UIManager {
         if (!this.uiComponents.menu) return;
         
         // Example: Update inventory badge based on new items
-        if (this.scene.playerStats && this.scene.playerStats.newItems) {
+        if (this.scene.playerStats?.newItems) {
             this.updateMenuBadge('inventory', this.scene.playerStats.newItems);
         }
         
         // Example: Update map badge based on new discoveries
-        if (this.mapManager && this.mapManager.newDiscoveries) {
+        if (this.mapManager?.newDiscoveries) {
             this.updateMenuBadge('map', this.mapManager.newDiscoveries);
         }
         
         // Example: Update communication badge based on new messages
-        if (this.scene.playerStats && this.scene.playerStats.newMessages) {
+        if (this.scene.playerStats?.newMessages) {
             this.updateMenuBadge('communication', this.scene.playerStats.newMessages);
         }
     }
@@ -676,7 +676,7 @@ export class UIManager {
         
         // Listen for flag placement events to update the flag count badge
         this.scene.events.on('flagPlaced', () => {
-            if (this.mapManager && this.mapManager.flags) {
+            if (this.mapManager?.flags) {
                 this.updateMenuBadge('placeFlag', this.mapManager.flags.length);
                 this.updateFlagCounter(); // Update the flag counter UI as well
             }
@@ -684,7 +684,7 @@ export class UIManager {
         
         // Listen for flag removal events
         this.scene.events.on('flagRemoved', () => {
-            if (this.mapManager && this.mapManager.flags) {
+            if (this.mapManager?.flags) {
                 this.updateMenuBadge('placeFlag', this.mapManager.flags.length);
                 this.updateFlagCounter(); // Update the flag counter UI as well
             }
@@ -746,10 +746,10 @@ export class UIManager {
      */
     destroy() {
         // Remove DOM elements
-        if (this.uiContainer && this.uiContainer.list) {
+        if (this.uiContainer?.list) {
             for (let i = 0; i < this.uiContainer.list.length; i++) {
                 const item = this.uiContainer.list[i];
-                if (item && item.domElement && item.domElement.parentNode) {
+                if (item?.domElement?.parentNode) {
                     item.domElement.parentNode.removeChild(item.domElement);
                 }
             }

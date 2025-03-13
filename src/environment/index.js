@@ -10,10 +10,12 @@ export class Environment {
     treeSystem;
     fruitSystem;
     popupSystem;
+    mapManager;
     
     constructor(scene) {
         this.scene = scene;
         this.environmentGroup = this.scene.add.group();
+        this.mapManager = scene.mapManager;
         
         // Initialize subsystems
         this.treeSystem = new TreeSystem(scene, this.environmentGroup);
@@ -21,6 +23,9 @@ export class Environment {
         
         // Setup interactions between systems
         this.setupSystemInteractions();
+        
+        // Setup map drag handlers to update environment positions
+        this.setupMapDragHandlers();
     }
     
     /**
@@ -45,6 +50,87 @@ export class Environment {
     }
     
     /**
+     * Setup map drag handlers to update environment positions
+     */
+    setupMapDragHandlers() {
+        if (this.mapManager?.getMap()) {
+            // Update environment positions when map is dragged
+            this.mapManager.getMap().on('drag', () => {
+                this.updateEnvironmentPositions();
+            });
+            
+            // Update environment positions when map drag ends
+            this.mapManager.getMap().on('dragend', () => {
+                this.updateEnvironmentPositions();
+            });
+            
+            // Update environment positions when map is zoomed
+            this.mapManager.getMap().on('zoom', () => {
+                this.updateEnvironmentPositions();
+            });
+        }
+    }
+    
+    /**
+     * Update positions of all environment elements based on their stored lat/lng
+     */
+    updateEnvironmentPositions() {
+        // Get all environment objects
+        const environmentObjects = this.environmentGroup.getChildren();
+        
+        // Update each object's position
+        for (const obj of environmentObjects) {
+            // Skip objects that don't have lat/lng data
+            if (!obj.getData('lat') || !obj.getData('lng')) {
+                continue;
+            }
+            
+            // Get the object's lat/lng
+            const lat = obj.getData('lat');
+            const lng = obj.getData('lng');
+            
+            // Convert to pixel coordinates
+            const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+            
+            // Update position
+            obj.x = pixelPos.x;
+            obj.y = pixelPos.y;
+            
+            // Apply sway offset for fruits
+            if (obj.getData('fruitType') !== undefined && obj.getData('swayData') !== undefined) {
+                const swayData = obj.getData('swayData');
+                if (swayData && typeof swayData.value === 'number') {
+                    obj.x += swayData.value;
+                }
+            }
+            
+            // Update any attached objects (like fruits on trees)
+            if (obj.getData('attachedObjects')) {
+                const attachedObjects = obj.getData('attachedObjects');
+                const offsetsX = obj.getData('attachedObjectsOffsetX') || [];
+                const offsetsY = obj.getData('attachedObjectsOffsetY') || [];
+                
+                for (let i = 0; i < attachedObjects.length; i++) {
+                    const attachedObj = attachedObjects[i];
+                    const offsetX = offsetsX[i] || 0;
+                    const offsetY = offsetsY[i] || 0;
+                    
+                    attachedObj.x = pixelPos.x + offsetX;
+                    attachedObj.y = pixelPos.y + offsetY;
+                    
+                    // Apply sway offset for attached fruits
+                    if (attachedObj.getData('fruitType') !== undefined && attachedObj.getData('swayData') !== undefined) {
+                        const swayData = attachedObj.getData('swayData');
+                        if (swayData && typeof swayData.value === 'number') {
+                            attachedObj.x += swayData.value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
      * Generate environment elements within a circular area
      * @param centerX Center X of circle
      * @param centerY Center Y of circle
@@ -54,8 +140,11 @@ export class Environment {
         // Clear any existing environment objects
         this.clearEnvironment();
         
+        // Get lat/lng for the center position
+        const centerLatLng = this.mapManager.pixelToLatLng(centerX, centerY);
+        
         // Add trees within the navigation circle
-        this.treeSystem.addTreesInCircle(12, centerX, centerY, radius * 0.8);
+        this.treeSystem.addTreesInCircle(12, centerX, centerY, radius * 0.8, centerLatLng);
         
         // Add fruits to healing spruce trees
         const trees = this.environmentGroup.getChildren().filter(obj => 
@@ -64,9 +153,9 @@ export class Environment {
         );
         
         // Add fruits to each healing spruce tree
-        trees.forEach(tree => {
+        for (const tree of trees) {
             this.fruitSystem.addFruitsToTree(tree);
-        });
+        }
     }
     
     /**
@@ -94,6 +183,13 @@ export class Environment {
      * Clean up resources
      */
     destroy() {
+        // Remove map event listeners
+        if (this.mapManager?.getMap()) {
+            this.mapManager.getMap().off('drag');
+            this.mapManager.getMap().off('dragend');
+            this.mapManager.getMap().off('zoom');
+        }
+        
         this.scene.events.off('tree-destroyed');
         this.clearEnvironment();
         this.treeSystem.destroy();

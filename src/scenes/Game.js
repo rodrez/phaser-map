@@ -33,6 +33,9 @@ export class Game extends Scene {
 
     // Initialize player manager
     this.playerManager = new PlayerManager(this, this.mapManager);
+    
+    // Register the player in the scene registry for other systems to access
+    this.registry.set('player', this.playerManager.getPlayer());
 
     // Initialize flag manager
     this.flagManager = new FlagManager(this, this.mapManager);
@@ -81,6 +84,16 @@ export class Game extends Scene {
     this.events.on("placeFlag", () => {
       this.handlePlayerClick();
     });
+    
+    // Listen for double-click-move event from interactive objects
+    this.events.on("double-click-move", (data) => {
+      this.handleDoubleClickMove(data);
+    });
+    
+    // Listen for add-item-to-inventory event
+    this.events.on("add-item-to-inventory", (data) => {
+      this.handleAddItemToInventory(data);
+    });
   }
 
   setupDOMEventListeners() {
@@ -108,6 +121,27 @@ export class Game extends Scene {
     };
 
     canvas.addEventListener("click", this.canvasClickListener);
+    
+    // Add a double-click event listener to the canvas for movement
+    this.canvasDoubleClickListener = (e) => {
+      // Get the click position
+      const clickX = e.offsetX;
+      const clickY = e.offsetY;
+      
+      logger.info(LogCategory.GAME, "Double-click detected at:", clickX, clickY);
+      
+      // Handle double-click movement
+      this.handleDoubleClickMove({
+        x: clickX,
+        y: clickY
+      });
+      
+      // Prevent default behavior and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    canvas.addEventListener("dblclick", this.canvasDoubleClickListener);
 
     // Add a class to the canvas for CSS targeting
     canvas.classList.add("game-canvas");
@@ -129,10 +163,70 @@ export class Game extends Scene {
     }
   }
 
+  /**
+   * Handle double-click movement to a target position
+   * @param {Object} data - Data containing target position
+   */
+  handleDoubleClickMove(data) {
+    if (!data || !this.mapManager) return;
+    
+    // Get the target position in lat/lng
+    const targetLatLng = this.mapManager.pixelToLatLng(data.x, data.y);
+    
+    // Set the target position for player movement
+    const success = this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+    
+    if (success) {
+      // Play movement animation
+      const player = this.playerManager.getPlayer();
+      if (player) {
+        player.play("player-move");
+        
+        // Determine direction for flipping the sprite
+        if (data.x > player.x) {
+          player.setFlipX(false);
+        } else {
+          player.setFlipX(true);
+        }
+      }
+      
+      logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
+    } else {
+      this.uiManager.showMessage("Cannot move to that location!", "#FF5252");
+    }
+  }
+
+  /**
+   * Handle adding an item to the inventory
+   * @param {Object} data - Data containing itemId and quantity
+   */
+  handleAddItemToInventory(data) {
+    if (!data || !data.itemId || !data.quantity) return;
+    
+    // Log the item being added
+    logger.info(LogCategory.INVENTORY, `Adding ${data.quantity}x ${data.itemId} to inventory`);
+    
+    // Here you would update the player's inventory
+    // For now, we'll just show a message
+    this.uiManager.showMessage(`Added ${data.quantity}x ${data.itemId} to inventory!`, "#4CAF50");
+    
+    // Update any UI elements that show inventory
+    // For example, update menu badges
+    if (this.uiManager) {
+      // Increment the new items counter
+      this.playerStats.newItems = (this.playerStats.newItems || 0) + 1;
+      // Update the inventory badge
+      this.uiManager.updateMenuBadge('inventory', this.playerStats.newItems);
+    }
+  }
+
   update(time, delta) {
     // Update player position
     if (this.playerManager) {
       this.playerManager.update(delta);
+      
+      // Ensure the player reference in the registry is up to date
+      this.registry.set('player', this.playerManager.getPlayer());
     }
     
     // Update flag positions
@@ -171,6 +265,15 @@ export class Game extends Scene {
     if (canvas && this.canvasClickListener) {
       canvas.removeEventListener("click", this.canvasClickListener);
     }
+    
+    // Clean up double-click event listener
+    if (canvas && this.canvasDoubleClickListener) {
+      canvas.removeEventListener("dblclick", this.canvasDoubleClickListener);
+    }
+    
+    // Clean up custom event listeners
+    this.events.off("double-click-move");
+    this.events.off("add-item-to-inventory");
 
     // Clean up managers
     if (this.playerManager) {

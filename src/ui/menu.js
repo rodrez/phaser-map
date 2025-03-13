@@ -7,7 +7,7 @@ import { logger, LogCategory } from '../utils/Logger';
  * @property {string} [position='left'] - The position of the menu (left, right, top, bottom)
  * @property {string} [orientation='vertical'] - The orientation of the menu (horizontal, vertical)
  * @property {boolean} [showIcons=true] - Whether to show icons in the menu items
- * @property {string} [width='80px'] - The width of the menu
+ * @property {string} [width='230px'] - The width of the menu
  * @property {string} [iconSize='32px'] - The size of the icons in the menu items
  * @property {string} [menuButtonIcon='☰'] - The icon for the menu button
  */
@@ -41,7 +41,7 @@ export class MedievalMenu {
         this.activeItem = null;
         
         // State
-        this.isVisible = true;
+        this.isVisible = false;
         this.menuItemConfigs = [];
         
         // Set default options
@@ -49,7 +49,7 @@ export class MedievalMenu {
             position: options.position || 'left',
             orientation: options.orientation || 'vertical',
             showIcons: options.showIcons !== undefined ? options.showIcons : true,
-            width: options.width || '80px',
+            width: options.width || '230px',
             iconSize: options.iconSize || '32px',
             menuButtonIcon: options.menuButtonIcon || '☰',
             menuButtonSize: options.menuButtonSize || '36px',
@@ -58,6 +58,7 @@ export class MedievalMenu {
         
         // Load the CSS files
         this.uiHelper.loadCSS('/styles/medieval-menu.css');
+        this.uiHelper.loadCSS('/styles/popups.css'); // Add popup styles for consistent theming
         
         // Create the menu button first (always visible)
         this.createMenuButton();
@@ -67,13 +68,16 @@ export class MedievalMenu {
         
         // Add default menu items
         this.addDefaultMenuItems();
+        
+        // Hide the menu by default
+        this.container.style.display = 'none';
     }
     
     /**
      * Creates the menu button that's always visible
      */
     createMenuButton() {
-        this.menuButton = this.uiHelper.createElement('div', 'medieval-menu-button');
+        this.menuButton = this.uiHelper.createElement('div', 'medieval-menu-button custom-popup');
         
         // Apply styles
         const styles = {
@@ -81,22 +85,44 @@ export class MedievalMenu {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(30, 30, 30, 0.8)',
-            border: '2px solid #8b7250',
-            borderRadius: '8px',
             padding: '8px 16px',
             cursor: 'pointer',
             zIndex: '1001',
-            boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
             bottom: '20px',
             right: '20px',
             fontSize: '16px',
             fontFamily: 'serif',
             fontWeight: 'bold',
-            color: '#d4b483'
+            color: '#d4b483',
+            width: this.options.width,
+            boxSizing: 'border-box'
         };
         
         Object.assign(this.menuButton.style, styles);
+        
+        // Add parchment texture and decorative corners
+        const parchmentTexture = this.uiHelper.createElement('div', 'parchment-texture');
+        this.menuButton.appendChild(parchmentTexture);
+        
+        // Add decorative corners
+        const cornerTopLeft = this.uiHelper.createElement('div', 'popup-corner corner-top-left');
+        const cornerTopRight = this.uiHelper.createElement('div', 'popup-corner corner-top-right');
+        const cornerBottomLeft = this.uiHelper.createElement('div', 'popup-corner corner-bottom-left');
+        const cornerBottomRight = this.uiHelper.createElement('div', 'popup-corner corner-bottom-right');
+        
+        this.menuButton.appendChild(cornerTopLeft);
+        this.menuButton.appendChild(cornerTopRight);
+        this.menuButton.appendChild(cornerBottomLeft);
+        this.menuButton.appendChild(cornerBottomRight);
+        
+        // Create a content wrapper for the button content
+        const buttonContent = this.uiHelper.createElement('div', 'button-content');
+        buttonContent.style.position = 'relative';
+        buttonContent.style.zIndex = '2';
+        buttonContent.style.display = 'flex';
+        buttonContent.style.alignItems = 'center';
+        buttonContent.style.justifyContent = 'center';
+        buttonContent.style.width = '100%';
         
         // Create icon and text container
         const iconContainer = this.uiHelper.createElement('span', 'menu-button-icon');
@@ -107,9 +133,12 @@ export class MedievalMenu {
         const textContainer = this.uiHelper.createElement('span', 'menu-button-text');
         textContainer.textContent = this.options.menuButtonText;
         
-        // Add icon and text to button
-        this.menuButton.appendChild(iconContainer);
-        this.menuButton.appendChild(textContainer);
+        // Add icon and text to button content
+        buttonContent.appendChild(iconContainer);
+        buttonContent.appendChild(textContainer);
+        
+        // Add button content to button
+        this.menuButton.appendChild(buttonContent);
         
         // Add click handler to toggle menu
         this.menuButton.addEventListener('click', (event) => {
@@ -122,15 +151,13 @@ export class MedievalMenu {
         
         // Add hover effects
         this.menuButton.addEventListener('mouseenter', () => {
-            this.menuButton.style.backgroundColor = 'rgba(139, 114, 80, 0.5)';
-            this.menuButton.style.transform = 'scale(1.05)';
+            this.menuButton.classList.add('hover');
         });
         
         this.menuButton.addEventListener('mouseleave', () => {
             if (!this.isVisible) {
-                this.menuButton.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
+                this.menuButton.classList.remove('hover');
             }
-            this.menuButton.style.transform = 'scale(1)';
         });
         
         // Add to the DOM
@@ -141,10 +168,9 @@ export class MedievalMenu {
      * Creates the main container for the menu
      */
     createContainer() {
-        this.container = this.uiHelper.createContainer('medieval-menu');
+        this.container = this.uiHelper.createContainer('medieval-menu custom-popup');
         
         // Set position based on options
-        const position = this.options.position;
         const orientation = this.options.orientation;
         
         // Apply styles based on position and orientation
@@ -152,14 +178,12 @@ export class MedievalMenu {
             position: 'fixed',
             display: 'flex',
             flexDirection: orientation === 'vertical' ? 'column' : 'row',
-            background: 'rgba(30, 30, 30, 0.8)',
-            border: '2px solid #8b7250',
-            borderRadius: '8px',
             padding: '10px',
             boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
             zIndex: '1000',
             bottom: '70px',
-            right: '20px'
+            right: '20px',
+            boxSizing: 'border-box'
         };
         
         // Apply width
@@ -168,6 +192,28 @@ export class MedievalMenu {
         }
         
         Object.assign(this.container.style, styles);
+        
+        // Add parchment texture and decorative corners
+        const parchmentTexture = this.uiHelper.createElement('div', 'parchment-texture');
+        this.container.appendChild(parchmentTexture);
+        
+        // Add decorative corners
+        const cornerTopLeft = this.uiHelper.createElement('div', 'popup-corner corner-top-left');
+        const cornerTopRight = this.uiHelper.createElement('div', 'popup-corner corner-top-right');
+        const cornerBottomLeft = this.uiHelper.createElement('div', 'popup-corner corner-bottom-left');
+        const cornerBottomRight = this.uiHelper.createElement('div', 'popup-corner corner-bottom-right');
+        
+        this.container.appendChild(cornerTopLeft);
+        this.container.appendChild(cornerTopRight);
+        this.container.appendChild(cornerBottomLeft);
+        this.container.appendChild(cornerBottomRight);
+        
+        // Create a content wrapper for the menu items
+        this.menuContent = this.uiHelper.createElement('div', 'menu-content');
+        this.menuContent.style.position = 'relative';
+        this.menuContent.style.zIndex = '2';
+        this.menuContent.style.width = '100%';
+        this.container.appendChild(this.menuContent);
         
         // Add to the DOM
         document.body.appendChild(this.container);
@@ -216,7 +262,8 @@ export class MedievalMenu {
             cursor: 'pointer',
             borderRadius: '5px',
             transition: 'background-color 0.2s, transform 0.1s',
-            position: 'relative'
+            position: 'relative',
+            zIndex: '2'
         };
         
         Object.assign(menuItem.style, styles);
@@ -288,19 +335,19 @@ export class MedievalMenu {
         menuItem.addEventListener('mouseenter', () => {
             logger.info(LogCategory.MENU, `[MedievalMenu] Mouse enter on menu item: ${id}`);
             if (id !== this.activeItem) {
-                menuItem.style.backgroundColor = 'rgba(139, 114, 80, 0.3)';
+                menuItem.classList.add('hover');
             }
         });
         
         menuItem.addEventListener('mouseleave', () => {
             logger.info(LogCategory.MENU, `[MedievalMenu] Mouse leave on menu item: ${id}`);
             if (id !== this.activeItem) {
-                menuItem.style.backgroundColor = '';
+                menuItem.classList.remove('hover');
             }
         });
         
         // Add to container
-        this.container.appendChild(menuItem);
+        this.menuContent.appendChild(menuItem);
         logger.info(LogCategory.MENU, `[MedievalMenu] Menu item added to container: ${id}`);
         
         // Store reference
@@ -329,7 +376,8 @@ export class MedievalMenu {
             justifyContent: 'center',
             fontSize: '12px',
             fontWeight: 'bold',
-            transform: 'translate(50%, -50%)'
+            transform: 'translate(50%, -50%)',
+            zIndex: '3'
         };
         
         Object.assign(badge.style, badgeStyles);
@@ -344,8 +392,6 @@ export class MedievalMenu {
         if (this.activeItem && this.menuItems.has(this.activeItem)) {
             const prevItem = this.menuItems.get(this.activeItem);
             if (prevItem) {
-                prevItem.style.backgroundColor = '';
-                prevItem.style.transform = '';
                 prevItem.classList.remove('active');
             }
         }
@@ -354,8 +400,6 @@ export class MedievalMenu {
         if (id && this.menuItems.has(id)) {
             const newItem = this.menuItems.get(id);
             if (newItem) {
-                newItem.style.backgroundColor = 'rgba(139, 114, 80, 0.6)';
-                newItem.style.transform = 'scale(1.05)';
                 newItem.classList.add('active');
                 this.activeItem = id;
             }
@@ -437,13 +481,13 @@ export class MedievalMenu {
                 // Add hover effects
                 newMenuItem.addEventListener('mouseenter', () => {
                     if (id !== this.activeItem) {
-                        newMenuItem.style.backgroundColor = 'rgba(139, 114, 80, 0.3)';
+                        newMenuItem.classList.add('hover');
                     }
                 });
                 
                 newMenuItem.addEventListener('mouseleave', () => {
                     if (id !== this.activeItem) {
-                        newMenuItem.style.backgroundColor = '';
+                        newMenuItem.classList.remove('hover');
                     }
                 });
             } else {
@@ -465,7 +509,18 @@ export class MedievalMenu {
             this.isVisible = true;
             
             // Update menu button appearance
-            this.menuButton.style.backgroundColor = 'rgba(139, 114, 80, 0.5)';
+            this.menuButton.classList.add('active');
+            
+            // Add entrance animation
+            this.container.style.opacity = '0';
+            this.container.style.transform = 'translateY(10px)';
+            this.container.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            
+            // Trigger animation after a small delay
+            setTimeout(() => {
+                this.container.style.opacity = '1';
+                this.container.style.transform = 'translateY(0)';
+            }, 10);
             
             logger.info(LogCategory.MENU, '[MedievalMenu] Menu is now visible');
         } else {
@@ -480,11 +535,19 @@ export class MedievalMenu {
         logger.info(LogCategory.MENU, '[MedievalMenu] Hide method called, isVisible:', this.isVisible);
         if (this.isVisible) {
             logger.info(LogCategory.MENU, '[MedievalMenu] Setting display to none');
-            this.container.style.display = 'none';
-            this.isVisible = false;
+            
+            // Add exit animation
+            this.container.style.opacity = '0';
+            this.container.style.transform = 'translateY(10px)';
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                this.container.style.display = 'none';
+                this.isVisible = false;
+            }, 300); // Match the transition duration
             
             // Update menu button appearance
-            this.menuButton.style.backgroundColor = 'rgba(30, 30, 30, 0.8)';
+            this.menuButton.classList.remove('active');
             
             logger.info(LogCategory.MENU, '[MedievalMenu] Menu is now hidden');
         } else {

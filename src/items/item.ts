@@ -1,4 +1,5 @@
-import { Scene } from 'phaser';
+import type { Scene } from 'phaser';
+
 
 // Enum for item types
 export enum ItemType {

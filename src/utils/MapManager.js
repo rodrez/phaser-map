@@ -34,6 +34,7 @@ export class MapManager {
     this.onPlayerClick = null;
     this.onPlayerMove = null;
     this.onPlayerReachTarget = null;
+    this.setTargetPositionCallback = null; // Callback for when target position is set
 
     // Store the center position of the map
     this.mapCenter = { lat: this.config.lat, lng: this.config.lng };
@@ -90,16 +91,16 @@ export class MapManager {
       // Initialize boundary circle
       this.initBoundaryCircle();
 
-      // Add click handler for map to move player
-      this.map.on("click", (e) => {
+      // Add double-click handler for map to move player (replacing the click handler)
+      this.map.on("dblclick", (e) => {
         if (this.debug) {
-          logger.info(LogCategory.MAP, "Map clicked at:", e.latlng);
+          logger.info(LogCategory.MAP, "Map double-clicked at:", e.latlng);
           logger.info(LogCategory.MAP, "Current map center:", this.map.getCenter());
           logger.info(LogCategory.MAP, "Current player position:", this.playerPosition);
           logger.info(LogCategory.MAP, "Current boundary center:", this.config);
         }
 
-        // Get the click coordinates
+        // Get the double-click coordinates
         const clickLat = e.latlng.lat;
         const clickLng = e.latlng.lng;
 
@@ -109,21 +110,21 @@ export class MapManager {
           [this.config.lat, this.config.lng],
         );
 
-        // Only proceed if the click is within the boundary circle
+        // Only proceed if the double-click is within the boundary circle
         if (distance <= this.config.boundaryRadius) {
-          // Set the target position directly to the clicked coordinates
+          // Set the target position directly to the double-clicked coordinates
           this.setTargetPosition(clickLat, clickLng);
 
           if (this.debug) {
             logger.info(LogCategory.MAP,
-              "Click within boundary, setting target to:",
+              "Double-click within boundary, setting target to:",
               clickLat,
               clickLng,
             );
             logger.info(LogCategory.MAP, "Distance from boundary center:", distance);
           }
         } else if (this.debug) {
-          logger.info(LogCategory.MAP, "Click outside boundary, ignoring. Distance:", distance);
+          logger.info(LogCategory.MAP, "Double-click outside boundary, ignoring. Distance:", distance);
         }
       });
 
@@ -243,6 +244,11 @@ export class MapManager {
       // Set target position
       this.targetPosition = { lat, lng };
 
+      // Call the target position callback if it exists
+      if (this.setTargetPositionCallback) {
+        this.setTargetPositionCallback(this.targetPosition);
+      }
+
       if (this.debug) {
         logger.info(LogCategory.MAP, "Target position set:", this.targetPosition);
         logger.info(LogCategory.MAP, "Distance from boundary center:", distance);
@@ -309,44 +315,61 @@ export class MapManager {
   }
 
   /**
-   * Animate player movement
-   * @param {Object} startPos - Starting position {lat, lng}
-   * @param {Object} endPos - Ending position {lat, lng}
-   * @param {number} duration - Duration of animation in milliseconds
+   * Animate player movement from start to end position
+   * @param {Object} startPos - Start position {lat, lng}
+   * @param {Object} endPos - End position {lat, lng}
+   * @param {number} duration - Animation duration in milliseconds
    * @param {Function} onComplete - Callback when animation completes
    */
   animatePlayerMovement(startPos, endPos, duration, onComplete) {
-    const startTime = Date.now();
-
-    // Ensure we have the correct starting position
-    this.playerPosition = { ...startPos };
-
-    // Force an initial update to ensure we start from the correct position
-    if (this.onPlayerMove) {
-      this.onPlayerMove(this.playerPosition);
+    if (!this.map) {
+      logger.warn(LogCategory.MAP, "Map not initialized");
+      return;
     }
 
-    const animate = () => {
-      try {
-        const now = Date.now();
-        const elapsed = now - startTime;
+    try {
+      // Calculate the direction of movement
+      const direction = {
+        lat: endPos.lat - startPos.lat,
+        lng: endPos.lng - startPos.lng
+      };
+
+      // Determine the primary direction (up, down, left, right)
+      let primaryDirection = "down";
+      if (Math.abs(direction.lat) > Math.abs(direction.lng)) {
+        // Movement is primarily north-south
+        primaryDirection = direction.lat < 0 ? "up" : "down";
+      } else {
+        // Movement is primarily east-west
+        primaryDirection = direction.lng < 0 ? "left" : "right";
+      }
+
+      // Store the start time
+      const startTime = Date.now();
+
+      // Create an animation frame
+      const animate = () => {
+        // Calculate progress (0 to 1)
+        const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Calculate current position
-        const lat = startPos.lat + (endPos.lat - startPos.lat) * progress;
-        const lng = startPos.lng + (endPos.lng - startPos.lng) * progress;
+        // Calculate current position using linear interpolation
+        const currentPos = {
+          lat: startPos.lat + (endPos.lat - startPos.lat) * progress,
+          lng: startPos.lng + (endPos.lng - startPos.lng) * progress,
+        };
 
         // Update player position
-        this.playerPosition = { lat, lng };
+        this.playerPosition = currentPos;
 
         // Update marker position (invisible)
         if (this.playerMarker) {
-          this.playerMarker.setLatLng([lat, lng]);
+          this.playerMarker.setLatLng([currentPos.lat, currentPos.lng]);
         }
 
-        // Call move callback
+        // Call player move callback
         if (this.onPlayerMove) {
-          this.onPlayerMove(this.playerPosition);
+          this.onPlayerMove(currentPos);
         }
 
         // Continue animation if not complete
@@ -358,16 +381,16 @@ export class MapManager {
             onComplete();
           }
         }
-      } catch (error) {
-        logger.error(LogCategory.MAP, "Error in animation frame:", error);
-        if (onComplete) {
-          onComplete();
-        }
-      }
-    };
+      };
 
-    // Start animation
-    animate();
+      // Start animation
+      animate();
+    } catch (error) {
+      logger.error(LogCategory.MAP, "Error animating player movement:", error);
+      if (onComplete) {
+        onComplete();
+      }
+    }
   }
 
   /**

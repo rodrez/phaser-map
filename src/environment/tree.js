@@ -1,3 +1,5 @@
+import { LogCategory, logger } from "../utils/Logger";
+
 /**
  * System to handle tree-related functionality
  */
@@ -5,10 +7,12 @@ export class TreeSystem {
     scene;
     environmentGroup;
     popupSystem;
+    mapManager;
 
     constructor(scene, environmentGroup) {
         this.scene = scene;
         this.environmentGroup = environmentGroup;
+        this.mapManager = scene.mapManager;
         this.setupTreeInteractions();
     }
 
@@ -66,6 +70,10 @@ export class TreeSystem {
             {
                 text: "Examine",
                 onClick: () => {
+                    // Close the popup immediately
+                    if (this.popupSystem) {
+                        this.popupSystem.closePopupsByClass('tree-popup');
+                    }
                     this.examineTree(tree);
                 },
                 className: "popup-button-info"
@@ -73,6 +81,10 @@ export class TreeSystem {
             {
                 text: "Chop",
                 onClick: () => {
+                    // Close the popup immediately
+                    if (this.popupSystem) {
+                        this.popupSystem.closePopupsByClass('tree-popup');
+                    }
                     this.chopTree(tree);
                 },
                 className: "popup-button-danger"
@@ -84,6 +96,10 @@ export class TreeSystem {
             actions.push({
                 text: "Gather Fruits",
                 onClick: () => {
+                    // Close the popup immediately
+                    if (this.popupSystem) {
+                        this.popupSystem.closePopupsByClass('tree-popup');
+                    }
                     this.handleGatherFruits(tree);
                 },
                 className: "popup-button-success"
@@ -120,8 +136,14 @@ export class TreeSystem {
 
     /**
      * Add trees within a circular area
+     * @param {number} count Maximum number of trees to add
+     * @param {number} centerX Center X coordinate in pixels
+     * @param {number} centerY Center Y coordinate in pixels
+     * @param {number} radius Radius in pixels
+     * @param {Object} centerLatLng Center position in lat/lng coordinates
+     * @returns {number} Number of trees placed
      */
-    addTreesInCircle(count, centerX, centerY, radius) {
+    addTreesInCircle(count, centerX, centerY, radius, centerLatLng) {
         // Determine number of trees to add (between 3 and specified count, maximum 12)
         const treesToAdd = Phaser.Math.Between(3, Math.min(12, count));
 
@@ -141,9 +163,12 @@ export class TreeSystem {
             const y = centerY + Math.sin(angle) * distance;
 
             if (!this.isPositionTooCloseToTrees(x, y, treePositions, minDistanceBetweenTrees)) {
+                // Calculate lat/lng for this position
+                const treeLatLng = this.mapManager.pixelToLatLng(x, y);
+                
                 // Use 'tree' or 'spruce' as the tree type
                 const treeType = Math.random() > 0.5 ? 'tree' : 'spruce';
-                const tree = this.addTreeWithVariation(x, y, treeType);
+                const tree = this.addTreeWithVariation(x, y, treeType, treeLatLng);
 
                 treePositions.push({
                     x,
@@ -174,14 +199,25 @@ export class TreeSystem {
 
     /**
      * Add a tree with random variations
+     * @param {number} x X coordinate
+     * @param {number} y Y coordinate
+     * @param {string} treeType Type of tree ('tree' or 'spruce')
+     * @param {Object} latLng Latitude/longitude position
+     * @returns {Phaser.GameObjects.Image} The created tree
      */
-    addTreeWithVariation(x, y, treeType) {
+    addTreeWithVariation(x, y, treeType, latLng) {
         let tree;
 
         if (treeType === 'spruce') {
             tree = this.createSpruceTree(x, y);
         } else {
             tree = this.createRegularTree(x, y);
+        }
+
+        // Store lat/lng coordinates for map dragging
+        if (latLng) {
+            tree.setData('lat', latLng.lat);
+            tree.setData('lng', latLng.lng);
         }
 
         // Add some randomness to scale
@@ -206,7 +242,7 @@ export class TreeSystem {
      */
     createSpruceTree(x, y) {
         // Use the healing-spruce image instead of a sprite sheet
-        const tree = this.scene.add.image(x, y, 'healing-spruce');
+        const tree = this.scene.add.image(x, y, 'spruce-tree');
 
         // Set tree data
         tree.setData('woodAmount', { min: 1, max: 2 });
@@ -225,9 +261,10 @@ export class TreeSystem {
     createRegularTree(x, y) {
         // Use the tree image
         const tree = this.scene.add.image(x, y, 'tree');
+        tree.setScale(0.7);
         
         // Set tree data
-        tree.setData('woodAmount', { min: 2, max: 4 });
+        tree.setData('woodAmount', { min: 3, max: 5 });
         tree.setData('treeName', 'Oak Tree');
         
         return tree;
@@ -237,10 +274,22 @@ export class TreeSystem {
      * Add a healing aura to a tree
      */
     addHealingAura(tree) {
-        const healingRadius = 100;
-        const healingAura = this.scene.add.circle(tree.x, tree.y, healingRadius, 0x00ff00, 0.1);
+        const healingRadius = 15; // Much smaller radius
+        const points = [];
+        const sides = 3; // Triangle
+        const angleStep = (Math.PI * 2) / sides;
+        
+        for (let i = 0; i < sides; i++) {
+            const angle = i * angleStep;
+            points.push({
+                x: tree.x + healingRadius * Math.cos(angle),
+                y: tree.y + healingRadius * Math.sin(angle)
+            });
+        }
+
+        const healingAura = this.scene.add.polygon(tree.x, tree.y, points, 0x00ff00, 0.8);
         healingAura.setVisible(false);
-        healingAura.setData('healingPower', 1);
+        healingAura.setData('healingPower', 2); // Increased healing power to compensate for smaller radius
         healingAura.setData('parentTree', tree);
         tree.setData('healingAura', healingAura);
 
@@ -276,19 +325,59 @@ export class TreeSystem {
             });
         });
 
+        // Add double click detection properties to the tree
+        tree.setData('lastClickTime', 0);
+        tree.setData('clickCount', 0);
+        
         // Click effect
         tree.on('pointerdown', () => {
-            this.scene.tweens.add({
-                targets: tree,
-                x: tree.x + 2,
-                y: tree.y - 2,
-                duration: 50,
-                yoyo: true,
-                repeat: 3,
-                ease: 'Sine.easeInOut',
-                onComplete: () => {
-                    this.scene.events.emit('tree-interact', tree);
-                    this.createLeafParticles(tree.x, tree.y - tree.height * 0.6);
+            const currentTime = this.scene.time.now;
+            const lastClickTime = tree.getData('lastClickTime') || 0;
+            const clickCount = tree.getData('clickCount') || 0;
+            const doubleClickDelay = 300; // milliseconds
+            
+            // Update click count and time
+            if (currentTime - lastClickTime < doubleClickDelay) {
+                // This is a double click
+                tree.setData('clickCount', 0);
+                tree.setData('lastClickTime', 0);
+                
+                // Emit a double-click event that can be handled by the movement system
+                this.scene.events.emit('double-click-move', {
+                    x: tree.x,
+                    y: tree.y,
+                    targetObject: tree
+                });
+                
+                // Don't trigger the single-click interaction
+                return;
+            }
+            
+            // This might be the first click of a double click
+            tree.setData('clickCount', 1);
+            tree.setData('lastClickTime', currentTime);
+            
+            // Set a timeout to handle single click after the double click window passes
+            this.scene.time.delayedCall(doubleClickDelay, () => {
+                // Only proceed if this wasn't part of a double click
+                if (tree.getData('clickCount') === 1) {
+                    // Reset click tracking
+                    tree.setData('clickCount', 0);
+                    
+                    // Trigger the tree interaction animation and event
+                    this.scene.tweens.add({
+                        targets: tree,
+                        x: tree.x + 2,
+                        y: tree.y - 2,
+                        duration: 50,
+                        yoyo: true,
+                        repeat: 3,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => {
+                            this.scene.events.emit('tree-interact', tree);
+                            this.createLeafParticles(tree.x, tree.y - tree.height * 0.6);
+                        }
+                    });
                 }
             });
         });
@@ -333,35 +422,87 @@ export class TreeSystem {
      * Chop down a tree
      */
     chopTree(tree) {
-        // Check if player has the right tool (optional)
-        // For now, we'll allow chopping without a tool
+        logger.info(LogCategory.ENVIRONMENT, 'Chopping tree started');
 
         // Get player from the scene
-        const player = this.scene.registry.get('player');
-        if (!player) return;
+        let player = this.scene.registry.get('player');
+        
+        // Fallback to get player from the scene if not in registry
+        if (!player && this.scene.playerManager) {
+            logger.info(LogCategory.ENVIRONMENT, 'Player not found in registry, getting from playerManager');
+            player = this.scene.playerManager.getPlayer();
+            // Update registry for future use
+            this.scene.registry.set('player', player);
+        }
+        
+        if (!player) {
+            logger.error(LogCategory.ENVIRONMENT, 'Player not found in registry or playerManager');
+            return;
+        }
+
+        // Store the tree reference for later use
+        this.currentActionTree = tree;
+        this.currentActionType = 'chop';
 
         // Move player closer to the tree if they're far away
         const distance = Phaser.Math.Distance.Between(player.x, player.y, tree.x, tree.y);
+        logger.info(LogCategory.ENVIRONMENT, `Distance to tree: ${distance} pixels`);
+        
         if (distance > 50) {
-            // Player is too far, move closer first
+            logger.info(LogCategory.ENVIRONMENT, 'Player is too far from tree, moving closer');
+            
+            // Calculate target position near the tree
             const angle = Phaser.Math.Angle.Between(player.x, player.y, tree.x, tree.y);
             const targetX = tree.x - Math.cos(angle) * 40;
             const targetY = tree.y - Math.sin(angle) * 40;
+            
+            logger.info(LogCategory.ENVIRONMENT, `Moving player to: ${targetX}, ${targetY}`);
 
-            // Move player to the tree first, then chop
-            this.scene.tweens.add({
-                targets: player,
-                x: targetX,
-                y: targetY,
-                duration: distance * 5, // Speed based on distance
-                ease: 'Linear',
-                onComplete: () => {
-                    // After moving, perform the chopping action
-                    this.performChopAction(tree, player);
-                }
-            });
+            // Convert target position to lat/lng
+            const targetLatLng = this.mapManager.pixelToLatLng(targetX, targetY);
+            
+            if (!targetLatLng) {
+                logger.error(LogCategory.ENVIRONMENT, 'Failed to convert target position to lat/lng');
+                return;
+            }
+            
+            logger.info(LogCategory.ENVIRONMENT, `Target lat/lng: ${targetLatLng.lat}, ${targetLatLng.lng}`);
+            
+            // Set up a one-time event listener for when the player reaches the target
+            const reachTargetListener = (position) => {
+                logger.info(LogCategory.ENVIRONMENT, 'Player reached tree position');
+                // Perform the chopping action
+                this.performChopAction(tree, player);
+                
+                // Remove this listener
+                this.mapManager.onPlayerReachTarget = this.originalReachTargetCallback;
+            };
+            
+            // Save the original callback
+            this.originalReachTargetCallback = this.mapManager.onPlayerReachTarget;
+            
+            // Set our callback
+            this.mapManager.onPlayerReachTarget = reachTargetListener;
+            
+            // Move the player using the mapManager
+            const success = this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+            
+            if (!success) {
+                logger.error(LogCategory.ENVIRONMENT, 'Failed to set target position');
+                // Restore original callback
+                this.mapManager.onPlayerReachTarget = this.originalReachTargetCallback;
+                return;
+            }
+            
+            // Face the player toward the tree
+            if (tree.x > player.x) {
+                player.setFlipX(false);
+            } else {
+                player.setFlipX(true);
+            }
         } else {
             // Player is close enough, chop immediately
+            logger.info(LogCategory.ENVIRONMENT, 'Player is close enough to tree, chopping immediately');
             this.performChopAction(tree, player);
         }
     }
@@ -376,6 +517,8 @@ export class TreeSystem {
         } else {
             player.setFlipX(true);
         }
+
+        logger.info(LogCategory.ENVIRONMENT, 'Performing chop action');
 
         // Play chopping animation (shake the tree)
         this.scene.tweens.add({
@@ -558,9 +701,23 @@ export class TreeSystem {
      * Handle gathering fruits from a tree
      */
     handleGatherFruits(tree) {
+        logger.info(LogCategory.ENVIRONMENT, 'Gathering fruits started');
+        
         // Get player from the scene
-        const player = this.scene.registry.get('player');
-        if (!player) return;
+        let player = this.scene.registry.get('player');
+        
+        // Fallback to get player from the scene if not in registry
+        if (!player && this.scene.playerManager) {
+            logger.info(LogCategory.ENVIRONMENT, 'Player not found in registry, getting from playerManager');
+            player = this.scene.playerManager.getPlayer();
+            // Update registry for future use
+            this.scene.registry.set('player', player);
+        }
+        
+        if (!player) {
+            logger.error(LogCategory.ENVIRONMENT, 'Player not found in registry or playerManager');
+            return;
+        }
 
         // Get all fruit sprites near the tree
         const fruitSprites = this.scene.children.list.filter(obj => {
@@ -570,6 +727,11 @@ export class TreeSystem {
                 // Check if it's close to the tree (within the tree's canopy)
                 Phaser.Math.Distance.Between(obj.x, obj.y, tree.x, tree.y) < tree.displayWidth * 0.6;
         });
+
+        // Store the tree and fruit sprites for later use
+        this.currentActionTree = tree;
+        this.currentActionType = 'gather';
+        this.currentFruitSprites = fruitSprites;
 
         if (fruitSprites.length === 0) {
             // No fruits found
@@ -604,25 +766,60 @@ export class TreeSystem {
 
         // Move player closer to the tree if they're far away
         const distance = Phaser.Math.Distance.Between(player.x, player.y, tree.x, tree.y);
+        logger.info(LogCategory.ENVIRONMENT, `Distance to tree for fruit gathering: ${distance} pixels`);
 
         if (distance > 50) {
-            // Player is too far, move closer first
+            logger.info(LogCategory.ENVIRONMENT, 'Player is too far from tree for fruit gathering, moving closer');
+            
+            // Calculate target position near the tree
             const angle = Phaser.Math.Angle.Between(player.x, player.y, tree.x, tree.y);
             const targetX = tree.x - Math.cos(angle) * 40;
             const targetY = tree.y - Math.sin(angle) * 40;
+            
+            logger.info(LogCategory.ENVIRONMENT, `Moving player to: ${targetX}, ${targetY} for fruit gathering`);
 
-            // Move player to the tree
-            this.scene.tweens.add({
-                targets: player,
-                x: targetX,
-                y: targetY,
-                duration: distance * 5, // Speed based on distance
-                ease: 'Linear',
-                onComplete: () => {
-                    // After moving, perform the gathering action
-                    this.performGatherFruits(tree, fruitSprites, player);
-                }
-            });
+            // Convert target position to lat/lng
+            const targetLatLng = this.mapManager.pixelToLatLng(targetX, targetY);
+            
+            if (!targetLatLng) {
+                logger.error(LogCategory.ENVIRONMENT, 'Failed to convert target position to lat/lng');
+                return;
+            }
+            
+            logger.info(LogCategory.ENVIRONMENT, `Target lat/lng: ${targetLatLng.lat}, ${targetLatLng.lng}`);
+            
+            // Set up a one-time event listener for when the player reaches the target
+            const reachTargetListener = (position) => {
+                logger.info(LogCategory.ENVIRONMENT, 'Player reached tree position for fruit gathering');
+                // Perform the gathering action
+                this.performGatherFruits(tree, fruitSprites, player);
+                
+                // Remove this listener
+                this.mapManager.onPlayerReachTarget = this.originalReachTargetCallback;
+            };
+            
+            // Save the original callback
+            this.originalReachTargetCallback = this.mapManager.onPlayerReachTarget;
+            
+            // Set our callback
+            this.mapManager.onPlayerReachTarget = reachTargetListener;
+            
+            // Move the player using the mapManager
+            const success = this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+            
+            if (!success) {
+                logger.error(LogCategory.ENVIRONMENT, 'Failed to set target position for fruit gathering');
+                // Restore original callback
+                this.mapManager.onPlayerReachTarget = this.originalReachTargetCallback;
+                return;
+            }
+            
+            // Face the player toward the tree
+            if (tree.x > player.x) {
+                player.setFlipX(false);
+            } else {
+                player.setFlipX(true);
+            }
         } else {
             // Player is close enough, gather immediately
             this.performGatherFruits(tree, fruitSprites, player);
@@ -854,57 +1051,5 @@ export class TreeSystem {
                 });
             }
         });
-    }
-
-    /**
-     * Test method to show the updated tree popup
-     */
-    testTreePopup() {
-        // Create a dummy tree object with necessary data
-        const dummyTree = {
-            getData: (key) => {
-                const data = {
-                    'treeName': 'Ancient Oak',
-                    'isHealingSpruce': false
-                };
-                return data[key];
-            }
-        };
-
-        // Mock the checkTreeHasFruits method to return true
-        const originalCheckTreeHasFruits = this.checkTreeHasFruits;
-        this.checkTreeHasFruits = () => true;
-
-        // Show the popup
-        this.showTreeInteractionPopup(dummyTree);
-
-        // Restore the original method
-        this.checkTreeHasFruits = originalCheckTreeHasFruits;
-    }
-
-    /**
-     * Test method to show a healing spruce tree popup
-     */
-    testHealingSprucePopup() {
-        // Create a dummy healing spruce tree object
-        const dummyTree = {
-            getData: (key) => {
-                const data = {
-                    'treeName': 'Healing Spruce',
-                    'isHealingSpruce': true
-                };
-                return data[key];
-            }
-        };
-
-        // Mock the checkTreeHasFruits method to return false
-        const originalCheckTreeHasFruits = this.checkTreeHasFruits;
-        this.checkTreeHasFruits = () => false;
-
-        // Show the popup
-        this.showTreeInteractionPopup(dummyTree);
-
-        // Restore the original method
-        this.checkTreeHasFruits = originalCheckTreeHasFruits;
     }
 } 

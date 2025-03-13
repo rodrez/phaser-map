@@ -86,23 +86,9 @@ export class PopupSystem {
    */
   private ensurePopupVisibility(
     customPopup: HTMLElement,
-    x: number,
-    y: number,
-    offsetX: number,
-    offsetY: number,
   ): void {
-    // Position the popup at the specified coordinates
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Calculate position that keeps the popup within viewport
-    let posX = Math.max(20, Math.min(viewportWidth - 20, x + offsetX));
-    let posY = Math.max(20, Math.min(viewportHeight - 20, y + offsetY));
-    
     // Set the position
     customPopup.style.position = "absolute";
-    customPopup.style.left = `${posX}px`;
-    customPopup.style.top = `${posY}px`;
     customPopup.style.transform = "translate(-50%, -50%)";
   }
 
@@ -197,10 +183,6 @@ export class PopupSystem {
       // Ensure popup stays within viewport boundaries
       this.ensurePopupVisibility(
         customPopup,
-        screenPos.x,
-        screenPos.y,
-        offsetX,
-        offsetY,
       );
 
       // Make sure the popup is positioned relative to the viewport, not the overlay
@@ -266,10 +248,10 @@ export class PopupSystem {
    * Create a popup at a specific screen position
    */
   createPopupAtScreenPosition(
-    x: number,
-    y: number,
     content: PopupContent,
     options: PopupOptions = {},
+    x = 0,
+    y = 0,
   ): HTMLElement | null {
     try {
       // Remove any existing popups with the same class
@@ -355,10 +337,6 @@ export class PopupSystem {
       // Ensure popup stays within viewport boundaries
       this.ensurePopupVisibility(
         customPopup,
-        screenPos.x,
-        screenPos.y,
-        offsetX,
-        offsetY,
       );
 
       // Make sure the popup is positioned relative to the viewport, not the overlay
@@ -557,7 +535,7 @@ export class PopupSystem {
       this.activePopups = [];
 
       // Remove the interaction element if it exists
-      if (this.interactionElement && this.interactionElement.parentNode) {
+      if (this.interactionElement?.parentNode) {
         this.interactionElement.parentNode.removeChild(this.interactionElement);
       }
 
@@ -576,60 +554,10 @@ export class PopupSystem {
     options: StandardPopupOptions,
   ): HTMLElement | null {
     try {
-      // Generate HTML for the popup content
-      let actionsHtml = '';
-      
-      if (options.actions && options.actions.length > 0) {
-        const buttonHtml = options.actions.map((action, index) => {
-          const className = action.className || '';
-          return `<button class="popup-button ${className}" data-action-index="${index}">${action.text}</button>`;
-        }).join('');
-        
-        actionsHtml = `<div class="popup-actions">${buttonHtml}</div>`;
-      }
-
-      // Generate icon HTML if provided
-      const iconHtml = options.icon ? `
-        <div class="popup-icon">
-          ${options.icon}
-        </div>
-      ` : '';
-
-      // Create the HTML content
-      const html = `
-        <div class="parchment-texture"></div>
-        <div class="popup-corner corner-top-left"></div>
-        <div class="popup-corner corner-top-right"></div>
-        <div class="popup-corner corner-bottom-left"></div>
-        <div class="popup-corner corner-bottom-right"></div>
-        
-        ${iconHtml}
-        
-        <div class="popup-title">${options.title}</div>
-        
-        <div class="popup-content">
-          ${options.description}
-        </div>
-        
-        ${actionsHtml}
-      `;
-
-      // Create button handlers
-      const buttons: { selector: string; onClick: () => void }[] = [];
-      
-      if (options.actions) {
-        options.actions.forEach((action, index) => {
-          buttons.push({
-            selector: `[data-action-index="${index}"]`,
-            onClick: action.onClick
-          });
-        });
-      }
-
-      // Create the popup content
+      // Create the popup content using helper methods
       const content: PopupContent = {
-        html,
-        buttons
+        html: this.generateStandardPopupHtml(options),
+        buttons: this.generateStandardPopupButtons(options)
       };
 
       // Create popup options
@@ -637,12 +565,12 @@ export class PopupSystem {
         className: options.className,
         closeButton: options.closeButton,
         offset: options.offset,
-        width: options.width || 400, // Default width for standard popups
+        width: options.width || 250, // Default width for standard popups
         zIndex: options.zIndex
       };
 
       // Create the popup at the specified screen position
-      return this.createPopupAtScreenPosition(x, y, content, popupOptions);
+      return this.createPopupAtScreenPosition(content, popupOptions, x, y);
     } catch (error) {
       console.error("Error creating standard popup:", error);
       return null;
@@ -677,12 +605,23 @@ export class PopupSystem {
     options: StandardPopupOptions,
   ): HTMLElement | null {
     try {
-      // Get the center of the viewport
-      const x = window.innerWidth / 2;
-      const y = window.innerHeight / 2;
+      // Use the default centered positioning
+      const content: PopupContent = {
+        html: this.generateStandardPopupHtml(options),
+        buttons: this.generateStandardPopupButtons(options)
+      };
 
-      // Create the standard popup at the center of the screen
-      return this.createStandardPopup(x, y, options);
+      // Create popup options
+      const popupOptions: PopupOptions = {
+        className: options.className,
+        closeButton: options.closeButton,
+        offset: options.offset,
+        width: options.width || 250, // Default width for standard popups
+        zIndex: options.zIndex
+      };
+
+      // Create the popup at the center of the screen (using default 0,0 which will be centered)
+      return this.createPopupAtScreenPosition(content, popupOptions);
     } catch (error) {
       console.error("Error creating centered standard popup:", error);
       return null;
@@ -690,46 +629,81 @@ export class PopupSystem {
   }
 
   /**
-   * Example method to show how to use the standard popup
+   * Generate HTML for a standard popup (helper method)
+   * @private
    */
-  showExamplePopup(): HTMLElement | null {
-    // Example SVG icon
-    const exampleIcon = `
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c8a165" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-      </svg>
-    `;
+  private generateStandardPopupHtml(options: StandardPopupOptions): string {
+    // Generate actions HTML
+    let actionsHtml = '';
+    if (options.actions && options.actions.length > 0) {
+      const buttonHtml = options.actions.map((action, index) => {
+        const className = action.className || '';
+        return `<button class="popup-button ${className}" data-action-index="${index}">${action.text}</button>`;
+      }).join('');
+      
+      actionsHtml = `<div class="popup-actions">${buttonHtml}</div>`;
+    }
 
-    // Create a standard popup with title, description, and action buttons
-    return this.createCenteredStandardPopup({
-      title: "The King's Summons",
-      description: `
-        By royal decree, His Majesty King Aldric III, Sovereign of the Western Realms and Protector of the Seven Valleys, demands thine immediate presence at the Royal Court.
-        
-        Dark tidings have reached the castle. The Eastern Horde gathers at our borders, led by the dreaded Warlord Krizak. The kingdom requires thy valor and wit in this dire hour.
-      `,
-      icon: exampleIcon,
-      actions: [
-        {
-          text: "Heed the Call",
-          onClick: () => {
-            console.log("User accepted the quest");
-            // Add your logic here
-          },
-          className: "popup-button-primary"
-        },
-        {
-          text: "Decline",
-          onClick: () => {
-            console.log("User declined the quest");
-            // Add your logic here
-          },
-          className: "popup-button-danger"
-        }
-      ],
-      width: 450,
-      closeButton: true
-    });
+    // Generate icon HTML if provided
+    const iconHtml = options.icon ? `
+      <div class="popup-icon">
+        ${options.icon}
+      </div>
+    ` : '';
+
+    // Create the HTML content
+    return `
+      <div class="parchment-texture"></div>
+      <div class="popup-corner corner-top-left"></div>
+      <div class="popup-corner corner-top-right"></div>
+      <div class="popup-corner corner-bottom-left"></div>
+      <div class="popup-corner corner-bottom-right"></div>
+      
+      ${iconHtml}
+      
+      <div class="popup-title">${options.title}</div>
+      
+      <div class="popup-content">
+        ${options.description}
+      </div>
+      
+      ${actionsHtml}
+    `;
+  }
+
+  /**
+   * Generate button handlers for a standard popup (helper method)
+   * @private
+   */
+  private generateStandardPopupButtons(options: StandardPopupOptions): { selector: string; onClick: () => void }[] {
+    const buttons: { selector: string; onClick: () => void }[] = [];
+    
+    if (options.actions) {
+      options.actions.forEach((action, index) => {
+        buttons.push({
+          selector: `[data-action-index="${index}"]`,
+          onClick: action.onClick
+        });
+      });
+    }
+
+    return buttons;
+  }
+
+  /**
+   * Create a centered popup
+   */
+  createCenteredPopup(
+    content: PopupContent,
+    options: PopupOptions = {},
+  ): HTMLElement | null {
+    try {
+      // Create the popup at the center of the screen (using default 0,0 which will be centered)
+      return this.createPopupAtScreenPosition(content, options);
+    } catch (error) {
+      console.error("Error creating centered popup:", error);
+      return null;
+    }
   }
 }
 

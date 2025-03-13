@@ -166,9 +166,9 @@ export class PlayerManager {
     // Store a reference to the hitarea
     this.playerHitarea = hitarea;
 
-    // Add a click event listener to the hitarea
-    hitarea.addEventListener("click", (e) => {
-      logger.info(LogCategory.PLAYER, "Player hitarea clicked");
+    // Add a double-click event listener to the hitarea (replacing the click event)
+    hitarea.addEventListener("dblclick", (e) => {
+      logger.info(LogCategory.PLAYER, "Player hitarea double-clicked");
       this.handleClick();
       e.stopPropagation();
     });
@@ -239,6 +239,9 @@ export class PlayerManager {
           this.player.shadow.x = pixelPos.x;
           this.player.shadow.y = pixelPos.y + 2;
         }
+        
+        // Play the idle animation when player stops moving
+        this.player.play("player-idle");
       }
 
       if (this.playerHitarea) {
@@ -246,9 +249,36 @@ export class PlayerManager {
         this.playerHitarea.style.top = `${pixelPos.y}px`;
       }
     });
+    
+    // Add callback for when target position is set (after double-click)
+    this.mapManager.setTargetPositionCallback = (targetPosition) => {
+      if (this.player) {
+        // Play the movement animation when player starts moving
+        this.player.play("player-move");
+        
+        // Add a visual pulse effect to show the player is responding to the double-click
+        const pulse = this.scene.add.circle(
+          this.player.x,
+          this.player.y,
+          20,
+          0x4a90e2,
+          0.7
+        );
+        pulse.setDepth(1999); // Just below player depth
+        
+        // Animate the pulse
+        this.scene.tweens.add({
+          targets: pulse,
+          radius: 40,
+          alpha: 0,
+          duration: 600,
+          onComplete: () => {
+            pulse.destroy();
+          }
+        });
+      }
+    };
   }
-
-
 
   /**
    * Handle player click event
@@ -321,8 +351,29 @@ export class PlayerManager {
         const distSquared = dx * dx + dy * dy;
 
         if (distSquared > 1) {
+          // Player is moving, update position
           this.player.x = pixelPos.x;
           this.player.y = pixelPos.y;
+
+          // Update player animation based on movement direction
+          if (!this.player.anims.isPlaying || this.player.anims.currentAnim.key === "player-idle") {
+            // Determine movement direction
+            if (Math.abs(dx) > Math.abs(dy)) {
+              // Moving horizontally
+              if (dx > 0) {
+                this.player.play("player-move-left");
+              } else {
+                this.player.play("player-move-right");
+              }
+            } else {
+              // Moving vertically
+              if (dy > 0) {
+                this.player.play("player-move-up");
+              } else {
+                this.player.play("player-move-down");
+              }
+            }
+          }
 
           if (this.player.shadow) {
             this.player.shadow.x = pixelPos.x;
@@ -333,6 +384,11 @@ export class PlayerManager {
             this.playerHitarea.style.left = `${pixelPos.x}px`;
             this.playerHitarea.style.top = `${pixelPos.y}px`;
           }
+        } else if (this.mapManager.isPlayerMoving === false && 
+                  this.player.anims.isPlaying && 
+                  this.player.anims.currentAnim.key.includes("player-move")) {
+          // Player has stopped moving, switch to idle animation
+          this.player.play("player-idle");
         }
       }
     }
@@ -343,7 +399,7 @@ export class PlayerManager {
    */
   destroy() {
     // Remove the player hitarea from the DOM
-    if (this.playerHitarea && this.playerHitarea.parentNode) {
+    if (this.playerHitarea?.parentNode) {
       this.playerHitarea.parentNode.removeChild(this.playerHitarea);
     }
 
