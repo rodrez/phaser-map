@@ -1,5 +1,5 @@
-import { Scene } from 'phaser';
 import { DOMUIHelper } from '../utils/DOMUIHelper';
+import { logger, LogCategory } from '../utils/Logger';
 
 /**
  * MedievalVitals - A simplified medieval-themed HTML/CSS overlay for player vitals
@@ -37,16 +37,26 @@ export class MedievalVitals {
     isAggressive = false;
     isGodMode = false;
     
+    // Reference to the PlayerHealthSystem
+    playerHealthSystem = null;
+    
     constructor(scene) {
         this.scene = scene;
         this.uiHelper = new DOMUIHelper(scene);
+
+        logger.info(LogCategory.UI, 'MedievalVitals constructor');
+
+        logger.info(LogCategory.UI, 'MedievalVitals constructor - scene:', this.scene);
+
+        // Get reference to PlayerHealthSystem if available
+        this.playerHealthSystem = this.scene.playerHealthSystem;
+        
+        // log the player stats
+        logger.info(LogCategory.UI, 'MedievalVitals constructor - player stats:', this.scene.playerStats);
         
         // Load the CSS files
         this.uiHelper.loadCSS('/styles/popups.css');
         this.uiHelper.loadCSS('/styles/medieval-vitals.css');
-        
-        // Add pulse animation for low health
-        this.addPulseAnimation();
         
         // Create the main container
         this.createContainer();
@@ -61,43 +71,13 @@ export class MedievalVitals {
         // Add the container to the DOM
         document.body.appendChild(this.container);
         
+        // Connect to the PlayerHealthSystem if available
+        this.connectToHealthSystem();
+        
         // Initial update
         this.updateUI();
     }
     
-    /**
-     * Adds a pulse animation for low health and glow animation for god mode
-     */
-    addPulseAnimation() {
-        // Check if the animation already exists
-        if (!document.getElementById('medieval-vitals-animations')) {
-            // Create a style element
-            const style = document.createElement('style');
-            style.id = 'medieval-vitals-animations';
-            
-            // Add the keyframes animation
-            style.textContent = `
-                @keyframes pulse {
-                    0% { opacity: 0.7; }
-                    50% { opacity: 1; }
-                    100% { opacity: 0.7; }
-                }
-                
-                @keyframes glow {
-                    0% { box-shadow: 0 0 5px #f0c070; }
-                    100% { box-shadow: 0 0 20px #f0c070, 0 0 30px #f0c070; }
-                }
-                
-                @keyframes goldChange {
-                    0% { transform: translateY(0); opacity: 1; }
-                    100% { transform: translateY(-20px); opacity: 0; }
-                }
-            `;
-            
-            // Add to document head
-            document.head.appendChild(style);
-        }
-    }
     
     /**
      * Creates the main container for all vitals elements
@@ -160,9 +140,34 @@ export class MedievalVitals {
         
         // Create progress fill
         const progressFill = document.createElement('div');
-        progressFill.style.width = '70%'; // Start with 70% health
+        
+        // Get initial health values from PlayerHealthSystem if available
+        let initialHealth = 70;
+        let initialMaxHealth = 100;
+        
+        if (this.playerHealthSystem) {
+            initialHealth = this.playerHealthSystem.getHealth();
+            initialMaxHealth = this.playerHealthSystem.getMaxHealth();
+        } else if (this.scene.playerStats) {
+            initialHealth = this.scene.playerStats.health || 70;
+            initialMaxHealth = this.scene.playerStats.maxHealth || 100;
+        }
+        
+        // Calculate initial health percentage
+        const initialHealthPercent = Math.min(1, Math.max(0, initialHealth / initialMaxHealth));
+        
+        progressFill.style.width = `${initialHealthPercent * 100}%`;
         progressFill.style.height = '100%';
-        progressFill.style.backgroundColor = '#c0392b'; // Red color for health
+        
+        // Set color based on health percentage
+        if (initialHealthPercent <= 0.2) {
+            progressFill.style.backgroundColor = '#e74c3c'; // Red for critical health
+        } else if (initialHealthPercent <= 0.5) {
+            progressFill.style.backgroundColor = '#f39c12'; // Orange for medium health
+        } else {
+            progressFill.style.backgroundColor = '#27ae60'; // Green for good health
+        }
+        
         progressFill.style.boxShadow = 'inset 0 0 5px rgba(255, 255, 255, 0.3)';
         progressBar.appendChild(progressFill);
         
@@ -172,13 +177,15 @@ export class MedievalVitals {
         healthText.style.marginLeft = '10px';
         healthText.style.fontSize = '14px';
         healthText.style.fontWeight = 'bold';
-        healthText.textContent = '70/100';
+        healthText.textContent = `${Math.floor(initialHealth)}/${initialMaxHealth}`;
         statRow.appendChild(healthText);
         
         // Store references
         this.healthBar = progressBar;
         this.healthFill = progressFill;
         this.healthText = healthText;
+        
+        logger.info(LogCategory.UI, `Health bar created with initial values: ${Math.floor(initialHealth)}/${initialMaxHealth}`);
     }
     
     /**
@@ -329,21 +336,41 @@ export class MedievalVitals {
      * Updates the UI with current player stats
      */
     updateUI() {
-        // Get player stats from the scene
-        const playerStats = this.scene.playerStats;
-        if (!playerStats) return;
+        // Try to get player stats from PlayerHealthSystem first, then fall back to scene.playerStats
+        let playerStats = this.scene.playerStats;
         
-        // Only update health if it hasn't been updated directly
-        // This prevents overriding direct health updates
-        const currentHealthText = this.healthText.textContent || '0/0';
-        const [currentHealth, currentMaxHealth] = currentHealthText.split('/').map(Number);
-        
-        if (currentHealth !== playerStats.health || currentMaxHealth !== playerStats.maxHealth) {
-            this.updateHealthBar(playerStats.health, playerStats.maxHealth);
+        // If PlayerHealthSystem is available, use it to get the most up-to-date health values
+        if (this.playerHealthSystem) {
+            // Update the reference in case it was initialized after this class
+            if (!playerStats) {
+                playerStats = {};
+            }
+            
+            // Get health values directly from PlayerHealthSystem
+            playerStats.health = this.playerHealthSystem.getHealth();
+            playerStats.maxHealth = this.playerHealthSystem.getMaxHealth();
+            playerStats.godMode = this.playerHealthSystem.isGodModeEnabled();
+            
+            logger.info(LogCategory.UI, `MedievalVitals updateUI - Using PlayerHealthSystem values: health=${playerStats.health}/${playerStats.maxHealth}, godMode=${playerStats.godMode}`);
+        } else if (!playerStats) {
+            logger.warn(LogCategory.UI, 'MedievalVitals updateUI - playerStats not found and PlayerHealthSystem not available');
+            return;
         }
         
-        this.updateXPBar(playerStats.xp, playerStats.xpToNextLevel);
-        this.updateGoldDisplay(playerStats.gold);
+        // Log the current health values for debugging
+        logger.info(LogCategory.UI, `MedievalVitals updateUI - health: ${playerStats.health}/${playerStats.maxHealth}`);
+        
+        // Update health bar with current health values
+        this.updateHealthBar(playerStats.health, playerStats.maxHealth);
+        
+        // Update XP and gold if available
+        if (playerStats.xp !== undefined && playerStats.xpToNextLevel !== undefined) {
+            this.updateXPBar(playerStats.xp, playerStats.xpToNextLevel);
+        }
+        
+        if (playerStats.gold !== undefined) {
+            this.updateGoldDisplay(playerStats.gold);
+        }
         
         // Update god mode indicator
         if (playerStats.godMode !== undefined) {
@@ -357,12 +384,25 @@ export class MedievalVitals {
      * @param {number} maxHealth - Maximum health
      */
     updateHealthBar(health, maxHealth) {
-        if (!this.healthBar || !this.healthFill || !this.healthText) return;
+        if (!this.healthBar || !this.healthFill || !this.healthText) {
+            logger.warn(LogCategory.UI, 'MedievalVitals updateHealthBar - UI elements not initialized');
+            return;
+        }
+        
+        // Ensure health and maxHealth are valid numbers
+        if (typeof health !== 'number' || typeof maxHealth !== 'number' || Number.isNaN(health) || Number.isNaN(maxHealth)) {
+            logger.warn(LogCategory.UI, `MedievalVitals updateHealthBar - Invalid health values: ${health}/${maxHealth}`);
+            return;
+        }
         
         // Calculate health percentage
         const healthPercent = Math.min(1, Math.max(0, health / maxHealth));
         
-        // Update health bar width
+        // Log the health update
+        logger.info(LogCategory.UI, `MedievalVitals updateHealthBar - Setting health bar to ${Math.floor(health)}/${maxHealth} (${Math.floor(healthPercent * 100)}%)`);
+        
+        // Update health bar width with a smooth transition
+        this.healthFill.style.transition = 'width 0.3s ease-in-out';
         this.healthFill.style.width = `${healthPercent * 100}%`;
         
         // Update health text
@@ -379,9 +419,9 @@ export class MedievalVitals {
         
         // Add pulse animation when health is low
         if (healthPercent <= 0.2) {
-            this.healthBar.classList.add('pulse');
+            this.healthFill.style.animation = 'pulse 1.5s infinite';
         } else {
-            this.healthBar.classList.remove('pulse');
+            this.healthFill.style.animation = 'none';
         }
         
         // Update god mode indicator if it exists and god mode is enabled
@@ -544,117 +584,6 @@ export class MedievalVitals {
         }
     }
     
-    /**
-     * Shows a message notification
-     * @param message The message to display
-     * @param type The type of message (info, success, warning, error)
-     * @param duration How long to show the message in milliseconds
-     */
-    showMessage(message, type = 'info', duration = 3000) {
-        // Create message container
-        const messageContainer = document.createElement('div');
-        messageContainer.style.position = 'fixed';
-        messageContainer.style.bottom = '20px';
-        messageContainer.style.left = '50%';
-        messageContainer.style.transform = 'translateX(-50%)';
-        messageContainer.style.padding = '10px 20px';
-        messageContainer.style.zIndex = '1001';
-        messageContainer.style.textAlign = 'center';
-        messageContainer.style.backgroundColor = '#2a1a0a';
-        messageContainer.style.color = '#e8d4b9';
-        messageContainer.style.borderRadius = '8px';
-        messageContainer.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(200, 161, 101, 0.2)';
-        messageContainer.style.fontFamily = 'Cinzel, "Times New Roman", serif';
-        
-        // Set color based on message type
-        let borderColor = '#3498db'; // Default blue for info
-        
-        switch (type) {
-            case 'success':
-                borderColor = '#27ae60'; // Green
-                break;
-            case 'warning':
-                borderColor = '#f39c12'; // Orange
-                break;
-            case 'error':
-                borderColor = '#c0392b'; // Red
-                break;
-        }
-        
-        messageContainer.style.border = `3px solid ${borderColor}`;
-        
-        // Set message text
-        messageContainer.textContent = message;
-        
-        // Add to DOM
-        document.body.appendChild(messageContainer);
-        
-        // Remove after duration
-        setTimeout(() => {
-            if (messageContainer.parentNode) {
-                messageContainer.parentNode.removeChild(messageContainer);
-            }
-        }, duration);
-    }
-    
-    /**
-     * Shows a level up notification
-     * @param level The new level
-     */
-    showLevelUpNotification(level) {
-        // Create level up container
-        const levelUpContainer = document.createElement('div');
-        levelUpContainer.style.position = 'fixed';
-        levelUpContainer.style.top = '50%';
-        levelUpContainer.style.left = '50%';
-        levelUpContainer.style.transform = 'translate(-50%, -50%)';
-        levelUpContainer.style.padding = '20px';
-        levelUpContainer.style.zIndex = '1002';
-        levelUpContainer.style.textAlign = 'center';
-        levelUpContainer.style.backgroundColor = '#2a1a0a';
-        levelUpContainer.style.color = '#e8d4b9';
-        levelUpContainer.style.borderRadius = '8px';
-        levelUpContainer.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(200, 161, 101, 0.2)';
-        levelUpContainer.style.fontFamily = 'Cinzel, "Times New Roman", serif';
-        levelUpContainer.style.border = '3px solid #f0c070';
-        levelUpContainer.style.minWidth = '300px';
-        
-        // Add title
-        const title = document.createElement('h3');
-        title.style.margin = '0 0 15px 0';
-        title.style.color = '#f0c070';
-        title.style.fontSize = '24px';
-        title.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.7)';
-        title.textContent = 'Level Up!';
-        levelUpContainer.appendChild(title);
-        
-        // Add message
-        const message = document.createElement('div');
-        message.style.marginBottom = '15px';
-        message.style.fontSize = '16px';
-        message.textContent = `You have reached level ${level}!`;
-        levelUpContainer.appendChild(message);
-        
-        // Add close button
-        const closeButton = document.createElement('button');
-        closeButton.style.backgroundColor = '#8b5a2b';
-        closeButton.style.color = '#e8d4b9';
-        closeButton.style.border = '2px solid #c8a165';
-        closeButton.style.borderRadius = '4px';
-        closeButton.style.padding = '8px 16px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.style.fontFamily = 'Cinzel, "Times New Roman", serif';
-        closeButton.style.fontSize = '14px';
-        closeButton.style.fontWeight = 'bold';
-        closeButton.textContent = 'Continue';
-        closeButton.addEventListener('click', () => {
-            document.body.removeChild(levelUpContainer);
-        });
-        levelUpContainer.appendChild(closeButton);
-        
-        // Add to DOM
-        document.body.appendChild(levelUpContainer);
-    }
     
     /**
      * Destroys the UI elements
@@ -673,5 +602,75 @@ export class MedievalVitals {
         if (animationStyle?.parentNode) {
             animationStyle.parentNode.removeChild(animationStyle);
         }
+    }
+    
+    /**
+     * Connect to the PlayerHealthSystem to listen for health changes
+     */
+    connectToHealthSystem() {
+        // Try to get the PlayerHealthSystem if not already available
+        if (!this.playerHealthSystem) {
+            this.playerHealthSystem = this.scene.playerHealthSystem;
+        }
+        
+        // Check if the PlayerHealthSystem is available
+        if (this.playerHealthSystem) {
+            logger.info(LogCategory.UI, 'MedievalVitals connecting to PlayerHealthSystem');
+            
+            // Listen for player-stats-changed events
+            if (this.scene.events) {
+                // Remove any existing listeners to prevent duplicates
+                this.scene.events.off('player-stats-changed', this.updateUI, this);
+                this.scene.events.off('godModeChanged', this.setGodMode, this);
+                
+                // Add new listeners with proper context binding
+                this.scene.events.on('player-stats-changed', this.updateUI, this);
+                this.scene.events.on('godModeChanged', this.setGodMode, this);
+                
+                // Also listen for specific health-related events
+                this.scene.events.off('player-damage-taken', this.onPlayerDamageTaken, this);
+                this.scene.events.on('player-damage-taken', this.onPlayerDamageTaken, this);
+                
+                logger.info(LogCategory.UI, 'MedievalVitals event listeners registered');
+            }
+            
+            // Update UI immediately after connecting
+            this.updateUI();
+            
+            logger.info(LogCategory.UI, 'MedievalVitals connected to PlayerHealthSystem');
+        } else {
+            // If PlayerHealthSystem is not available yet, try again after a short delay
+            logger.warn(LogCategory.UI, 'PlayerHealthSystem not available yet, will try to connect later');
+            this.scene.time.delayedCall(500, () => {
+                this.connectToHealthSystem();
+            });
+        }
+    }
+    
+    /**
+     * Handler for player-damage-taken events
+     * @param {number} damage - The amount of damage taken
+     */
+    onPlayerDamageTaken(damage) {
+        // Flash the health bar red when damage is taken
+        if (this.healthFill) {
+            // Store the original color
+            const originalColor = this.healthFill.style.backgroundColor;
+            
+            // Flash red
+            this.healthFill.style.backgroundColor = '#ff0000';
+            this.healthFill.style.boxShadow = '0 0 10px #ff0000, inset 0 0 5px #ffffff';
+            
+            // Restore original color after a short delay
+            this.scene.time.delayedCall(300, () => {
+                if (this.healthFill) {
+                    this.healthFill.style.backgroundColor = originalColor;
+                    this.healthFill.style.boxShadow = 'inset 0 0 5px rgba(255, 255, 255, 0.3)';
+                }
+            });
+        }
+        
+        // Update the UI to reflect the new health value
+        this.updateUI();
     }
 } 

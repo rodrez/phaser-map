@@ -38,7 +38,7 @@ export class PlayerHealthSystem {
         // Set up event listeners
         this.setupEventListeners();
         
-        logger.info(LogCategory.PLAYER, "PlayerHealthSystem initialized");
+        logger.info(LogCategory.HEALTH, "PlayerHealthSystem initialized");
     }
     
     /**
@@ -77,7 +77,7 @@ export class PlayerHealthSystem {
         
         // Log the damage
         logger.info(
-            LogCategory.PLAYER, 
+            LogCategory.HEALTH, 
             `Player took ${actualDamage} damage from ${source}. Health: ${oldHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`
         );
         
@@ -85,6 +85,9 @@ export class PlayerHealthSystem {
         if (this.scene.playerManager?.statsManager?.showDamageText) {
             this.scene.playerManager.statsManager.showDamageText(actualDamage);
         }
+        
+        // Emit damage taken event
+        this.safeEmitEvent('player-damage-taken', actualDamage);
         
         // Update UI
         this.updateUI(true);
@@ -113,7 +116,7 @@ export class PlayerHealthSystem {
         
         // If no healing needed, return early
         if (actualHealAmount <= 0) {
-            logger.info(LogCategory.PLAYER, `Heal attempt from ${source} - Player already at full health`);
+            logger.info(LogCategory.HEALTH, `Heal attempt from ${source} - Player already at full health`);
             return 0;
         }
         
@@ -125,7 +128,7 @@ export class PlayerHealthSystem {
         
         // Log the healing
         logger.info(
-            LogCategory.PLAYER, 
+            LogCategory.HEALTH, 
             `Player healed for ${actualHealAmount} from ${source}. Health: ${oldHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`
         );
         
@@ -173,7 +176,7 @@ export class PlayerHealthSystem {
             // Only heal if health is below 50% of max health
             const healthThreshold = this.playerStats.maxHealth * 0.5; // 50% of max health
             if (currentHealth < healthThreshold) {
-                logger.info(LogCategory.PLAYER, `Health ${currentHealth}/${this.playerStats.maxHealth} is below 50% threshold, triggering god mode healing`);
+                logger.info(LogCategory.HEALTH, `Health ${currentHealth}/${this.playerStats.maxHealth} is below 50% threshold, triggering god mode healing`);
                 
                 // Calculate heal amount
                 const healAmount = this.playerStats.maxHealth - currentHealth;
@@ -194,9 +197,9 @@ export class PlayerHealthSystem {
                     this.scene.uiManager.showMedievalMessage("God Mode: Thou art fully healed!", "success", 1500);
                 }
                 
-                logger.info(LogCategory.PLAYER, `God mode healed player for ${healAmount} health (below 50% threshold). Health: ${currentHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`);
+                logger.info(LogCategory.HEALTH, `God mode healed player for ${healAmount} health (below 50% threshold). Health: ${currentHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`);
             } else {
-                logger.info(LogCategory.PLAYER, `Health ${currentHealth}/${this.playerStats.maxHealth} is above 50% threshold, no god mode healing needed`);
+                logger.info(LogCategory.HEALTH, `Health ${currentHealth}/${this.playerStats.maxHealth} is above 50% threshold, no god mode healing needed`);
             }
         }
     }

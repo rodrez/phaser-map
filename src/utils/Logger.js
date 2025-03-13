@@ -35,8 +35,10 @@ export const LogCategory = {
     POSITION: 'POSITION',
     NETWORK: 'NETWORK',
     DEBUG: 'DEBUG',
-    MENU: 'menu',
-    CHAT: 'chat',
+    MENU: 'MENU',
+    CHAT: 'CHAT',
+    HEALTH: 'HEALTH',
+
     // Add more categories as needed
 };
 

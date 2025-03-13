@@ -12,7 +12,7 @@ export class LoggerPanel {
         // Create container
         this.container = document.createElement('div');
         this.container.style.position = 'fixed';
-        this.container.style.top = '60px';
+        this.container.style.top = '10px';
         this.container.style.left= '10px';
         this.container.style.zIndex = '1000';
         this.container.style.display = 'none';
@@ -27,7 +27,7 @@ export class LoggerPanel {
         this.toggleButton = document.createElement('button');
         this.toggleButton.textContent = '🔍 Logger';
         this.toggleButton.style.position = 'fixed';
-        this.toggleButton.style.top = '90px';
+        this.toggleButton.style.top = '10px';
         this.toggleButton.style.left = '10px';
         this.toggleButton.style.zIndex = '1001';
         this.toggleButton.style.padding = '5px 10px';
@@ -59,6 +59,11 @@ export class LoggerPanel {
         
         // Update button text
         this.toggleButton.textContent = this.isVisible ? '❌ Close' : '🔍 Logger';
+        
+        // If panel is visible, adjust its position to be below the toggle button
+        if (this.isVisible) {
+            this.container.style.top = `${this.toggleButton.offsetHeight + 15}px`;
+        }
     }
 
     /**

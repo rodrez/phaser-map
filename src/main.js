@@ -3,6 +3,7 @@ import { Game } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
+import { loggerPanel } from './ui/logger-panel'; // Import the logger panel
 
 // Import Leaflet
 import 'leaflet';
@@ -41,6 +42,10 @@ const config = {
 
 // Create the game instance and store it in a variable
 const gameInstance = new Phaser.Game(config);
+
+// Initialize the logger panel
+// The panel is already created as a singleton in the import
+// The toggle button will appear at the top left of the screen
 
 // Handle window resize
 window.addEventListener('resize', () => {
