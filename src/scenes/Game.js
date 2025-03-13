@@ -1,11 +1,14 @@
 import { Scene } from "phaser";
 import { MapManager } from "../utils/MapManager";
-import { PlayerManager } from "../utils/PlayerManager";
-import { UIManager } from "../utils/UIManager";
+import { PlayerManager } from "../utils/player/PlayerManager";
+import { UIManager } from "../utils/ui/UIManager";
 import { FlagManager } from "../utils/FlagManager";
 import { Environment } from "../environment";
 import { PopupSystem } from "../ui/popup";
 import { logger, LogCategory } from "../utils/Logger";
+import { MonsterSystem, MonsterPopupSystem } from "../monsters";
+import { ItemSystem } from "../items/item";
+import { CombatSystem } from "../utils/CombatSystem";
 
 export class Game extends Scene {
   constructor() {
@@ -47,11 +50,28 @@ export class Game extends Scene {
       xp: 0,
       xpToNextLevel: 100,
       gold: 0,
-      level: 1
+      level: 1,
     };
 
     // Initialize popup system
     this.popupSystem = new PopupSystem(this, this.mapManager);
+
+    // Initialize item system
+    this.itemSystem = new ItemSystem(this);
+
+    // Initialize combat system
+    this.combatSystem = new CombatSystem(this);
+
+    // Initialize monster popup system
+    this.monsterPopupSystem = new MonsterPopupSystem(this, this.popupSystem);
+
+    // Initialize monster system
+    this.monsterSystem = new MonsterSystem(
+      this, 
+      this.mapManager, 
+      this.playerManager, 
+      this.itemSystem
+    );
 
     // Initialize environment system
     this.environment = new Environment(this);
@@ -77,6 +97,7 @@ export class Game extends Scene {
     logger.info(LogCategory.GAME, "Map:", this.mapManager.getMap());
     logger.info(LogCategory.GAME, "Player:", this.playerManager.getPlayer());
     logger.info(LogCategory.GAME, "Environment initialized");
+    logger.info(LogCategory.GAME, "Monster system initialized");
   }
 
   setupEventListeners() {
@@ -93,6 +114,11 @@ export class Game extends Scene {
     // Listen for add-item-to-inventory event
     this.events.on("add-item-to-inventory", (data) => {
       this.handleAddItemToInventory(data);
+    });
+    
+    // Listen for monster-click event
+    this.events.on("monster-click", (monster) => {
+      this.handleMonsterClick(monster);
     });
   }
 
@@ -220,6 +246,45 @@ export class Game extends Scene {
     }
   }
 
+  /**
+   * Give an item to the player
+   * @param {string} itemId - The ID of the item to give
+   * @param {number} quantity - The quantity of the item to give
+   */
+  givePlayerItem(itemId, quantity = 1) {
+    // Log the item being given
+    logger.info(LogCategory.INVENTORY, `Giving player ${quantity}x ${itemId}`);
+    
+    // Add the item to the player's inventory
+    this.events.emit('add-item-to-inventory', { itemId, quantity });
+    
+    // Show a message to the player
+    if (this.uiManager) {
+      const item = this.itemSystem.getItem(itemId);
+      if (item) {
+        const itemName = item.name || itemId;
+        this.uiManager.showMedievalMessage(`Thou hast acquired ${quantity}x ${itemName}!`, 'success', 3000);
+      }
+    }
+  }
+
+  /**
+   * Handle a click on a monster
+   * @param {Object} monster - The monster that was clicked
+   */
+  handleMonsterClick(monster) {
+    if (!monster) return;
+    
+    // Log the monster click
+    logger.info(LogCategory.MONSTER, `Clicked on monster: ${monster.monsterName}`);
+    
+    // Attack the monster with a base damage of 10
+    // In a real game, this would be based on the player's weapon, stats, etc.
+    if (this.combatSystem) {
+      this.combatSystem.playerAttackMonster(monster, 10);
+    }
+  }
+
   update(time, delta) {
     // Update player position
     if (this.playerManager) {
@@ -227,6 +292,26 @@ export class Game extends Scene {
       
       // Ensure the player reference in the registry is up to date
       this.registry.set('player', this.playerManager.getPlayer());
+    }
+    
+    // Apply god mode healing if enabled and health is below 50%
+    if (this.playerStats?.godMode && this.playerStats.health < this.playerStats.maxHealth * 0.5) {
+      // Heal to full health immediately when in god mode and health is below 50%
+      const oldHealth = this.playerStats.health;
+      this.playerStats.health = this.playerStats.maxHealth;
+      
+      // Update UI to reflect health changes
+      if (this.uiManager) {
+        this.uiManager.updateHealthBar(this.playerStats.health, this.playerStats.maxHealth);
+        this.uiManager.showMedievalMessage("God Mode: Thou art fully healed!", "success", 1500);
+      }
+      
+      // Show healing effect if we have a player manager
+      if (this.playerManager?.statsManager) {
+        this.playerManager.statsManager.showGodModeHealEffect(this.playerStats.maxHealth - oldHealth);
+      }
+      
+      logger.info(LogCategory.GAME, `God Mode healing applied. Health: ${oldHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`);
     }
     
     // Update flag positions
@@ -237,6 +322,11 @@ export class Game extends Scene {
     // Update UI
     if (this.uiManager) {
       this.uiManager.update();
+    }
+    
+    // Update monster system
+    if (this.monsterSystem) {
+      this.monsterSystem.update(time, delta);
     }
     
     // Update environment and check for healing auras
@@ -274,6 +364,7 @@ export class Game extends Scene {
     // Clean up custom event listeners
     this.events.off("double-click-move");
     this.events.off("add-item-to-inventory");
+    this.events.off("monster-click");
 
     // Clean up managers
     if (this.playerManager) {
@@ -294,6 +385,14 @@ export class Game extends Scene {
     
     if (this.popupSystem) {
       this.popupSystem.destroy();
+    }
+    
+    if (this.monsterSystem) {
+      this.monsterSystem.destroy();
+    }
+    
+    if (this.monsterPopupSystem) {
+      this.monsterPopupSystem.destroy();
     }
 
     logger.info(LogCategory.GAME, "Game scene shutdown");

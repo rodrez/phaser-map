@@ -1,4 +1,5 @@
 import { Scene } from "phaser";
+import { logger, LogCategory } from './Logger';
 
 /**
  * FlagManager class to handle all flag-related functionality
@@ -73,8 +74,8 @@ export class FlagManager {
       this.createFlagSprite(flag);
       
       if (this.mapManager.debug) {
-        console.log("Flag added at:", lat, lng);
-        console.log("Total flags:", this.mapManager.flags.length);
+        logger.info(LogCategory.FLAG, `Flag added at: ${lat}, ${lng}`);
+        logger.info(LogCategory.FLAG, `Total flags: ${this.mapManager.flags.length}`);
       }
       
       return flag;
@@ -109,7 +110,7 @@ export class FlagManager {
       
       // Add click handler
       flagSprite.on('pointerdown', () => {
-        console.log("Flag sprite clicked at:", flag.lat, flag.lng);
+        logger.info(LogCategory.FLAG, `Flag sprite clicked at: ${flag.lat}, ${flag.lng}`);
         this.handleFlagClick(flag);
       });
       
@@ -156,7 +157,7 @@ export class FlagManager {
       
       // Add click handler
       container.on('pointerdown', () => {
-        console.log("Flag container clicked at:", flag.lat, flag.lng);
+        logger.info(LogCategory.FLAG, `Flag container clicked at: ${flag.lat}, ${flag.lng}`);
         this.handleFlagClick(flag);
       });
       
@@ -199,7 +200,7 @@ export class FlagManager {
     
     // Add a click event listener to the hitarea
     hitarea.addEventListener("click", (e) => {
-      console.log("Flag hitarea clicked at:", flag.lat, flag.lng);
+      logger.info(LogCategory.FLAG, `Flag hitarea clicked at: ${flag.lat}, ${flag.lng}`);
       this.handleFlagClick(flag);
       e.stopPropagation();
     });
@@ -228,7 +229,7 @@ export class FlagManager {
    * @param {Object} flag - The flag object that was clicked
    */
   handleFlagClick(flag) {
-    console.log("Handling flag click, jumping to:", flag.lat, flag.lng);
+    logger.info(LogCategory.FLAG, `Handling flag click, jumping to: ${flag.lat}, ${flag.lng}`);
     
     // Jump to the flag using the MapManager's method after a short delay
     // This delay helps the user see the visual feedback

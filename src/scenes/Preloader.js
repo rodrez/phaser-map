@@ -46,6 +46,12 @@ export class Preloader extends Scene {
 			frameWidth: 16,
 			frameHeight: 16,
 		});
+
+		// Load monster sprites
+		this.load.image('stag', 'assets/monsters/stag.png');
+		this.load.image('wolf', 'assets/monsters/wolf.png');
+		this.load.image('bear', 'assets/monsters/bear.png');
+		this.load.image('boar', 'assets/monsters/boar.png');
 	}
 
 	create() {

@@ -66,7 +66,7 @@ export class MedievalVitals {
     }
     
     /**
-     * Adds a pulse animation for low health
+     * Adds a pulse animation for low health and glow animation for god mode
      */
     addPulseAnimation() {
         // Check if the animation already exists
@@ -84,8 +84,8 @@ export class MedievalVitals {
                 }
                 
                 @keyframes glow {
-                    from { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
-                    to { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+                    0% { box-shadow: 0 0 5px #f0c070; }
+                    100% { box-shadow: 0 0 20px #f0c070, 0 0 30px #f0c070; }
                 }
                 
                 @keyframes goldChange {
@@ -286,17 +286,17 @@ export class MedievalVitals {
         godModeIndicator.style.right = '10px';
         godModeIndicator.style.padding = '5px 10px';
         godModeIndicator.style.backgroundColor = '#2a1a0a';
-        godModeIndicator.style.color = '#f0c070';
+        godModeIndicator.style.color = '#ffcc00';
         godModeIndicator.style.borderRadius = '4px';
         godModeIndicator.style.fontFamily = 'Cinzel, "Times New Roman", serif';
         godModeIndicator.style.fontWeight = 'bold';
-        godModeIndicator.style.fontSize = '14px';
-        godModeIndicator.style.border = '2px solid #f0c070';
-        godModeIndicator.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.5)';
+        godModeIndicator.style.fontSize = '16px';
+        godModeIndicator.style.border = '2px solid #ffcc00';
+        godModeIndicator.style.boxShadow = '0 0 10px #ffcc00';
         godModeIndicator.style.display = 'none'; // Hidden by default
-        godModeIndicator.style.animation = 'glow 2s infinite alternate';
+        godModeIndicator.style.animation = 'glow 1.5s infinite alternate';
         godModeIndicator.style.zIndex = '1000';
-        godModeIndicator.textContent = 'GOD MODE';
+        godModeIndicator.innerHTML = '⚡ GOD MODE ⚡<br><span style="font-size: 12px; color: #e8d4b9;">Heals below 50% health</span>';
         
         // Add to document body
         document.body.appendChild(godModeIndicator);
@@ -333,31 +333,79 @@ export class MedievalVitals {
         const playerStats = this.scene.playerStats;
         if (!playerStats) return;
         
-        this.updateHealthBar(playerStats.health, playerStats.maxHealth);
+        // Only update health if it hasn't been updated directly
+        // This prevents overriding direct health updates
+        const currentHealthText = this.healthText.textContent || '0/0';
+        const [currentHealth, currentMaxHealth] = currentHealthText.split('/').map(Number);
+        
+        if (currentHealth !== playerStats.health || currentMaxHealth !== playerStats.maxHealth) {
+            this.updateHealthBar(playerStats.health, playerStats.maxHealth);
+        }
+        
         this.updateXPBar(playerStats.xp, playerStats.xpToNextLevel);
         this.updateGoldDisplay(playerStats.gold);
+        
+        // Update god mode indicator
+        if (playerStats.godMode !== undefined) {
+            this.setGodMode(playerStats.godMode);
+        }
     }
     
     /**
-     * Updates the health bar display
+     * Updates the health bar
+     * @param {number} health - Current health
+     * @param {number} maxHealth - Maximum health
      */
     updateHealthBar(health, maxHealth) {
-        const healthPercent = Math.max(0, health / maxHealth);
+        if (!this.healthBar || !this.healthFill || !this.healthText) return;
         
-        // Update fill width
+        // Calculate health percentage
+        const healthPercent = Math.min(1, Math.max(0, health / maxHealth));
+        
+        // Update health bar width
         this.healthFill.style.width = `${healthPercent * 100}%`;
         
-        // Update text
-        this.healthText.textContent = `${health}/${maxHealth}`;
+        // Update health text
+        this.healthText.textContent = `${Math.floor(health)}/${maxHealth}`;
         
-        // Change color based on health percentage
-        if (healthPercent <= 0.3) {
-            this.healthFill.style.backgroundColor = '#c0392b'; // Red color
-            // Add pulsing animation for low health
-            this.healthFill.style.animation = 'pulse 1.5s infinite';
+        // Update health bar color based on health percentage
+        if (healthPercent <= 0.2) {
+            this.healthFill.style.backgroundColor = '#e74c3c'; // Red for critical health
+        } else if (healthPercent <= 0.5) {
+            this.healthFill.style.backgroundColor = '#f39c12'; // Orange for medium health
         } else {
-            this.healthFill.style.backgroundColor = '#c0392b'; // Red color
-            this.healthFill.style.animation = 'none';
+            this.healthFill.style.backgroundColor = '#27ae60'; // Green for good health
+        }
+        
+        // Add pulse animation when health is low
+        if (healthPercent <= 0.2) {
+            this.healthBar.classList.add('pulse');
+        } else {
+            this.healthBar.classList.remove('pulse');
+        }
+        
+        // Update god mode indicator if it exists and god mode is enabled
+        if (this.isGodMode && this.godModeIndicator && this.godModeIndicator.style.display !== 'none') {
+            const healthPercentDisplay = Math.floor(healthPercent * 100);
+            const healthThreshold = 50; // 50% threshold for god mode healing
+            
+            // Update the indicator text with health info
+            this.godModeIndicator.innerHTML = `⚡ GOD MODE ⚡<br>
+                <span style="font-size: 12px; color: #e8d4b9;">
+                    Health: ${healthPercentDisplay}%<br>
+                    Heals below ${healthThreshold}% health
+                </span>`;
+            
+            // Change border color based on whether healing would trigger
+            if (healthPercentDisplay < healthThreshold) {
+                // Green border when healing will trigger
+                this.godModeIndicator.style.borderColor = '#27ae60'; // Green when healing will trigger
+                this.godModeIndicator.style.boxShadow = '0 0 10px #27ae60';
+            } else {
+                // Default yellow border
+                this.godModeIndicator.style.borderColor = '#ffcc00'; // Default yellow
+                this.godModeIndicator.style.boxShadow = '0 0 10px #ffcc00';
+            }
         }
     }
     
@@ -466,6 +514,33 @@ export class MedievalVitals {
         
         if (this.godModeIndicator) {
             this.godModeIndicator.style.display = enabled ? 'block' : 'none';
+            
+            // If enabled, make sure the indicator is more noticeable
+            if (enabled) {
+                // Update the indicator with current health info
+                const playerStats = this.scene.playerStats;
+                if (playerStats) {
+                    const healthPercent = Math.floor((playerStats.health / playerStats.maxHealth) * 100);
+                    const healthThreshold = 50; // 50% threshold for god mode healing
+                    
+                    this.godModeIndicator.innerHTML = `⚡ GOD MODE ⚡<br>
+                        <span style="font-size: 12px; color: #e8d4b9;">
+                            Health: ${healthPercent}%<br>
+                            Heals below ${healthThreshold}% health
+                        </span>`;
+                    
+                    // Change border color based on whether healing would trigger
+                    if (healthPercent < healthThreshold) {
+                        // Green border when healing will trigger
+                        this.godModeIndicator.style.borderColor = '#27ae60'; // Green when healing will trigger
+                        this.godModeIndicator.style.boxShadow = '0 0 10px #27ae60';
+                    } else {
+                        // Default yellow border
+                        this.godModeIndicator.style.borderColor = '#ffcc00'; // Default yellow
+                        this.godModeIndicator.style.boxShadow = '0 0 10px #ffcc00';
+                    }
+                }
+            }
         }
     }
     

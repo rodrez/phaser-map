@@ -1,5 +1,6 @@
 import type { Scene } from "phaser";
 import type { MapManager} from "../utils/MapManager";
+import { logger, LogCategory } from "../utils/Logger";
 
 /**
  * Interface for popup options
@@ -54,7 +55,7 @@ export class PopupSystem {
     this.createInteractionElement();
 
     // CSS is now loaded via import statement
-    console.log("PopupSystem initialized with external CSS");
+    logger.info(LogCategory.UI, "PopupSystem initialized with external CSS");
   }
 
   /**
@@ -239,7 +240,7 @@ export class PopupSystem {
 
       return overlay;
     } catch (error) {
-      console.error("Error creating popup:", error);
+      logger.error(LogCategory.UI, `Error creating popup: ${error}`);
       return null;
     }
   }
@@ -393,7 +394,7 @@ export class PopupSystem {
 
       return overlay;
     } catch (error) {
-      console.error("Error creating popup:", error);
+      logger.error(LogCategory.UI, `Error creating popup: ${error}`);
       return null;
     }
   }
@@ -448,7 +449,7 @@ export class PopupSystem {
         });
       }
     } catch (error) {
-      console.error("Error updating popup content:", error);
+      logger.error(LogCategory.UI, `Error updating popup content: ${error}`);
     }
   }
 
@@ -475,7 +476,7 @@ export class PopupSystem {
         }
       }, 300); // Match the transition duration
     } catch (error) {
-      console.error("Error closing popup:", error);
+      logger.error(LogCategory.UI, `Error closing popup: ${error}`);
     }
   }
 
@@ -495,7 +496,7 @@ export class PopupSystem {
         this.closePopup(popup);
       }
     } catch (error) {
-      console.error("Error closing popups by class:", error);
+      logger.error(LogCategory.UI, `Error closing popups by class: ${error}`);
     }
   }
 
@@ -512,7 +513,7 @@ export class PopupSystem {
         this.closePopup(popup);
       }
     } catch (error) {
-      console.error("Error closing all popups:", error);
+      logger.error(LogCategory.UI, `Error closing all popups: ${error}`);
     }
   }
 
@@ -539,9 +540,9 @@ export class PopupSystem {
         this.interactionElement.parentNode.removeChild(this.interactionElement);
       }
 
-      console.log("PopupSystem destroyed");
+      logger.info(LogCategory.UI, "PopupSystem destroyed");
     } catch (error) {
-      console.error("Error destroying PopupSystem:", error);
+      logger.error(LogCategory.UI, `Error destroying PopupSystem: ${error}`);
     }
   }
 
@@ -572,7 +573,7 @@ export class PopupSystem {
       // Create the popup at the specified screen position
       return this.createPopupAtScreenPosition(content, popupOptions, x, y);
     } catch (error) {
-      console.error("Error creating standard popup:", error);
+      logger.error(LogCategory.UI, `Error creating standard popup: ${error}`);
       return null;
     }
   }
@@ -593,7 +594,7 @@ export class PopupSystem {
       // Create the standard popup at the screen position
       return this.createStandardPopup(screenPos.x, screenPos.y, options);
     } catch (error) {
-      console.error("Error creating standard popup at lat/lng:", error);
+      logger.error(LogCategory.UI, `Error creating standard popup at lat/lng: ${error}`);
       return null;
     }
   }
@@ -623,7 +624,7 @@ export class PopupSystem {
       // Create the popup at the center of the screen (using default 0,0 which will be centered)
       return this.createPopupAtScreenPosition(content, popupOptions);
     } catch (error) {
-      console.error("Error creating centered standard popup:", error);
+      logger.error(LogCategory.UI, `Error creating centered standard popup: ${error}`);
       return null;
     }
   }
@@ -701,7 +702,7 @@ export class PopupSystem {
       // Create the popup at the center of the screen (using default 0,0 which will be centered)
       return this.createPopupAtScreenPosition(content, options);
     } catch (error) {
-      console.error("Error creating centered popup:", error);
+      logger.error(LogCategory.UI, `Error creating centered popup: ${error}`);
       return null;
     }
   }
