@@ -131,7 +131,7 @@ export class UIManager {
             // Regenerate environment around player
             this.scene.environment.generateEnvironment(player.x, player.y, 300);
             // Show message
-            this.showMessage('Environment regenerated!', '#4CAF50');
+            this.showMedievalMessage('The lands around thee have been transformed!', 'success');
         });
         
         this.uiContainer.add(regenerateButton);
@@ -390,27 +390,126 @@ export class UIManager {
      * Show a message
      * @param {string} text - The message text
      * @param {string} backgroundColor - The background color of the message
+     * @param {number} duration - The duration to show the message in milliseconds
      */
-    showMessage(text, backgroundColor) {
-        // Create message text
-        const message = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height - 50, text, {
-            fontFamily: 'Arial',
-            fontSize: 18,
-            color: '#ffffff',
-            backgroundColor: backgroundColor,
-            padding: { left: 15, right: 15, top: 10, bottom: 10 }
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
-        
-        // Fade out and destroy after 2 seconds
-        this.scene.tweens.add({
-            targets: message,
-            alpha: 0,
-            duration: 1000,
-            delay: 1000,
-            onComplete: () => {
-                message.destroy();
+    showMessage(text, backgroundColor, duration = 2000) {
+        // If MedievalVitals is available, use it instead
+        if (this.uiComponents.vitals) {
+            // Convert backgroundColor to message type
+            let type = 'info';
+            if (backgroundColor === '#4CAF50' || backgroundColor === '#27ae60') {
+                type = 'success';
+            } else if (backgroundColor === '#FF5252' || backgroundColor === '#c0392b') {
+                type = 'error';
+            } else if (backgroundColor === '#f39c12' || backgroundColor === '#f0c070') {
+                type = 'warning';
             }
-        });
+            
+            this.showMedievalMessage(text, type, duration);
+            return;
+        }
+        
+        // Create a DOM-based medieval styled message
+        const messageContainer = document.createElement('div');
+        messageContainer.style.position = 'fixed';
+        messageContainer.style.bottom = '20px';
+        messageContainer.style.left = '50%';
+        messageContainer.style.transform = 'translateX(-50%)';
+        messageContainer.style.padding = '15px 25px';
+        messageContainer.style.zIndex = '1001';
+        messageContainer.style.textAlign = 'center';
+        messageContainer.style.backgroundColor = '#2a1a0a'; // Dark brown background
+        messageContainer.style.color = '#e8d4b9'; // Light parchment text color
+        messageContainer.style.borderRadius = '8px';
+        messageContainer.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(200, 161, 101, 0.2)';
+        messageContainer.style.fontFamily = 'Cinzel, "Times New Roman", serif';
+        messageContainer.style.border = `3px solid ${backgroundColor}`;
+        messageContainer.style.minWidth = '280px';
+        messageContainer.style.maxWidth = '80%';
+        
+        // Add decorative corners
+        const cornerTopLeft = document.createElement('div');
+        cornerTopLeft.style.position = 'absolute';
+        cornerTopLeft.style.top = '0';
+        cornerTopLeft.style.left = '0';
+        cornerTopLeft.style.width = '12px';
+        cornerTopLeft.style.height = '12px';
+        cornerTopLeft.style.borderTop = `2px solid ${backgroundColor}`;
+        cornerTopLeft.style.borderLeft = `2px solid ${backgroundColor}`;
+        
+        const cornerTopRight = document.createElement('div');
+        cornerTopRight.style.position = 'absolute';
+        cornerTopRight.style.top = '0';
+        cornerTopRight.style.right = '0';
+        cornerTopRight.style.width = '12px';
+        cornerTopRight.style.height = '12px';
+        cornerTopRight.style.borderTop = `2px solid ${backgroundColor}`;
+        cornerTopRight.style.borderRight = `2px solid ${backgroundColor}`;
+        
+        const cornerBottomLeft = document.createElement('div');
+        cornerBottomLeft.style.position = 'absolute';
+        cornerBottomLeft.style.bottom = '0';
+        cornerBottomLeft.style.left = '0';
+        cornerBottomLeft.style.width = '12px';
+        cornerBottomLeft.style.height = '12px';
+        cornerBottomLeft.style.borderBottom = `2px solid ${backgroundColor}`;
+        cornerBottomLeft.style.borderLeft = `2px solid ${backgroundColor}`;
+        
+        const cornerBottomRight = document.createElement('div');
+        cornerBottomRight.style.position = 'absolute';
+        cornerBottomRight.style.bottom = '0';
+        cornerBottomRight.style.right = '0';
+        cornerBottomRight.style.width = '12px';
+        cornerBottomRight.style.height = '12px';
+        cornerBottomRight.style.borderBottom = `2px solid ${backgroundColor}`;
+        cornerBottomRight.style.borderRight = `2px solid ${backgroundColor}`;
+        
+        messageContainer.appendChild(cornerTopLeft);
+        messageContainer.appendChild(cornerTopRight);
+        messageContainer.appendChild(cornerBottomLeft);
+        messageContainer.appendChild(cornerBottomRight);
+        
+        // Add medieval prefix based on message type
+        let prefix = '';
+        if (backgroundColor === '#4CAF50' || backgroundColor === '#27ae60') {
+            prefix = 'Huzzah! ';
+        } else if (backgroundColor === '#FF5252' || backgroundColor === '#c0392b') {
+            prefix = 'Alas! ';
+        } else if (backgroundColor === '#f39c12' || backgroundColor === '#f0c070') {
+            prefix = 'Hearken! ';
+        } else {
+            prefix = 'Behold! ';
+        }
+        
+        // Create content wrapper for the message text
+        const contentWrapper = document.createElement('div');
+        contentWrapper.style.position = 'relative';
+        contentWrapper.style.zIndex = '2';
+        
+        // Set message text with prefix
+        contentWrapper.textContent = prefix + text;
+        messageContainer.appendChild(contentWrapper);
+        
+        // Add to DOM
+        document.getElementById('game-container')?.appendChild(messageContainer) || 
+            document.body.appendChild(messageContainer);
+        
+        // Add fade-in animation
+        messageContainer.style.opacity = '0';
+        messageContainer.style.transition = 'opacity 0.3s ease-in-out';
+        setTimeout(() => {
+            messageContainer.style.opacity = '1';
+        }, 10);
+        
+        // Remove after duration with fade-out
+        setTimeout(() => {
+            messageContainer.style.opacity = '0';
+            setTimeout(() => {
+                if (messageContainer.parentNode) {
+                    messageContainer.parentNode.removeChild(messageContainer);
+                }
+            }, 300);
+        }, duration);
     }
     
     /**
@@ -467,8 +566,28 @@ export class UIManager {
      * @param {number} duration - The duration to show the message
      */
     showMedievalMessage(text, type = 'info', duration = 3000) {
+        // Add medieval prefix based on message type
+        let prefix = '';
+        switch (type) {
+            case 'success':
+                prefix = 'Huzzah! ';
+                break;
+            case 'error':
+                prefix = 'Alas! ';
+                break;
+            case 'warning':
+                prefix = 'Hearken! ';
+                break;
+            default:
+                prefix = 'Behold! ';
+                break;
+        }
+        
+        // Create message with prefix if needed
+        const messageText = text.startsWith(prefix) ? text : prefix + text;
+        
         if (this.uiComponents.vitals) {
-            this.uiComponents.vitals.showMessage(text, type, duration);
+            this.uiComponents.vitals.showMessage(messageText, type, duration);
         } else {
             // Fallback to regular message
             const bgColors = {
@@ -477,7 +596,7 @@ export class UIManager {
                 warning: '#f39c12',
                 error: '#c0392b'
             };
-            this.showMessage(text, bgColors[type] || bgColors.info);
+            this.showMessage(messageText, bgColors[type] || bgColors.info, duration);
         }
     }
     
@@ -486,11 +605,13 @@ export class UIManager {
      * @param {number} level - The new level
      */
     showLevelUp(level) {
+        const medievalLevelMessage = `Thy prowess grows! Thou hast attained level ${level}!`;
+        
         if (this.uiComponents.vitals) {
             this.uiComponents.vitals.showLevelUpNotification(level);
         } else {
-            // Fallback to regular message
-            this.showMessage(`Level Up! You reached level ${level}`, '#f0c070');
+            // Fallback to regular message with medieval styling
+            this.showMessage(medievalLevelMessage, '#f0c070');
         }
     }
     

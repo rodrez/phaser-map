@@ -156,10 +156,10 @@ export class Game extends Scene {
       this.uiManager.updateFlagCounter();
 
       // Show success message
-      this.uiManager.showMessage("Flag placed successfully!", "#4CAF50");
+      this.uiManager.showMedievalMessage("Flag placed successfully!", "success");
     } else {
       // Show error message
-      this.uiManager.showMessage("Cannot place flag here!", "#FF5252");
+      this.uiManager.showMedievalMessage("Cannot place flag here!", "error");
     }
   }
 
@@ -192,7 +192,7 @@ export class Game extends Scene {
       
       logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
     } else {
-      this.uiManager.showMessage("Cannot move to that location!", "#FF5252");
+      this.uiManager.showMedievalMessage("Cannot move to that location!", "error");
     }
   }
 
@@ -208,7 +208,7 @@ export class Game extends Scene {
     
     // Here you would update the player's inventory
     // For now, we'll just show a message
-    this.uiManager.showMessage(`Added ${data.quantity}x ${data.itemId} to inventory!`, "#4CAF50");
+    this.uiManager.showMedievalMessage(`Thou hast acquired ${data.quantity}x ${data.itemId}!`, "success");
     
     // Update any UI elements that show inventory
     // For example, update menu badges
