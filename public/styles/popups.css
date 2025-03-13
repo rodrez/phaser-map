@@ -1,0 +1,329 @@
+/* Popup styles for medieval UI */
+.custom-popup {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    color: #e8d4b9;
+    background-color: #2a1a0a;
+    border: 3px solid;
+    border-image: linear-gradient(to bottom, #c8a165, #8b5a2b) 1;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(200, 161, 101, 0.2);
+    padding: 25px;
+    position: relative;
+    z-index: 1000;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+/* Popup overlay - blocks clicks to game canvas */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+/* Decorative corner elements */
+.popup-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    z-index: 1001;
+}
+
+.corner-top-left {
+    top: -5px;
+    left: -5px;
+    border-top: 3px solid #c8a165;
+    border-left: 3px solid #c8a165;
+    border-top-left-radius: 8px;
+}
+
+.corner-top-right {
+    top: -5px;
+    right: -5px;
+    border-top: 3px solid #c8a165;
+    border-right: 3px solid #c8a165;
+    border-top-right-radius: 8px;
+}
+
+.corner-bottom-left {
+    bottom: -5px;
+    left: -5px;
+    border-bottom: 3px solid #8b5a2b;
+    border-left: 3px solid #8b5a2b;
+    border-bottom-left-radius: 8px;
+}
+
+.corner-bottom-right {
+    bottom: -5px;
+    right: -5px;
+    border-bottom: 3px solid #8b5a2b;
+    border-right: 3px solid #8b5a2b;
+    border-bottom-right-radius: 8px;
+}
+
+.popup-title {
+    color: #f0c070;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    padding-bottom: 10px;
+    position: relative;
+    letter-spacing: 1px;
+}
+
+.popup-title:after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #c8a165, transparent);
+}
+
+.popup-icon {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 60px;
+    background: #2a1a0a;
+    border: 3px solid #c8a165;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(200, 161, 101, 0.5);
+}
+
+.popup-content {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: rgba(200, 161, 101, 0.1);
+    border-radius: 4px;
+    position: relative;
+}
+
+.popup-content:before,
+.popup-content:after {
+    content: "❧";
+    display: block;
+    color: #c8a165;
+    font-size: 20px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+/* Close button styling - matches the class used in the code */
+.close-button {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    cursor: pointer;
+    color: #c8a165;
+    font-size: 20px;
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.close-button:hover {
+    color: #f0c070;
+    background-color: rgba(200, 161, 101, 0.2);
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Button styles */
+.popup-button {
+    background: linear-gradient(to bottom, #8b5a2b, #6d4520);
+    border: 1px solid #c8a165;
+    border-radius: 4px;
+    color: #e8d4b9;
+    cursor: pointer;
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 20px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.popup-button:hover {
+    background: linear-gradient(to bottom, #a06c33, #8b5a2b);
+    box-shadow: 0 0 10px rgba(200, 161, 101, 0.5);
+}
+
+.popup-button:active {
+    transform: translateY(1px);
+}
+
+.popup-button:before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.popup-button:hover:before {
+    transform: translateY(300%);
+}
+
+/* Button variants */
+.popup-button-primary {
+    background: linear-gradient(to bottom, #4a7eb5, #2c5a8c);
+    border-color: #6a9fd5;
+}
+
+.popup-button-primary:hover {
+    background: linear-gradient(to bottom, #5a8ec5, #4a7eb5);
+    box-shadow: 0 0 10px rgba(106, 159, 213, 0.5);
+}
+
+.popup-button-success {
+    background: linear-gradient(to bottom, #5a9d5a, #3c7c3c);
+    border-color: #7abd7a;
+}
+
+.popup-button-success:hover {
+    background: linear-gradient(to bottom, #6aad6a, #5a9d5a);
+    box-shadow: 0 0 10px rgba(122, 189, 122, 0.5);
+}
+
+.popup-button-info {
+    background: linear-gradient(to bottom, #5bc0de, #31b0d5);
+    border-color: #7cd1e7;
+}
+
+.popup-button-info:hover {
+    background: linear-gradient(to bottom, #6bcbde, #5bc0de);
+    box-shadow: 0 0 10px rgba(124, 209, 231, 0.5);
+}
+
+.popup-button-danger {
+    background: linear-gradient(to bottom, #d9534f, #c9302c);
+    border-color: #e27c79;
+}
+
+.popup-button-danger:hover {
+    background: linear-gradient(to bottom, #e9635f, #d9534f);
+    box-shadow: 0 0 10px rgba(226, 124, 121, 0.5);
+}
+
+.popup-button-warning {
+    background: linear-gradient(to bottom, #f0ad4e, #ec971f);
+    border-color: #f4c37d;
+}
+
+.popup-button-warning:hover {
+    background: linear-gradient(to bottom, #f5bd6e, #f0ad4e);
+    box-shadow: 0 0 10px rgba(244, 195, 125, 0.5);
+}
+
+.parchment-texture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" stitchTiles="stitch" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.1 0" in="noise" result="noiseOutput"/></filter><rect width="200" height="200" filter="url(%23noise)" opacity="0.05"/></svg>');
+    opacity: 0.7;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: -1;
+}
+
+/* Message popup styles */
+.message-popup {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-align: center;
+    animation: fadeInUp 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+}
+
+/* Alert styles */
+.popup-alert {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.popup-alert-info {
+    background-color: rgba(91, 192, 222, 0.2);
+    border-left-color: #5bc0de;
+    color: #9adced;
+}
+
+.popup-alert-success {
+    background-color: rgba(92, 184, 92, 0.2);
+    border-left-color: #5cb85c;
+    color: #9ad99a;
+}
+
+.popup-alert-warning {
+    background-color: rgba(240, 173, 78, 0.2);
+    border-left-color: #f0ad4e;
+    color: #f5c77e;
+}
+
+.popup-alert-danger {
+    background-color: rgba(217, 83, 79, 0.2);
+    border-left-color: #d9534f;
+    color: #e48784;
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+} 

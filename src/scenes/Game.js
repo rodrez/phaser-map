@@ -3,6 +3,8 @@ import { MapManager } from "../utils/MapManager";
 import { PlayerManager } from "../utils/PlayerManager";
 import { UIManager } from "../utils/UIManager";
 import { FlagManager } from "../utils/FlagManager";
+import { Environment } from "../environment";
+import { PopupSystem } from "../ui/popup";
 import { logger, LogCategory } from "../utils/Logger";
 
 export class Game extends Scene {
@@ -35,6 +37,25 @@ export class Game extends Scene {
     // Initialize flag manager
     this.flagManager = new FlagManager(this, this.mapManager);
 
+    // Initialize player stats
+    this.playerStats = {
+      health: 100,
+      maxHealth: 100,
+      xp: 0,
+      xpToNextLevel: 100,
+      gold: 0,
+      level: 1
+    };
+
+    // Initialize popup system
+    this.popupSystem = new PopupSystem(this, this.mapManager);
+
+    // Initialize environment system
+    this.environment = new Environment(this);
+    
+    // Connect environment with popup system
+    this.environment.setPopupSystem(this.popupSystem);
+
     // Initialize UI manager
     this.uiManager = new UIManager(this, this.mapManager);
 
@@ -44,10 +65,15 @@ export class Game extends Scene {
     // Add DOM event listeners to handle interactions
     this.setupDOMEventListeners();
 
+    // Generate environment elements around the player
+    const player = this.playerManager.getPlayer();
+    this.environment.generateEnvironment(player.x, player.y, 300);
+
     // Log debug info
     logger.info(LogCategory.GAME, "Game scene created");
     logger.info(LogCategory.GAME, "Map:", this.mapManager.getMap());
     logger.info(LogCategory.GAME, "Player:", this.playerManager.getPlayer());
+    logger.info(LogCategory.GAME, "Environment initialized");
   }
 
   setupEventListeners() {
@@ -114,6 +140,27 @@ export class Game extends Scene {
       this.flagManager.update();
     }
     
+    // Update UI
+    if (this.uiManager) {
+      this.uiManager.update();
+    }
+    
+    // Update environment and check for healing auras
+    if (this.environment && this.playerManager) {
+      const player = this.playerManager.getPlayer();
+      // Check if player is in any healing aura and apply effects
+      const isInHealingAura = this.environment.checkHealingAuras(player, this.playerStats, this);
+      
+      // Track player's healing aura state to emit events when it changes
+      if (isInHealingAura && !this.playerInHealingAura) {
+        this.playerInHealingAura = true;
+        this.events.emit('player-in-healing-aura');
+      } else if (!isInHealingAura && this.playerInHealingAura) {
+        this.playerInHealingAura = false;
+        this.events.emit('player-left-healing-aura');
+      }
+    }
+    
     // Ensure the map is properly invalidated to handle any size changes
     this.mapManager?.getMap()?.invalidateSize();
   }
@@ -136,6 +183,14 @@ export class Game extends Scene {
     
     if (this.flagManager) {
       this.flagManager.destroy();
+    }
+    
+    if (this.environment) {
+      this.environment.destroy();
+    }
+    
+    if (this.popupSystem) {
+      this.popupSystem.destroy();
     }
 
     logger.info(LogCategory.GAME, "Game scene shutdown");

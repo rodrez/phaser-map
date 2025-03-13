@@ -14,7 +14,7 @@ export class Preloader extends Scene
         const centerY = this.cameras.main.height / 2;
         
         // We loaded this image in our Boot Scene, so we can display it here
-        this.add.image(centerX, centerY, 'background');
+        // this.add.image(centerX, centerY, 'background');
 
         // A simple progress bar. This is the outline of the bar.
         this.add.rectangle(centerX, centerY, 468, 32).setStrokeStyle(1, 0xffffff);
@@ -37,6 +37,13 @@ export class Preloader extends Scene
         // Load any additional assets here
         this.load.image('logo', 'logo.png');
         this.load.svg('player', '/svg/player.svg');
+        
+        // Load environment assets
+        this.load.image('particle', '/particles/particle.png');
+        this.load.image('tree', '/environment/tree.png');
+        this.load.image('spruce', '/environment/spruce.png');
+        this.load.image('healing-spruce', '/environment/healing-spruce.png');
+        this.load.image('fruit', '/environment/fruit.png');
     }
 
     create ()
@@ -45,6 +52,6 @@ export class Preloader extends Scene
         // For example, you can define global animations here, so we can use them in other scenes.
 
         // Move to the MainMenu
-        this.scene.start('MainMenu');
+        this.scene.start('Game');
     }
 }
