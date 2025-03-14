@@ -16,6 +16,8 @@ import { InventoryUI } from "../ui/inventory-ui/index";
 import { CombatSystem } from "../utils/CombatSystem";
 import { CharacterStatsUI } from "../ui/character-stats";
 import playerStatsService from "../utils/player/PlayerStatsService";
+import { StatusEffectsUI } from "../ui/StatusEffectsUI";
+import { StatusEffectType } from "../utils/StatusEffectSystem";
 
 export class Game extends Scene {
   constructor() {
@@ -125,6 +127,9 @@ export class Game extends Scene {
 
     // Initialize character stats UI
     this.characterStatsUI = new CharacterStatsUI(this);
+    
+    // Initialize status effects UI to display ailments below the player's health bar
+    this.statusEffectsUI = new StatusEffectsUI(this, this.playerManager);
 
     // Set up event listeners
     this.setupEventListeners();
@@ -511,6 +516,11 @@ export class Game extends Scene {
       }
     }
     
+    // Update status effects UI
+    if (this.statusEffectsUI) {
+      this.statusEffectsUI.update();
+    }
+    
     // Ensure the map is properly invalidated to handle any size changes
     this.mapManager?.getMap()?.invalidateSize();
   }
@@ -577,6 +587,52 @@ export class Game extends Scene {
       this.inventoryUI.destroy();
     }
 
+    // Destroy status effects UI
+    if (this.statusEffectsUI) {
+      this.statusEffectsUI.destroy();
+    }
+
     logger.info(LogCategory.GAME, "Game scene shutdown");
+  }
+
+  /**
+   * Apply test status effects to the player for debugging
+   */
+  applyTestStatusEffects() {
+    if (!this.playerManager || !this.playerManager.statusEffectSystem) {
+      logger.error(LogCategory.COMBAT, "Cannot apply test status effects: playerManager or statusEffectSystem not found");
+      return;
+    }
+    
+    // Apply poison effect
+    this.playerManager.statusEffectSystem.applyEffect(StatusEffectType.POISON, {
+      damage: 5,
+      duration: 10000, // 10 seconds
+      tickInterval: 2000, // 2 seconds
+      source: { monsterName: 'Test Monster' }
+    });
+    
+    // Apply burn effect
+    this.playerManager.statusEffectSystem.applyEffect(StatusEffectType.BURN, {
+      damage: 8,
+      duration: 8000, // 8 seconds
+      tickInterval: 1000, // 1 second
+      source: { monsterName: 'Test Monster' }
+    });
+    
+    // Apply frozen effect
+    this.playerManager.statusEffectSystem.applyEffect(StatusEffectType.FROZEN, {
+      damage: 30, // 30% movement speed reduction
+      duration: 5000, // 5 seconds
+      tickInterval: 1000, // Not used for movement effects
+      source: { monsterName: 'Test Monster' }
+    });
+    
+    logger.info(LogCategory.COMBAT, "Applied test status effects to player");
+    
+    // Show a message to the player
+    if (this.uiManager) {
+      this.uiManager.showMedievalMessage("Test status effects applied!", "info", 3000);
+    }
   }
 }

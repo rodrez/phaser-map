@@ -33,6 +33,8 @@ export class MedievalVitals {
     goldText;
     godModeIndicator;
     aggressionIndicator;
+    weightDisplay;
+    weightText;
     
     isAggressive = false;
     isGodMode = false;
@@ -65,6 +67,7 @@ export class MedievalVitals {
         this.createHealthBar();
         this.createXPBar();
         this.createGoldDisplay();
+        this.createWeightDisplay();
         this.createGodModeIndicator();
         this.createAggressionIndicator();
         
@@ -283,6 +286,46 @@ export class MedievalVitals {
     }
     
     /**
+     * Creates the weight display element
+     */
+    createWeightDisplay() {
+        // Create weight display container
+        const weightDisplay = document.createElement('div');
+        weightDisplay.style.display = 'flex';
+        weightDisplay.style.alignItems = 'center';
+        weightDisplay.style.marginTop = '5px';
+        weightDisplay.style.marginBottom = '5px';
+        weightDisplay.style.position = 'relative';
+        this.container.appendChild(weightDisplay);
+        
+        // Create weight icon
+        const weightIcon = document.createElement('div');
+        weightIcon.style.display = 'inline-block';
+        weightIcon.style.width = '20px';
+        weightIcon.style.height = '20px';
+        weightIcon.style.background = 'radial-gradient(circle at 30% 30%, #a0a0a0, #505050)';
+        weightIcon.style.borderRadius = '50%';
+        weightIcon.style.marginRight = '10px';
+        weightIcon.style.border = '1px solid #8b5a2b';
+        weightIcon.style.boxShadow = 'inset 0 0 3px rgba(255, 255, 255, 0.8), 0 0 5px rgba(160, 160, 160, 0.5)';
+        weightIcon.innerHTML = '<div style="font-size: 12px; text-align: center; line-height: 20px; color: #2a1a0a; font-weight: bold;">W</div>';
+        weightDisplay.appendChild(weightIcon);
+        
+        // Create weight text
+        const weightText = document.createElement('div');
+        weightText.style.color = '#e8d4b9';
+        weightText.style.fontSize = '16px';
+        weightText.style.fontWeight = 'bold';
+        weightText.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.7)';
+        weightText.textContent = '0/0';
+        weightDisplay.appendChild(weightText);
+        
+        // Store references
+        this.weightDisplay = weightDisplay;
+        this.weightText = weightText;
+    }
+    
+    /**
      * Creates the god mode indicator
      */
     createGodModeIndicator() {
@@ -370,6 +413,19 @@ export class MedievalVitals {
         
         if (playerStats.gold !== undefined) {
             this.updateGoldDisplay(playerStats.gold);
+        }
+        
+        // Update weight if available
+        if (playerStats.currentWeight !== undefined && playerStats.maxWeight !== undefined) {
+            this.updateWeightDisplay(playerStats.currentWeight, playerStats.maxWeight);
+        } else if (this.scene.inventoryManager && this.scene.inventoryManager.getInventory) {
+            // Try to get weight from inventory if available
+            const inventory = this.scene.inventoryManager.getInventory();
+            if (inventory) {
+                const currentWeight = inventory.getTotalWeight();
+                const maxWeight = inventory.getMaxWeight();
+                this.updateWeightDisplay(currentWeight, maxWeight);
+            }
         }
         
         // Update god mode indicator
@@ -584,6 +640,31 @@ export class MedievalVitals {
         }
     }
     
+    /**
+     * Updates the weight display
+     * @param {number} currentWeight - Current weight
+     * @param {number} maxWeight - Maximum weight
+     */
+    updateWeightDisplay(currentWeight, maxWeight) {
+        if (!this.weightText) return;
+        
+        // Format the weight values
+        const formattedCurrent = currentWeight.toFixed(1);
+        const formattedMax = maxWeight.toFixed(1);
+        
+        // Update the text
+        this.weightText.textContent = `${formattedCurrent}/${formattedMax}`;
+        
+        // Change color based on weight percentage
+        const weightPercentage = (currentWeight / maxWeight) * 100;
+        if (weightPercentage > 90) {
+            this.weightText.style.color = '#e74c3c'; // Red for near capacity
+        } else if (weightPercentage > 70) {
+            this.weightText.style.color = '#f39c12'; // Orange for medium capacity
+        } else {
+            this.weightText.style.color = '#e8d4b9'; // Default color for low capacity
+        }
+    }
     
     /**
      * Destroys the UI elements

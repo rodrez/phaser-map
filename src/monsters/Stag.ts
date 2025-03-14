@@ -201,11 +201,14 @@ export class Stag extends BaseMonster {
         
         // Attack the player if very close and cooldown has expired
         if (distToPlayer <= this.ATTACK_RANGE && time > this.stateTimer) {
-            // Attack the player
-            this.attackPlayer();
+            // Attack the player and check if attack was successful
+            const attackSuccessful = this.attackPlayer();
             
-            // Set cooldown for next attack
-            this.stateTimer = time + 3000; // Increased from 1500 to 3000 ms (3 seconds) for more turn-based combat
+            // Only set cooldown if attack was successful (not on global cooldown)
+            if (attackSuccessful) {
+                // Set cooldown for next attack
+                this.stateTimer = time + 3000; // Increased from 1500 to 3000 ms (3 seconds) for more turn-based combat
+            }
         }
         
         // Generate random movement in blind rage (stags go blind in rage according to lore)

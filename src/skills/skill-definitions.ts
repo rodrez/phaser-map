@@ -84,7 +84,7 @@ export function createMartialArtsSkill(): EnhancedSkill {
       },
       {
         level: 2,
-        cost: 2,
+        cost: 1,
         effects: [
           {
             type: EffectType.CONDITIONAL_EFFECT,

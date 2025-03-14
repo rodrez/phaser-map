@@ -13,6 +13,7 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public isAutoAttacking= false;
     public goldReward: number;
     public xpReward: number;
+    public isBoss: boolean = false; // Flag to identify boss monsters
 
     protected spawnPoint: PhaserMath.Vector2;
     protected wanderTarget: PhaserMath.Vector2 | null = null;
@@ -39,6 +40,7 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         this.lootTable = [...monsterData.lootTable];
         this.goldReward = monsterData.goldReward || 0;
         this.xpReward = monsterData.xpReward || 0;
+        this.isBoss = monsterData.isBoss || false; // Set boss flag from monster data
         
         this.playerSprite = playerSprite;
         this.itemSystem = itemSystem;
@@ -211,19 +213,24 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
 
     /**
      * Attack the player using the combat system
+     * @returns {boolean} Whether the attack was successful
      */
-    protected attackPlayer(): void {
+    protected attackPlayer(): boolean {
         // Use combat system if available
         const combatSystem = (this.scene as any).combatSystem;
         if (combatSystem) {
-            combatSystem.monsterAttackPlayer(this, this.attributes.damage);
+            // The combat system now returns whether the attack was successful
+            const attackSuccessful = combatSystem.monsterAttackPlayer(this, this.attributes.damage);
+            return attackSuccessful;
         } else {
             // Fallback for backward compatibility
             const playerSystem = (this.scene as any).playerSystem;
             if (playerSystem && typeof playerSystem.takeDamage === 'function') {
                 playerSystem.takeDamage(this.attributes.damage);
+                return true;
             } else {
                 console.log(`${this.monsterName} attacks player for ${this.attributes.damage} damage`);
+                return true;
             }
         }
     }
@@ -464,7 +471,7 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     protected hideAttackIndicator(): void {
         if (this.attackIndicator) {
             this.attackIndicator.destroy();
-            this.attackIndicator = null;
+            this.attackIndicator = null as unknown as GameObjects.Graphics;
         }
     }
     
@@ -484,19 +491,28 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
      * @param fromScene Whether this Game Object is being destroyed by the Scene
      */
     public destroy(fromScene?: boolean): void {
-        // Clean up health bar if it exists
-        if (this.healthBar) {
-            this.healthBar.destroy();
-            this.healthBar = undefined as unknown as GameObjects.Graphics;
+        try {
+            // Clean up health bar if it exists
+            if (this.healthBar) {
+                this.healthBar.destroy();
+                this.healthBar = null as unknown as GameObjects.Graphics;
+            }
+            
+            // Clean up attack indicator if it exists
+            if (this.attackIndicator) {
+                this.attackIndicator.destroy();
+                this.attackIndicator = null as unknown as GameObjects.Graphics;
+            }
+            
+            // Clear references
+            this.playerSprite = null as unknown as Physics.Arcade.Sprite;
+            this.itemSystem = null as unknown as ItemSystem;
+            this.wanderTarget = null;
+            
+            // Call the parent destroy method
+            super.destroy(fromScene);
+        } catch (error) {
+            logger.error(LogCategory.MONSTER, `Error in BaseMonster destroy: ${error}`);
         }
-        
-        // Clean up attack indicator if it exists
-        if (this.attackIndicator) {
-            this.attackIndicator.destroy();
-            this.attackIndicator = undefined as unknown as GameObjects.Graphics;
-        }
-        
-        // Call the parent destroy method
-        super.destroy(fromScene);
     }
 } 

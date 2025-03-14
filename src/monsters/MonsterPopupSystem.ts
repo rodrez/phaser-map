@@ -294,7 +294,7 @@ export class MonsterPopupSystem {
     }
     
     /**
-     * Updates the monster popup if the monster is still visible and selected
+     * Updates the monster popup with current information
      */
     public update(): void {
         // If we have an active popup and monster, check if we need to update it
@@ -319,6 +319,26 @@ export class MonsterPopupSystem {
         } else if (this.activeMonsterPopup && (!this.clickTarget || !this.clickTarget.active)) {
             // If the monster is no longer active, close the popup
             this.closeMonsterPopup();
+        }
+    }
+
+    /**
+     * Clean up resources when destroying the system
+     */
+    public destroy(): void {
+        try {
+            // Close any open popup
+            this.closeMonsterPopup();
+            
+            // Clear references
+            this.clickTarget = null;
+            this.activeMonsterPopup = null;
+            this.popupSystem = null as unknown as PopupSystem;
+            this.scene = null as unknown as Scene;
+            
+            logger.info(LogCategory.MONSTER, "Monster popup system destroyed");
+        } catch (error) {
+            logger.error(LogCategory.MONSTER, `Error in MonsterPopupSystem.destroy(): ${error}`);
         }
     }
 }

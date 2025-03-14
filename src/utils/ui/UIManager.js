@@ -111,6 +111,28 @@ export class UIManager {
         });
         
         this.coreManager.addUIElement(regenerateButton);
+        
+        // Add test status effects button
+        const testEffectsButton = this.scene.add.text(this.scene.cameras.main.width - 10, 160, 'Apply Status Effects', {
+            fontFamily: 'Arial',
+            fontSize: 16,
+            color: '#ffffff',
+            backgroundColor: '#9C27B0', // Purple color
+            padding: { left: 10, right: 10, top: 5, bottom: 5 }
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(1000);
+        
+        // Add DOM element for the button
+        this.coreManager.createDOMButton(testEffectsButton, () => {
+            logger.info(LogCategory.UI, 'Test status effects button clicked');
+            // Call the method to apply test status effects
+            if (typeof this.scene.applyTestStatusEffects === 'function') {
+                this.scene.applyTestStatusEffects();
+            } else {
+                logger.error(LogCategory.UI, 'applyTestStatusEffects method not found in Game scene');
+            }
+        });
+        
+        this.coreManager.addUIElement(testEffectsButton);
     }
 
     /**

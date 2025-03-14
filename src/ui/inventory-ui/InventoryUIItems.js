@@ -59,7 +59,7 @@ export class InventoryUIItems {
             return;
         }
         
-        // Create item elements
+        // Create item elements directly in the items container
         items.forEach((itemStack, index) => {
             const itemElement = this.createItemElement(itemStack, index);
             this.itemsContainer.appendChild(itemElement);
@@ -79,10 +79,12 @@ export class InventoryUIItems {
         const emptyMessage = document.createElement('div');
         emptyMessage.className = 'inventory-empty';
         emptyMessage.textContent = message;
-        emptyMessage.style.gridColumn = `1 / span ${this.options.columns}`;
+        emptyMessage.style.width = '100%';
         emptyMessage.style.textAlign = 'center';
-        emptyMessage.style.padding = '20px';
+        emptyMessage.style.padding = '40px 20px';
         emptyMessage.style.color = '#8b5a2b';
+        emptyMessage.style.fontSize = '1.2rem';
+        emptyMessage.style.fontStyle = 'italic';
         
         this.itemsContainer.appendChild(emptyMessage);
     }
@@ -103,10 +105,9 @@ export class InventoryUIItems {
         itemElement.dataset.index = index;
         itemElement.dataset.itemId = item.id;
         
-        // Set styles
+        // Set styles for consistent sizing in grid layout
         itemElement.style.width = `${this.options.itemSize}px`;
         itemElement.style.height = `${this.options.itemSize}px`;
-        itemElement.style.margin = `${this.options.itemPadding}px`;
         itemElement.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
         itemElement.style.border = '1px solid #8b5a2b';
         itemElement.style.borderRadius = '4px';
@@ -121,6 +122,8 @@ export class InventoryUIItems {
         itemElement.addEventListener('mouseenter', () => {
             itemElement.style.backgroundColor = 'rgba(139, 90, 43, 0.3)';
             itemElement.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+            itemElement.style.transform = 'scale(1.05)';
+            itemElement.style.zIndex = '10';
             
             // Show tooltip
             if (this.inventoryUI.tooltip) {
@@ -131,6 +134,8 @@ export class InventoryUIItems {
         itemElement.addEventListener('mouseleave', () => {
             itemElement.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
             itemElement.style.boxShadow = 'none';
+            itemElement.style.transform = 'scale(1)';
+            itemElement.style.zIndex = '1';
             
             // Hide tooltip
             if (this.inventoryUI.tooltip) {
@@ -144,7 +149,7 @@ export class InventoryUIItems {
             
             // Handle item click
             if (this.options.onItemClick) {
-                this.options.onItemClick(item, index);
+                this.options.onItemClick(itemStack, index);
             }
         });
         
@@ -155,7 +160,7 @@ export class InventoryUIItems {
             
             // Handle item right-click
             if (this.options.onItemRightClick) {
-                this.options.onItemRightClick(item, index);
+                this.options.onItemRightClick(itemStack, index);
             }
         });
         
@@ -217,6 +222,26 @@ export class InventoryUIItems {
             quantityBadge.style.fontWeight = 'bold';
             
             itemElement.appendChild(quantityBadge);
+        }
+        
+        // Add level badge if item has a level and showLevel option is enabled
+        if (item.level && this.options.showLevel) {
+            const levelBadge = document.createElement('div');
+            levelBadge.className = 'item-level';
+            levelBadge.textContent = `Lvl ${item.level}`;
+            
+            // Style the level badge
+            levelBadge.style.position = 'absolute';
+            levelBadge.style.top = '2px';
+            levelBadge.style.left = '2px';
+            levelBadge.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            levelBadge.style.color = '#ffcc00'; // Gold color for levels
+            levelBadge.style.padding = '2px 5px';
+            levelBadge.style.borderRadius = '10px';
+            levelBadge.style.fontSize = '0.8rem';
+            levelBadge.style.fontWeight = 'bold';
+            
+            itemElement.appendChild(levelBadge);
         }
         
         // Add rarity border

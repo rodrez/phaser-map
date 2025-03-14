@@ -51,6 +51,11 @@ export class Preloader extends Scene {
 		this.load.image('stag', '/monsters/stag.png');
 		this.load.image('wolf', '/monsters/wolf.png');
 		this.load.image('deer', '/monsters/deer.png');
+		this.load.image('boar', '/monsters/boar-64.png');
+		this.load.image('dragon', '/monsters/black-dragon-128.png');
+		this.load.image('ogre', '/monsters/ogre-64.png');
+		this.load.image('lizardfolk', '/monsters/lizardfolk-64.png');
+		this.load.image('grizzly', '/monsters/grizzly-128.png');
 		
 		// Load individual item images
 		this.load.image('item-apple', '/items/apple.png');
@@ -65,6 +70,14 @@ export class Preloader extends Scene {
 		this.load.image('staff', '/weapons/staff-48.png');
 
 		// Armor
+
+		// Ailments
+		this.load.image('ailment-poison', '/ailments/poisoned-32.png');
+		this.load.image('ailment-fire', '/ailments/burn-32.png');
+		this.load.image('ailment-frozen', '/ailments/frozen-32.png');
+		this.load.image('ailment-stunned', '/ailments/stun-32.png');
+		this.load.image('ailment-pinned', '/ailments/pinned-32.png');
+		
 		
 	}
 

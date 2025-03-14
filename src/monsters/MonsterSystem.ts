@@ -1,12 +1,16 @@
 import type { Scene, Physics, GameObjects } from 'phaser';
-import type { MapManager } from '../utils/MapManager';
-import type { PlayerManager } from '../utils/player/PlayerManager';
+// @ts-expect-error - No type definitions available
+import { MapManager } from '../utils/MapManager';
+// @ts-expect-error - No type definitions available
+import { PlayerManager } from '../utils/player/PlayerManager';
 import type { ItemSystem } from '../items/item';
 import type { BaseMonster } from './BaseMonster';
 import { MonsterType, MonsterBehavior } from './MonsterTypes';
 import type { MonsterData } from './MonsterTypes';
 import { MonsterFactory } from './MonsterFactory';
+// @ts-expect-error - No type definitions available
 import { logger, LogCategory } from '../utils/Logger';
+import { MonsterRegistry, initializeMonsterDefinitions } from './definitions';
 
 export class MonsterSystem {
     private scene: Scene;
@@ -15,7 +19,7 @@ export class MonsterSystem {
     private itemSystem: ItemSystem;
     private monsters: BaseMonster[] = [];
     private monsterGroup: Physics.Arcade.Group;
-    private monsterData: Map<MonsterType, MonsterData> = new Map();
+    private monsterRegistry!: MonsterRegistry; // Using definite assignment assertion
     private spawnTimer = 0;
     private maxMonsters = 15;
 
@@ -25,8 +29,8 @@ export class MonsterSystem {
         this.playerManager = playerManager;
         this.itemSystem = itemSystem;
         
-        // Initialize monster data
-        this.initializeMonsterData();
+        // Initialize monster registry
+        this.initializeMonsterRegistry();
         
         // Create monster physics group
         this.monsterGroup = this.scene.physics.add.group({
@@ -37,16 +41,46 @@ export class MonsterSystem {
         this.scene.physics.add.collider(
             this.playerManager.getPlayer() as Physics.Arcade.Sprite,
             this.monsterGroup,
-            this.handlePlayerCollision.bind(this)
+            this.handlePlayerCollision.bind(this) as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback
         );
         
         // Spawn initial monsters
         this.spawnRandomMonsters(8, 600);
     }
     
-    private initializeMonsterData(): void {
+    private initializeMonsterRegistry(): void {
+        try {
+            // Get the registry instance
+            this.monsterRegistry = MonsterRegistry.getInstance();
+            
+            // Initialize all monster definitions
+            initializeMonsterDefinitions();
+            
+            logger.info(
+                LogCategory.MONSTER, 
+                `Monster registry initialized with ${this.monsterRegistry.getAllDefinitions().length} monsters`
+            );
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(LogCategory.MONSTER, `Failed to initialize monster registry: ${errorMessage}`);
+            // Fall back to legacy initialization if loading fails
+            this.initializeLegacyMonsterData();
+        }
+    }
+    
+    /**
+     * Legacy method to initialize monster data directly
+     * This is used as a fallback if loading from the registry fails
+     * @deprecated Use the monster registry instead
+     */
+    private initializeLegacyMonsterData(): void {
+        logger.warn(LogCategory.MONSTER, 'Using legacy monster data initialization');
+        
+        // Create a new registry instance
+        this.monsterRegistry = MonsterRegistry.getInstance();
+        
         // Stag - peaceful but defends itself
-        this.monsterData.set(MonsterType.STAG, {
+        this.monsterRegistry.registerDefinition({
             type: MonsterType.STAG,
             name: 'Stag',
             behavior: MonsterBehavior.NEUTRAL,
@@ -75,7 +109,7 @@ export class MonsterSystem {
         });
         
         // Wolf - aggressive predator
-        this.monsterData.set(MonsterType.WOLF, {
+        this.monsterRegistry.registerDefinition({
             type: MonsterType.WOLF,
             name: 'Wolf',
             behavior: MonsterBehavior.AGGRESSIVE,
@@ -108,41 +142,15 @@ export class MonsterSystem {
             goldReward: 10,
             xpReward: 20
         });
-        
-        // TODO: Add more monster types here (bear, boar, etc.)
-    }
-    
-    // Handle collision between player and monster
-    private handlePlayerCollision(player: Physics.Arcade.Sprite, monster: Physics.Arcade.Sprite & { behavior?: MonsterBehavior, changeState?: (state: string) => void }): void {
-        // For passive monsters, make them flee
-        if (monster.behavior === MonsterBehavior.PASSIVE) {
-            monster.changeState?.('fleeing');
-            return;
-        }
-        
-        // Use the combat system if available
-        const combatSystem = (this.scene as { combatSystem?: unknown }).combatSystem;
-        if (combatSystem) {
-            // We don't handle actual damage here - that's done in the monster's attacking state
-            // This is just for collision response
-            
-            // If the monster is neutral, make it aggressive when collided with
-            if (monster.behavior === MonsterBehavior.NEUTRAL) {
-                monster.changeState?.('chasing');
-            }
-        } else {
-            // Fallback for backward compatibility
-            logger.warn(LogCategory.MONSTER, 'Combat system not found, using fallback collision handling');
-        }
     }
     
     // Spawn a monster of the given type at the specified position
     public spawnMonster(type: MonsterType, x: number, y: number): BaseMonster | null {
-        // Get monster data
-        const data = this.monsterData.get(type);
+        // Get monster data from registry
+        const data = this.monsterRegistry.getDefinition(type);
         
         if (!data) {
-            logger.error(LogCategory.MONSTER, `Monster type ${type} not found in monster data`);
+            logger.error(LogCategory.MONSTER, `Monster type ${type} not found in monster registry`);
             return null;
         }
         
@@ -176,14 +184,12 @@ export class MonsterSystem {
         
         // If there's a MonsterPopupSystem, register direct click handlers for this monster
         const scene = this.scene as { monsterPopupSystem?: { showMonsterPopup: (monster: BaseMonster, x: number, y: number) => void } };
+        
         if (scene.monsterPopupSystem) {
             monster.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-                logger.info(LogCategory.MONSTER, `Direct click on monster: ${monster.monsterName}`);
                 scene.monsterPopupSystem?.showMonsterPopup(monster, pointer.worldX, pointer.worldY);
             });
         }
-        
-        logger.info(LogCategory.MONSTER, `Spawned ${data.name} at (${x}, ${y})`);
         
         return monster;
     }
@@ -208,12 +214,18 @@ export class MonsterSystem {
             const y = playerY + Math.sin(angle) * distance;
             
             // Choose a random monster type
-            const types = Array.from(this.monsterData.keys());
+            const types = this.monsterRegistry.getAllDefinitions().map(def => def.type);
             const randomType = types[Math.floor(Math.random() * types.length)];
             
             // Spawn the monster
             this.spawnMonster(randomType, x, y);
         }
+    }
+    
+    // Handle collision between player and monster
+    private handlePlayerCollision(player: Physics.Arcade.Sprite, monster: BaseMonster): void {
+        // This is just a basic collision handler
+        // More complex interaction would be handled by the combat system
     }
     
     // Update all monsters
@@ -266,5 +278,53 @@ export class MonsterSystem {
         return this.monsters.filter(monster => 
             monster.active && monster.isAutoAttacking
         );
+    }
+    
+    /**
+     * Get the monster registry
+     */
+    public getMonsterRegistry(): MonsterRegistry {
+        return this.monsterRegistry;
+    }
+
+    /**
+     * Clean up resources when destroying the system
+     */
+    public destroy(): void {
+        try {
+            // Destroy all monsters
+            for (let i = this.monsters.length - 1; i >= 0; i--) {
+                const monster = this.monsters[i];
+                if (monster && monster.active) {
+                    try {
+                        monster.destroy();
+                    } catch (error) {
+                        logger.error(LogCategory.MONSTER, `Error destroying monster: ${error}`);
+                    }
+                }
+            }
+            
+            // Clear the monsters array
+            this.monsters = [];
+            
+            // Destroy the monster group
+            if (this.monsterGroup) {
+                this.monsterGroup.destroy(true);
+            }
+            
+            // Remove collision handlers
+            if (this.scene && this.scene.physics) {
+                this.scene.physics.world.colliders.destroy();
+            }
+            
+            // Clear references
+            this.playerManager = null as unknown as PlayerManager;
+            this.itemSystem = null as unknown as ItemSystem;
+            this.mapManager = null as unknown as MapManager;
+            
+            logger.info(LogCategory.MONSTER, "Monster system destroyed");
+        } catch (error) {
+            logger.error(LogCategory.MONSTER, `Error in MonsterSystem.destroy(): ${error}`);
+        }
     }
 } 

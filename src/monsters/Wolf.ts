@@ -193,11 +193,14 @@ export class Wolf extends BaseMonster {
         
         // If we haven't set up the attack cooldown yet
         if (this.attackCooldown <= 0) {
-            // Attack the player
-            this.attackPlayer();
+            // Attack the player and check if attack was successful
+            const attackSuccessful = this.attackPlayer();
             
-            // Set cooldown for next attack
-            this.attackCooldown = 3000; // Increased from 1000 to 3000 ms (3 seconds) for more turn-based combat
+            // Only set cooldown if attack was successful (not on global cooldown)
+            if (attackSuccessful) {
+                // Set cooldown for next attack
+                this.attackCooldown = 3000; // Increased from 1000 to 3000 ms (3 seconds) for more turn-based combat
+            }
         }
         
         // Stop moving while attacking

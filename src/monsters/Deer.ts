@@ -11,23 +11,6 @@ export class Stag extends BaseMonster {
 
     constructor(scene: Scene, x: number, y: number, monsterData: MonsterData, playerSprite: Physics.Arcade.Sprite, itemSystem: ItemSystem) {
         super(scene, x, y, monsterData, playerSprite, itemSystem);
-        
-        // Stag-specific setup
-        this.anims.create({
-            key: 'deer_idle',
-            frames: this.anims.generateFrameNumbers('deer', { start: 0, end: 3 }),
-            frameRate: 5,
-            repeat: -1
-        });
-        
-        this.anims.create({
-            key: 'deer_walk',
-            frames: this.anims.generateFrameNumbers('deer', { start: 4, end: 7 }),
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        this.anims.play('deer_idle');
     }
     
     public takeDamage(amount: number): void {
@@ -61,11 +44,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleIdleState(time: number, delta: number, distToPlayer: number): void {
-        // Play idle animation if not already playing
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_idle')) {
-            this.anims.play('deer_idle');
-        }
-        
         // Stand still
         this.setVelocity(0, 0);
         
@@ -84,11 +62,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleWanderingState(time: number, delta: number, distToPlayer: number): void {
-        // Play walking animation
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_walk')) {
-            this.anims.play('deer_walk');
-        }
-        
         // Check if player is too close
         if (distToPlayer < this.attributes.detectionRadius) {
             this.changeState(MonsterState.FLEEING);
@@ -134,11 +107,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleFleeingState(time: number, delta: number, distToPlayer: number): void {
-        // Play running animation (using walk for now)
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_walk')) {
-            this.anims.play('deer_walk');
-        }
-        
         // If we're far enough from the player, go back to idle
         if (this.attributes.fleeRadius && distToPlayer > this.attributes.fleeRadius) {
             this.changeState(MonsterState.IDLE);
@@ -179,11 +147,6 @@ export class Stag extends BaseMonster {
             return;
         }
         
-        // Play running animation (using walk for now)
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_walk')) {
-            this.anims.play('deer_walk');
-        }
-        
         // Move toward player
         const dx = this.playerSprite.x - this.x;
         const dy = this.playerSprite.y - this.y;
@@ -217,11 +180,6 @@ export class Stag extends BaseMonster {
             return;
         }
         
-        // Play attack animation (using walk for now)
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_walk')) {
-            this.anims.play('deer_walk');
-        }
-        
         // If player is too far, chase them
         if (distToPlayer > 50) {
             this.changeState(MonsterState.CHASING);
@@ -248,11 +206,6 @@ export class Stag extends BaseMonster {
     }
     
     protected handleReturningState(time: number, delta: number): void {
-        // Play walking animation
-        if (!this.anims.isPlaying || (this.anims.currentAnim && this.anims.currentAnim.key !== 'deer_walk')) {
-            this.anims.play('deer_walk');
-        }
-        
         // Calculate direction to spawn point
         const dx = this.spawnPoint.x - this.x;
         const dy = this.spawnPoint.y - this.y;
@@ -276,6 +229,18 @@ export class Stag extends BaseMonster {
             this.setFlipX(true);
         } else {
             this.setFlipX(false);
+        }
+    }
+    
+    public destroy(fromScene?: boolean): void {
+        // Clear any references
+        this.wanderTarget = null;
+        
+        // Call super.destroy() in a try-catch to handle potential errors
+        try {
+            super.destroy(fromScene);
+        } catch (error) {
+            console.error(`Error destroying Stag: ${error}`);
         }
     }
 } 

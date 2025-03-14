@@ -1,4 +1,6 @@
 import { logger, LogCategory } from './Logger';
+import { CombatConfig } from './CombatConfig';
+import { StatusEffectType } from './StatusEffectSystem';
 
 export class CombatSystem {
     constructor(scene) {
@@ -13,23 +15,33 @@ export class CombatSystem {
         // Track the last monster that attacked the player for retaliation
         this.lastAttackingMonster = null;
         
-        // Retaliation properties
-        this.retaliationRange = 100; // Range at which player can retaliate
+        // Retaliation properties from config
+        this.retaliationRange = CombatConfig.RETALIATION.RANGE;
         this.retaliationCooldown = 0; // Cooldown timer for retaliation
-        this.retaliationDamage = 10; // Base damage for retaliation
+        this.retaliationDamageModifier = CombatConfig.RETALIATION.DAMAGE_MODIFIER;
         
-        logger.info(LogCategory.COMBAT, 'Combat system initialized');
+        // Global attack cooldown tracking
+        this.globalMonsterAttackCooldown = 0;
+        
+        logger.info(LogCategory.COMBAT, 'Combat system initialized with balanced configuration');
     }
     
     /**
      * Handle a monster attacking the player
      * @param {Object} monster - The monster attacking the player
      * @param {number} damage - The base damage amount
+     * @returns {boolean} - Whether the attack was successful (false if on cooldown)
      */
     monsterAttackPlayer(monster, damage) {
+        // Check global monster attack cooldown
+        if (this.globalMonsterAttackCooldown > 0) {
+            logger.debug(LogCategory.COMBAT, `Monster attack on cooldown (${this.globalMonsterAttackCooldown}ms remaining)`);
+            return false;
+        }
+        
         if (!this.playerStats) {
             logger.error(LogCategory.COMBAT, 'Cannot attack player: playerStats not found');
-            return;
+            return false;
         }
         
         // Ensure damage is a valid number
@@ -52,7 +64,7 @@ export class CombatSystem {
                 damageDealt = this.playerHealthSystem.takeDamage(damage, monster.monsterName || 'monster');
             } else {
                 logger.error(LogCategory.COMBAT, 'Cannot damage player: neither PlayerManager nor PlayerHealthSystem is available');
-                return;
+                return false;
             }
             
             // Ensure damageDealt is a valid number
@@ -85,6 +97,11 @@ export class CombatSystem {
                 this.retaliateAgainstMonster(monster);
             }
         }
+        
+        // Set global monster attack cooldown based on monster type
+        this.setGlobalMonsterAttackCooldown(monster);
+        
+        return true;
     }
     
     /**
@@ -145,19 +162,19 @@ export class CombatSystem {
         // Start with base damage
         let damage = baseDamage;
         
-        // Default critical hit chance (5%) and multiplier (2x)
-        let critChance = 5;
-        const critMultiplier = 2.0;
+        // Get critical hit chance and multiplier from config
+        let critChance = CombatConfig.PLAYER_ATTACK.CRITICAL_CHANCE * 100; // Convert to percentage
+        const critMultiplier = CombatConfig.PLAYER_ATTACK.CRITICAL_MULTIPLIER;
         let isCritical = false;
         
         // Check for critical hit chance bonuses from player stats
         if (this.playerStats) {
             if (typeof this.playerStats.getStat === 'function' && this.playerStats.getStat('criticalHitChance') !== undefined) {
                 const statValue = this.playerStats.getStat('criticalHitChance');
-                critChance = isNaN(statValue) ? 5 : statValue;
+                critChance = isNaN(statValue) ? critChance : statValue;
             } else if (this.playerStats.criticalHitChance !== undefined) {
                 const statValue = this.playerStats.criticalHitChance;
-                critChance = isNaN(statValue) ? 5 : statValue;
+                critChance = isNaN(statValue) ? critChance : statValue;
             }
         }
         
@@ -213,13 +230,16 @@ export class CombatSystem {
                 return;
             }
             
-            const { damage: retaliationDamage, isCritical } = this.calculatePlayerAttackDamage(baseDamage);
+            // Apply retaliation damage modifier from config
+            const retaliationBaseDamage = baseDamage * this.retaliationDamageModifier;
+            
+            const { damage: retaliationDamage, isCritical } = this.calculatePlayerAttackDamage(retaliationBaseDamage);
             
             // Apply damage to monster
             this.playerAttackMonster(monster, retaliationDamage);
             
-            // Set retaliation cooldown (1 second)
-            this.retaliationCooldown = 1000;
+            // Set retaliation cooldown from config
+            this.retaliationCooldown = CombatConfig.RETALIATION.COOLDOWN;
             
             // Log the retaliation
             const criticalText = isCritical ? ' (CRITICAL HIT!)' : '';
@@ -262,7 +282,7 @@ export class CombatSystem {
      */
     calculatePlayerDamage() {
         // Base damage from player's attack stat
-        let damage = this.retaliationDamage;
+        let damage = this.retaliationDamageModifier;
         
         // Add player's attack stat if available
         if (this.playerStats) {
@@ -321,11 +341,39 @@ export class CombatSystem {
         // Ensure final damage is a valid number
         const finalDamage = Math.max(1, Math.floor(damage));
         if (isNaN(finalDamage)) {
-            logger.error(LogCategory.COMBAT, `Calculated damage is NaN, defaulting to ${this.retaliationDamage}`);
-            return this.retaliationDamage;
+            logger.error(LogCategory.COMBAT, `Calculated damage is NaN, defaulting to ${this.retaliationDamageModifier}`);
+            return this.retaliationDamageModifier;
         }
         
         return finalDamage;
+    }
+    
+    /**
+     * Set the global monster attack cooldown based on monster type
+     * @param {Object} monster - The monster that just attacked
+     */
+    setGlobalMonsterAttackCooldown(monster) {
+        // Get base cooldown from config
+        let cooldown = CombatConfig.MONSTER_ATTACK.BASE_COOLDOWN;
+        
+        // Apply monster type modifier if available
+        if (monster && monster.monsterType && CombatConfig.MONSTER_TYPE_MODIFIERS[monster.monsterType]) {
+            const attackSpeedMod = CombatConfig.MONSTER_TYPE_MODIFIERS[monster.monsterType][0];
+            cooldown = cooldown / attackSpeedMod;
+        }
+        
+        // Apply boss modifier if this is a boss monster
+        if (monster && monster.isBoss) {
+            cooldown *= CombatConfig.MONSTER_ATTACK.BOSS_COOLDOWN_MODIFIER;
+        }
+        
+        // Ensure cooldown is not below minimum
+        cooldown = Math.max(cooldown, CombatConfig.MONSTER_ATTACK.MIN_COOLDOWN);
+        
+        // Set the global cooldown
+        this.globalMonsterAttackCooldown = cooldown;
+        
+        logger.debug(LogCategory.COMBAT, `Set global monster attack cooldown to ${cooldown}ms for ${monster.monsterName}`);
     }
     
     /**
@@ -337,6 +385,11 @@ export class CombatSystem {
         // Update retaliation cooldown
         if (this.retaliationCooldown > 0) {
             this.retaliationCooldown -= delta;
+        }
+        
+        // Update global monster attack cooldown
+        if (this.globalMonsterAttackCooldown > 0) {
+            this.globalMonsterAttackCooldown -= delta;
         }
         
         // Check for retaliation if there's a last attacking monster and cooldown is done
@@ -352,26 +405,128 @@ export class CombatSystem {
     }
     
     /**
+     * Apply a status effect to the player from a monster
+     * @param {Object} monster - The monster applying the effect
+     * @param {string} effectType - The type of status effect (from StatusEffectType)
+     * @param {Object} config - Configuration for the status effect
+     * @returns {boolean} - Whether the effect was applied
+     */
+    applyStatusEffectToPlayer(monster, effectType, config = {}) {
+        if (!this.playerManager) {
+            logger.error(LogCategory.COMBAT, 'Cannot apply status effect: playerManager not found');
+            return false;
+        }
+        
+        // Ensure monster is provided
+        if (!monster) {
+            logger.error(LogCategory.COMBAT, 'Cannot apply status effect: monster is null');
+            return false;
+        }
+        
+        // Set default values if not provided
+        const effectConfig = {
+            damage: config.damage || 1,
+            duration: config.duration || 5000, // Default 5 seconds
+            tickInterval: config.tickInterval || 1000, // Default 1 second
+            source: monster
+        };
+        
+        // Apply the effect
+        const applied = this.playerManager.applyStatusEffect(effectType, effectConfig);
+        
+        if (applied) {
+            logger.info(
+                LogCategory.COMBAT, 
+                `${monster.monsterName || 'Monster'} applied ${effectType} effect to player`
+            );
+        }
+        
+        return applied;
+    }
+    
+    /**
+     * Apply poison effect to the player
+     * @param {Object} monster - The monster applying the poison
+     * @param {number} damage - Damage per tick
+     * @param {number} duration - Duration in milliseconds
+     * @returns {boolean} - Whether the effect was applied
+     */
+    applyPoisonToPlayer(monster, damage = 1, duration = 5000) {
+        return this.applyStatusEffectToPlayer(monster, StatusEffectType.POISON, {
+            damage,
+            duration,
+            tickInterval: 1000 // 1 tick per second
+        });
+    }
+    
+    /**
+     * Apply burn effect to the player
+     * @param {Object} monster - The monster applying the burn
+     * @param {number} damage - Damage per tick
+     * @param {number} duration - Duration in milliseconds
+     * @returns {boolean} - Whether the effect was applied
+     */
+    applyBurnToPlayer(monster, damage = 1, duration = 3000) {
+        return this.applyStatusEffectToPlayer(monster, StatusEffectType.BURN, {
+            damage,
+            duration,
+            tickInterval: 500 // 2 ticks per second (burns are more intense but shorter)
+        });
+    }
+    
+    /**
+     * Check if the player has a specific status effect
+     * @param {string} effectType - The type of status effect to check
+     * @returns {boolean} - Whether the player has the effect
+     */
+    playerHasStatusEffect(effectType) {
+        if (!this.playerManager) {
+            logger.error(LogCategory.COMBAT, 'Cannot check status effect: playerManager not found');
+            return false;
+        }
+        
+        return this.playerManager.hasStatusEffect(effectType);
+    }
+    
+    /**
+     * Remove a status effect from the player
+     * @param {string} effectType - The type of status effect to remove
+     * @returns {boolean} - Whether the effect was removed
+     */
+    removeStatusEffectFromPlayer(effectType) {
+        if (!this.playerManager) {
+            logger.error(LogCategory.COMBAT, 'Cannot remove status effect: playerManager not found');
+            return false;
+        }
+        
+        return this.playerManager.removeStatusEffect(effectType);
+    }
+    
+    /**
+     * Clear all status effects from the player
+     */
+    clearAllPlayerStatusEffects() {
+        if (!this.playerManager) {
+            logger.error(LogCategory.COMBAT, 'Cannot clear status effects: playerManager not found');
+            return;
+        }
+        
+        this.playerManager.clearAllStatusEffects();
+    }
+    
+    /**
      * Handle player death
-     * This is now handled by PlayerHealthSystem, but kept for backward compatibility
      */
     handlePlayerDeath() {
-        logger.info(LogCategory.COMBAT, 'Player died - delegating to PlayerHealthSystem');
+        // Clear all status effects when player dies
+        this.clearAllPlayerStatusEffects();
         
-        if (this.playerHealthSystem) {
-            this.playerHealthSystem.handlePlayerDeath();
-        } else {
-            logger.error(LogCategory.COMBAT, 'PlayerHealthSystem not available, cannot handle player death properly');
-            
-            // Fallback death handling
-            if (this.scene.uiManager) {
-                this.scene.uiManager.showMedievalMessage('You have died!', 'error', 5000);
-            }
-            
-            // Transition to game over scene after a delay
-            this.scene.time.delayedCall(2000, () => {
-                this.scene.scene.start('GameOver');
-            });
+        // Existing death handling code...
+        logger.info(LogCategory.COMBAT, 'Player has died');
+        
+        // Emit player death event
+        if (this.scene.events) {
+            this.scene.events.emit('player-death');
         }
     }
 } 

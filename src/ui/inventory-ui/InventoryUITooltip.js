@@ -57,7 +57,70 @@ export class InventoryUITooltip {
         this.currentItemElement = itemElement;
         
         // Add mousemove event listener to update tooltip position
+        this.handleMouseMove = this.handleMouseMove.bind(this);
         document.addEventListener('mousemove', this.handleMouseMove);
+    }
+    
+    /**
+     * Handle mouse movement to update tooltip position
+     * @param {MouseEvent} event - The mouse event
+     */
+    handleMouseMove(event) {
+        if (!this.currentItemElement) return;
+        
+        // Get the tooltip dimensions
+        const tooltipRect = this.tooltip.getBoundingClientRect();
+        
+        // Calculate position based on mouse cursor
+        let left = event.clientX + 15; // 15px to the right of cursor
+        let top = event.clientY + 15; // 15px below cursor
+        
+        // Get viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Add padding to keep tooltip from touching the edge
+        const edgePadding = 10;
+        
+        // Check if tooltip would go off the right edge of the screen
+        if (left + tooltipRect.width + edgePadding > viewportWidth) {
+            // First try positioning to the left of cursor
+            left = event.clientX - tooltipRect.width - 15;
+            
+            // If that would go off the left edge, position it at the left edge with padding
+            if (left < edgePadding) {
+                left = edgePadding;
+                
+                // If we're at the left edge, try to position below or above the cursor instead
+                if (event.clientY + tooltipRect.height + edgePadding < viewportHeight) {
+                    // Position below cursor if there's room
+                    top = event.clientY + 25;
+                } else {
+                    // Otherwise position above cursor
+                    top = Math.max(edgePadding, event.clientY - tooltipRect.height - 15);
+                }
+            }
+        }
+        
+        // Check if tooltip would go off the bottom of the screen
+        if (top + tooltipRect.height + edgePadding > viewportHeight) {
+            // Position above cursor
+            top = event.clientY - tooltipRect.height - 15;
+            
+            // If that would go off the top edge, position at the top edge with padding
+            if (top < edgePadding) {
+                top = edgePadding;
+            }
+        }
+        
+        // Check if tooltip would go off the left edge of the screen
+        if (left < edgePadding) {
+            left = edgePadding;
+        }
+        
+        // Set the tooltip position
+        this.tooltip.style.left = `${left}px`;
+        this.tooltip.style.top = `${top}px`;
     }
     
     /**
@@ -484,20 +547,44 @@ export class InventoryUITooltip {
      * @param {HTMLElement} itemElement - The item element
      */
     positionTooltip(itemElement) {
+        // Get the tooltip dimensions
         const tooltipRect = this.tooltip.getBoundingClientRect();
         
-        let left = itemElement.offsetLeft + itemElement.offsetWidth / 2 - tooltipRect.width / 2;
-        let top = itemElement.offsetTop + itemElement.offsetHeight + 10;
+        // Get the item element's position relative to the viewport
+        const itemRect = itemElement.getBoundingClientRect();
         
-        // Adjust position if tooltip would go off screen
+        // Calculate initial position (centered below the item)
+        let left = itemRect.left + (itemRect.width / 2) - (tooltipRect.width / 2);
+        let top = itemRect.bottom + 10; // 10px below the item
+        
+        // Check if tooltip would go off the right edge of the screen
         if (left + tooltipRect.width > window.innerWidth) {
-            left = itemElement.offsetLeft + itemElement.offsetWidth / 2 - tooltipRect.width / 2;
+            left = window.innerWidth - tooltipRect.width - 10;
         }
         
+        // Check if tooltip would go off the left edge of the screen
+        if (left < 10) {
+            left = 10;
+        }
+        
+        // Check if tooltip would go off the bottom of the screen
         if (top + tooltipRect.height > window.innerHeight) {
-            top = itemElement.offsetTop - tooltipRect.height - 10;
+            // Position above the item instead
+            top = itemRect.top - tooltipRect.height - 10;
+            
+            // If that would go off the top of the screen, position to the right of the item
+            if (top < 10) {
+                top = Math.max(10, itemRect.top);
+                left = itemRect.right + 10;
+                
+                // If that would go off the right of the screen, position to the left of the item
+                if (left + tooltipRect.width > window.innerWidth) {
+                    left = itemRect.left - tooltipRect.width - 10;
+                }
+            }
         }
         
+        // Set the tooltip position
         this.tooltip.style.left = `${left}px`;
         this.tooltip.style.top = `${top}px`;
     }
@@ -507,6 +594,10 @@ export class InventoryUITooltip {
      */
     hideTooltip() {
         this.tooltip.style.opacity = '0';
+        
+        // Remove mousemove event listener
+        document.removeEventListener('mousemove', this.handleMouseMove);
+        this.currentItemElement = null;
     }
     
     /**

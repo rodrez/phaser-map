@@ -87,6 +87,17 @@ export class VitalsManager extends CoreUIManager {
     }
 
     /**
+     * Update weight display
+     * @param {number} currentWeight - The current weight
+     * @param {number} maxWeight - The maximum weight capacity
+     */
+    updateWeight(currentWeight, maxWeight) {
+        if (!this.vitals) return;
+        
+        this.vitals.updateWeightDisplay(currentWeight, maxWeight);
+    }
+
+    /**
      * Update gold with animation
      * @param {number} gold - The new gold amount
      * @param {boolean} animate - Whether to animate the change
@@ -156,6 +167,25 @@ export class VitalsManager extends CoreUIManager {
             this.scene.playerStats.xp,
             this.scene.playerStats.xpToNextLevel
         );
+        
+        // Update weight if available from player stats
+        if (this.scene.playerStats.currentWeight !== undefined && 
+            this.scene.playerStats.maxWeight !== undefined) {
+            this.updateWeight(
+                this.scene.playerStats.currentWeight,
+                this.scene.playerStats.maxWeight
+            );
+        } 
+        // Try to get weight from inventory if available
+        else if (this.scene.inventoryManager && this.scene.inventoryManager.getInventory) {
+            const inventory = this.scene.inventoryManager.getInventory();
+            if (inventory) {
+                this.updateWeight(
+                    inventory.getTotalWeight(),
+                    inventory.getMaxWeight()
+                );
+            }
+        }
     }
 
     /**

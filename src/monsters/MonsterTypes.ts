@@ -3,6 +3,9 @@ export enum MonsterType {
     WOLF = 'wolf',
     BEAR = 'bear',
     BOAR = 'boar',
+    DRAGON = 'dragon',
+    OGRE = 'ogre',
+    LIZARDFOLK = 'lizardfolk',
 }
 
 export enum MonsterBehavior {
@@ -41,6 +44,7 @@ export interface MonsterData {
     scale?: number;
     goldReward?: number;
     xpReward?: number;
+    isBoss?: boolean; // Flag to identify boss monsters
 }
 
 export enum MonsterState {

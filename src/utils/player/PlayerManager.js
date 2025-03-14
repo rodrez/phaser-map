@@ -6,6 +6,7 @@ import { PlayerDebugManager } from './PlayerDebugManager';
 import { PlayerHealthSystem } from './PlayerHealthSystem';
 import playerStatsService from './PlayerStatsService';
 import { logger, LogCategory } from '../Logger';
+import { StatusEffectSystem } from '../StatusEffectSystem';
 
 /**
  * PlayerManager - Main player manager that coordinates all specialized player managers
@@ -27,11 +28,17 @@ export class PlayerManager {
         // Initialize health system first (as other systems depend on it)
         this.healthSystem = new PlayerHealthSystem(scene);
         
+        // Initialize status effect system
+        this.statusEffectSystem = new StatusEffectSystem(this);
+        
         // Initialize managers
         this.coreManager = new CorePlayerManager(scene, mapManager);
         this.interactionManager = new PlayerInteractionManager(scene, mapManager);
         this.statsManager = new PlayerStatsManager(scene, mapManager);
         this.debugManager = new PlayerDebugManager(scene, mapManager);
+        
+        // Register this manager in the scene for other systems to access
+        this.scene.playerManager = this;
         
         logger.info(LogCategory.PLAYER, "PlayerManager initialized");
     }
@@ -129,6 +136,49 @@ export class PlayerManager {
     }
 
     /**
+     * Apply a status effect to the player
+     * @param {string} type - The type of status effect
+     * @param {Object} config - Configuration for the status effect
+     * @returns {boolean} - Whether the effect was applied
+     */
+    applyStatusEffect(type, config) {
+        return this.statusEffectSystem.applyEffect(type, config);
+    }
+    
+    /**
+     * Remove a status effect from the player
+     * @param {string} type - The type of status effect to remove
+     * @returns {boolean} - Whether an effect was removed
+     */
+    removeStatusEffect(type) {
+        return this.statusEffectSystem.removeEffect(type);
+    }
+    
+    /**
+     * Clear all status effects from the player
+     */
+    clearAllStatusEffects() {
+        this.statusEffectSystem.clearAllEffects();
+    }
+    
+    /**
+     * Check if the player has a specific status effect
+     * @param {string} type - The type of status effect to check
+     * @returns {boolean} - Whether the effect is active
+     */
+    hasStatusEffect(type) {
+        return this.statusEffectSystem.hasEffect(type);
+    }
+    
+    /**
+     * Get all active status effects on the player
+     * @returns {Array} - Array of active status effects
+     */
+    getActiveStatusEffects() {
+        return this.statusEffectSystem.getActiveEffects();
+    }
+
+    /**
      * Update method to be called in the scene's update loop
      * @param {number} delta - Time delta in milliseconds
      */
@@ -138,6 +188,9 @@ export class PlayerManager {
         this.interactionManager.update(delta);
         this.statsManager.update(delta);
         this.debugManager.update(delta);
+        
+        // Update status effects
+        this.statusEffectSystem.update(delta);
         
         // No need to explicitly update the health system as it's event-based
         // and doesn't have its own update method
@@ -153,8 +206,8 @@ export class PlayerManager {
         this.interactionManager.destroy();
         this.coreManager.destroy();
         
-        // Note: PlayerHealthSystem doesn't have a destroy method as it's event-based
-        // and doesn't create any resources that need explicit cleanup
+        // Note: PlayerHealthSystem and StatusEffectSystem don't have destroy methods as they're event-based
+        // and don't create any resources that need explicit cleanup
         
         logger.info(LogCategory.PLAYER, "PlayerManager destroyed");
     }

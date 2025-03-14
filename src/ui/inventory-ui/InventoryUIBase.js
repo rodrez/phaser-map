@@ -31,8 +31,8 @@ export class InventoryUI {
             itemSize: options.itemSize || 80,
             itemPadding: options.itemPadding || 10,
             columns: options.columns || 6,
-            showWeight: options.showWeight !== undefined ? options.showWeight : true,
-            showValue: options.showValue !== undefined ? options.showValue : true,
+            showWeight: options.showWeight !== undefined ? options.showWeight : false,
+            showValue: options.showValue !== undefined ? options.showValue : false,
             showLevel: options.showLevel !== undefined ? options.showLevel : true,
             onItemClick: options.onItemClick || null,
             onItemRightClick: options.onItemRightClick || null,
@@ -88,7 +88,7 @@ export class InventoryUI {
         this.itemsUI.initialize();
         
         // Initialize the info section LAST (to appear at the bottom)
-        this.elements.initializeInfoSection();
+        // this.elements.initializeInfoSection();
         
         // Initialize events
         this.events = new InventoryUIEvents(this);

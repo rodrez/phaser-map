@@ -116,50 +116,105 @@ export class InventoryUIElements {
      * Create the inventory container
      */
     createInventoryContainer() {
-        this.itemsContainer = document.createElement('div');
-        this.itemsContainer.className = 'inventory-items';
-        this.itemsContainer.style.display = 'grid';
-        this.itemsContainer.style.gridTemplateColumns = `repeat(${this.options.columns}, 1fr)`;
-        this.itemsContainer.style.gap = `${this.options.itemPadding}px`;
-        this.itemsContainer.style.padding = `${this.options.padding}px`;
-        this.itemsContainer.style.overflowY = 'auto';
-        this.itemsContainer.style.overflowX = 'hidden';
+        // Create a container for the inventory items
+        const containerWrapper = document.createElement('div');
+        containerWrapper.className = 'inventory-container-wrapper';
+        containerWrapper.style.width = '100%';
+        containerWrapper.style.height = `${this.options.height - 180}px`; // Adjust height to leave room for search and info
+        containerWrapper.style.overflow = 'hidden';
+        containerWrapper.style.position = 'relative';
+        containerWrapper.style.marginTop = '10px';
+        containerWrapper.style.marginBottom = '10px';
+        containerWrapper.style.borderTop = '1px solid rgba(139, 90, 43, 0.5)';
+        containerWrapper.style.borderBottom = '1px solid rgba(139, 90, 43, 0.5)';
         
-        // Adjust max height to account for search and filter buttons at the top
-        // and info section at the bottom
-        const topSectionHeight = this.options.searchEnabled ? 120 : 60; // Estimated height for search and filters
-        const infoSectionHeight = 80; // Estimated height for info section
-        const availableHeight = this.options.height - topSectionHeight - infoSectionHeight;
+        // Create the scrollable container
+        const scrollContainer = document.createElement('div');
+        scrollContainer.className = 'inventory-scroll-container';
+        scrollContainer.style.width = '100%';
+        scrollContainer.style.height = '100%';
+        scrollContainer.style.overflowY = 'auto';
+        scrollContainer.style.overflowX = 'hidden';
+        scrollContainer.style.paddingRight = '10px'; // Add padding for scrollbar
+        scrollContainer.style.boxSizing = 'border-box';
         
-        this.itemsContainer.style.maxHeight = `${availableHeight}px`;
-        this.itemsContainer.style.scrollbarWidth = 'thin'; // For Firefox
-        this.itemsContainer.style.scrollbarColor = '#8b5a2b #2a1a0a'; // For Firefox
+        // Style the scrollbar
+        scrollContainer.style.scrollbarWidth = 'thin'; // Firefox
+        scrollContainer.style.scrollbarColor = '#8b5a2b #2a1a0a'; // Firefox
         
-        // Custom scrollbar styles for WebKit browsers (Chrome, Safari, Edge)
-        this.itemsContainer.style.cssText += `
-            ::-webkit-scrollbar {
+        // Webkit scrollbar styles
+        const scrollbarStyles = document.createElement('style');
+        scrollbarStyles.textContent = `
+            .inventory-scroll-container::-webkit-scrollbar {
                 width: 8px;
             }
-            ::-webkit-scrollbar-track {
+            .inventory-scroll-container::-webkit-scrollbar-track {
                 background: #2a1a0a;
                 border-radius: 4px;
             }
-            ::-webkit-scrollbar-thumb {
-                background: #8b5a2b;
+            .inventory-scroll-container::-webkit-scrollbar-thumb {
+                background-color: #8b5a2b;
                 border-radius: 4px;
-            }
-            ::-webkit-scrollbar-thumb:hover {
-                background: #c8a165;
+                border: 2px solid #2a1a0a;
             }
         `;
+        document.head.appendChild(scrollbarStyles);
         
-        // Prevent event propagation for scroll events
-        this.inventoryUI.preventEventPropagation(this.itemsContainer);
+        // Create the items container
+        const itemsContainer = document.createElement('div');
+        itemsContainer.className = 'inventory-items';
         
-        this.panel.addDOMElement(this.itemsContainer);
+        // Use CSS Grid instead of flexbox for more consistent spacing
+        itemsContainer.style.display = 'grid';
+        itemsContainer.style.gridTemplateColumns = 'repeat(4, 1fr)'; // 4 items per row
+        itemsContainer.style.gap = '15px'; // Consistent gap between all items
+        itemsContainer.style.padding = '15px';
+        itemsContainer.style.boxSizing = 'border-box';
         
-        // Store reference in the parent InventoryUI
-        this.inventoryUI.itemsContainer = this.itemsContainer;
+        // Add responsive grid layout with CSS
+        const gridStyles = document.createElement('style');
+        gridStyles.textContent = `
+            .inventory-items {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+                padding: 15px;
+                box-sizing: border-box;
+            }
+            
+            /* Center items in their grid cells */
+            .inventory-items > .inventory-item {
+                justify-self: center;
+            }
+            
+            /* Responsive adjustments */
+            @media (max-width: 768px) {
+                .inventory-items {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .inventory-items {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+        `;
+        document.head.appendChild(gridStyles);
+        
+        // Add the items container to the scroll container
+        scrollContainer.appendChild(itemsContainer);
+        
+        // Add the scroll container to the wrapper
+        containerWrapper.appendChild(scrollContainer);
+        
+        // Add the container wrapper to the panel
+        this.panel.container.appendChild(containerWrapper);
+        
+        // Store references
+        this.inventoryUI.itemsContainer = itemsContainer;
+        this.inventoryUI.scrollContainer = scrollContainer;
+        this.inventoryUI.containerWrapper = containerWrapper;
     }
     
     /**
@@ -177,70 +232,24 @@ export class InventoryUIElements {
         this.infoContainer.style.fontFamily = "'Cinzel', serif";
         this.infoContainer.style.fontSize = '1.1rem'; // Increased font size
         
-        // Weight info
-        if (this.options.showWeight) {
-            this.weightInfo = document.createElement('div');
-            this.weightInfo.className = 'inventory-weight';
-            this.weightInfo.style.margin = '5px 0';
-            this.infoContainer.appendChild(this.weightInfo);
-        }
-        
-        // Value info
-        if (this.options.showValue) {
-            this.valueInfo = document.createElement('div');
-            this.valueInfo.className = 'inventory-value';
-            this.valueInfo.style.margin = '5px 0';
-            this.infoContainer.appendChild(this.valueInfo);
-        }
-        
-        // Slots info
-        this.slotsInfo = document.createElement('div');
-        this.slotsInfo.className = 'inventory-slots';
-        this.slotsInfo.style.margin = '5px 0';
-        this.infoContainer.appendChild(this.slotsInfo);
+        // We've removed weight, value, and slots info as requested
         
         this.panel.addDOMElement(this.infoContainer);
         
         // Store references in the parent InventoryUI
         this.inventoryUI.infoContainer = this.infoContainer;
-        this.inventoryUI.weightInfo = this.weightInfo;
-        this.inventoryUI.valueInfo = this.valueInfo;
-        this.inventoryUI.slotsInfo = this.slotsInfo;
+        // Remove references to the removed elements
+        this.inventoryUI.weightInfo = null;
+        this.inventoryUI.valueInfo = null;
+        this.inventoryUI.slotsInfo = null;
     }
     
     /**
      * Update the inventory info section
      */
     updateInfoSection() {
-        const inventory = this.inventoryUI.inventory;
-        if (!inventory) return;
-        
-        // Update weight info
-        if (this.options.showWeight && this.weightInfo) {
-            const currentWeight = inventory.getTotalWeight();
-            const maxWeight = inventory.getMaxWeight();
-            const weightPercentage = (currentWeight / maxWeight) * 100;
-            
-            this.weightInfo.innerHTML = `
-                <span>Weight: ${currentWeight.toFixed(1)}/${maxWeight}</span>
-                <div style="width: 120px; height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-top: 5px; overflow: hidden;">
-                    <div style="height: 100%; width: ${weightPercentage}%; background: ${this.getWeightBarColor(weightPercentage)}"></div>
-                </div>
-            `;
-        }
-        
-        // Update value info
-        if (this.options.showValue && this.valueInfo) {
-            const totalValue = inventory.getTotalValue();
-            this.valueInfo.textContent = `Value: ${totalValue} gold`;
-        }
-        
-        // Update slots info
-        if (this.slotsInfo) {
-            const usedSlots = inventory.getAllItems().length;
-            const totalSlots = inventory.getAllSlots().length;
-            this.slotsInfo.textContent = `Slots: ${usedSlots}/${totalSlots}`;
-        }
+        // All info elements have been removed, so there's nothing to update
+        // This method is kept for backward compatibility
     }
     
     /**
