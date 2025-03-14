@@ -1,4 +1,6 @@
 import type { Scene } from 'phaser';
+import { ItemAssetManager } from './item-asset-manager';
+import { logger, LogCategory } from '../utils/Logger';
 
 
 // Enum for item types
@@ -117,12 +119,15 @@ export class BaseItem implements IItem {
     maxDurability?: number;
     uses?: number;
     maxUses?: number;
-
+    
+    // Static reference to the asset manager
+    private static assetManager: ItemAssetManager | null = null;
+    
     constructor(itemData: IItem) {
         this.id = itemData.id;
         this.name = itemData.name;
         this.description = itemData.description;
-        this.iconUrl = itemData.iconUrl;
+        this.iconUrl = this.getIconUrl(itemData.id, itemData.iconUrl);
         this.type = itemData.type;
         this.rarity = itemData.rarity;
         this.weight = itemData.weight;
@@ -138,7 +143,58 @@ export class BaseItem implements IItem {
         this.uses = itemData.uses;
         this.maxUses = itemData.maxUses;
     }
-
+    
+    /**
+     * Set the asset manager for all items
+     * @param assetManager The asset manager to use
+     */
+    static setAssetManager(assetManager: ItemAssetManager): void {
+        BaseItem.assetManager = assetManager;
+    }
+    
+    /**
+     * Get the asset manager
+     * @returns The asset manager
+     */
+    static getAssetManager(): ItemAssetManager | null {
+        return BaseItem.assetManager;
+    }
+    
+    /**
+     * Get the icon URL for an item
+     * @param id The item ID
+     * @param fallbackUrl The fallback URL to use if no asset manager is available
+     * @returns The icon URL
+     */
+    private getIconUrl(id: string, fallbackUrl: string): string {
+        // If we have a direct URL already (starts with / or http), use it
+        if (fallbackUrl && (fallbackUrl.startsWith('/') || fallbackUrl.startsWith('http'))) {
+            return fallbackUrl;
+        }
+        
+        // If we have an asset manager, get the URL from it
+        if (BaseItem.assetManager) {
+            return BaseItem.assetManager.getTextureUrl(id);
+        }
+        
+        // If all else fails, construct a simple path
+        if (fallbackUrl) {
+            return `assets/items/${fallbackUrl}`;
+        }
+        
+        // Last resort default
+        return 'assets/items/default.png';
+    }
+    
+    /**
+     * Update the icon URL using the asset manager
+     */
+    updateIconUrl(): void {
+        if (BaseItem.assetManager) {
+            this.iconUrl = BaseItem.assetManager.getTextureUrl(this.id);
+        }
+    }
+    
     // Common methods
     use(): boolean {
         if (!this.usable) return false;
@@ -365,156 +421,105 @@ export class ItemStack {
 export class ItemSystem {
     private scene: Scene;
     private itemDatabase: Map<string, BaseItem> = new Map();
+    private assetManager: ItemAssetManager;
     
     constructor(scene: Scene) {
         this.scene = scene;
+        
+        // Create the asset manager
+        this.assetManager = new ItemAssetManager(scene);
+        
+        // Set the asset manager for all items
+        BaseItem.setAssetManager(this.assetManager);
+        
+        // Initialize the item database
         this.initializeItems();
+        
+        // Log that the item system is initialized
+        logger.info(LogCategory.ITEMS, 'ItemSystem initialized with asset manager');
     }
     
-    // Initialize the item database with predefined items
+    /**
+     * Preload all item assets
+     */
+    preloadAssets(): void {
+        logger.info(LogCategory.ITEMS, 'Preloading item assets...');
+        this.assetManager.preloadAssets();
+        logger.info(LogCategory.ITEMS, 'Item assets preloaded');
+    }
+    
+    /**
+     * Get the asset manager
+     * @returns The asset manager
+     */
+    getAssetManager(): ItemAssetManager {
+        return this.assetManager;
+    }
+    
     private initializeItems(): void {
-        // Register weapons
+        try {
+            // Import the item registry dynamically to avoid circular dependencies
+            import('./definitions').then(({ ItemRegistry, initializeItemDefinitions }) => {
+                // Initialize all item definitions
+                initializeItemDefinitions();
+                
+                // Get the registry instance
+                const registry = ItemRegistry.getInstance();
+                
+                // Get all definitions and create items
+                const definitions = registry.getAllDefinitions();
+                
+                // Register all items in the database
+                definitions.forEach(definition => {
+                    const item = registry.createItemFromDefinition(definition);
+                    this.registerItem(item);
+                });
+                
+                logger.info(LogCategory.ITEMS, `Loaded ${definitions.length} items from registry`);
+            }).catch(error => {
+                logger.error(LogCategory.ITEMS, `Failed to load item definitions: ${error.message}`);
+                // Fall back to legacy item initialization if loading fails
+                this.initializeLegacyItems();
+            });
+        } catch (error) {
+            logger.error(LogCategory.ITEMS, `Error initializing items: ${error.message}`);
+            // Fall back to legacy item initialization if loading fails
+            this.initializeLegacyItems();
+        }
+    }
+    
+    /**
+     * Legacy method to initialize items directly
+     * This is used as a fallback if loading from the registry fails
+     * @deprecated Use the item registry instead
+     */
+    private initializeLegacyItems(): void {
+        logger.warn(LogCategory.ITEMS, 'Using legacy item initialization');
+        
+        // Register weapons with simplified IDs
         this.registerItem(new WeaponItem({
-            id: 'rusty-sword',
-            name: 'Rusty Sword',
-            description: 'An old sword with a rusty blade. Not very effective, but better than nothing.',
-            iconUrl: 'rusty-sword',
+            id: 'sword',
+            name: 'Sword',
+            description: 'A well-crafted sword. Sharp and reliable.',
+            iconUrl: '/weapons/sword-48.png',
             type: ItemType.WEAPON,
-            rarity: ItemRarity.COMMON,
-            weight: 3,
-            value: 5,
-            level: 1,
+            rarity: ItemRarity.UNCOMMON,
+            weight: 2.5,
+            value: 25,
+            level: 3,
             stackable: false,
             maxStackSize: 1,
             usable: false,
-            durability: 20,
-            maxDurability: 20,
+            durability: 40,
+            maxDurability: 40,
             weaponType: WeaponType.SWORD,
             attributes: {
-                damage: 5,
+                damage: 12,
                 normal: true
             }
         }));
         
-        // Add some armor
-        const leatherChest = new ArmorItem({
-            id: 'armor_leather_chest',
-            name: 'Leather Chest',
-            description: 'A basic leather chest piece. Offers minimal protection.',
-            iconUrl: '/items/leather_chest.png',
-            type: ItemType.ARMOR,
-            armorType: ArmorType.CHEST,
-            rarity: ItemRarity.COMMON,
-            weight: 3.0,
-            value: 8,
-            level: 1,
-            stackable: false,
-            maxStackSize: 1,
-            usable: true,
-            attributes: {
-                defense: 5
-            },
-            durability: 30,
-            maxDurability: 30
-        });
-        
-        // Add some consumables
-        const minorHealingPotion = new ConsumableItem({
-            id: 'consumable_minor_healing_potion',
-            name: 'Minor Healing Potion',
-            description: 'A small potion that restores a little health.',
-            iconUrl: '/items/minor_healing_potion.png',
-            type: ItemType.CONSUMABLE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.2,
-            value: 5,
-            stackable: true,
-            maxStackSize: 20,
-            usable: true,
-            uses: 1,
-            maxUses: 1,
-            healthRestore: 20
-        });
-        
-        // Register resources
-        this.registerItem(new BaseItem({
-            id: 'wood',
-            name: 'Wood',
-            description: 'A piece of wood gathered from trees. Used for crafting and building.',
-            iconUrl: 'wood',
-            type: ItemType.RESOURCE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.5,
-            value: 1,
-            stackable: true,
-            maxStackSize: 50,
-            usable: false
-        }));
-        
-        // Register fruit items
-        this.registerItem(new ConsumableItem({
-            id: 'food_apple',
-            name: 'Apple',
-            description: 'A fresh, juicy apple. Restores a small amount of health.',
-            iconUrl: 'fruits',
-            type: ItemType.CONSUMABLE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.2,
-            value: 2,
-            stackable: true,
-            maxStackSize: 10,
-            usable: true,
-            healthRestore: 5
-        }));
-        
-        this.registerItem(new ConsumableItem({
-            id: 'food_orange',
-            name: 'Orange',
-            description: 'A citrus fruit rich in vitamin C. Restores health and provides a small energy boost.',
-            iconUrl: 'fruits',
-            type: ItemType.CONSUMABLE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.2,
-            value: 3,
-            stackable: true,
-            maxStackSize: 10,
-            usable: true,
-            healthRestore: 8
-        }));
-        
-        this.registerItem(new ConsumableItem({
-            id: 'food_cherry',
-            name: 'Cherry',
-            description: 'A small, sweet cherry. A tasty snack that provides a minor health boost.',
-            iconUrl: 'fruits',
-            type: ItemType.CONSUMABLE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.1,
-            value: 1,
-            stackable: true,
-            maxStackSize: 20,
-            usable: true,
-            healthRestore: 3
-        }));
-        
-        // Add material resources
-        this.registerItem(new BaseItem({
-            id: 'leather',
-            name: 'Leather',
-            description: 'Tanned animal hide. Used for crafting armor and other items.',
-            iconUrl: 'assets/materials/leather.svg',
-            type: ItemType.RESOURCE,
-            rarity: ItemRarity.COMMON,
-            weight: 0.5,
-            value: 5,
-            stackable: true,
-            maxStackSize: 20,
-            usable: false
-        }));
-        
-        // Register all items in the database
-        this.registerItem(leatherChest);
-        this.registerItem(minorHealingPotion);
+        // Add more legacy items here...
     }
     
     // Register a new item in the database

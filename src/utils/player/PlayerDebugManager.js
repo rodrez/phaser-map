@@ -141,18 +141,6 @@ export class PlayerDebugManager extends CorePlayerManager {
     }
     
     /**
-     * Heal the player to full health
-     */
-    healPlayer() {
-        // Use the PlayerHealthSystem
-        if (this.scene.playerHealthSystem) {
-            this.scene.playerHealthSystem.healToFull('debug menu');
-        } else {
-            logger.error(LogCategory.PLAYER, "PlayerHealthSystem not available, cannot heal player");
-        }
-    }
-    
-    /**
      * Test the God Mode and Full Heal features
      * This function simulates damage and healing to verify that the features work
      */

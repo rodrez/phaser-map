@@ -8,6 +8,11 @@ import { PopupSystem } from "../ui/popup";
 import { logger, LogCategory } from "../utils/Logger";
 import { MonsterSystem, MonsterPopupSystem } from "../monsters";
 import { ItemSystem } from "../items/item";
+// Import the ItemSystem extension
+import { BaseItem } from "../items/item-system-extension";
+import { Inventory } from "../items/inventory";
+import { InventoryManager } from "../items/inventory-manager";
+import { InventoryUI } from "../ui/inventory-ui/index";
 import { CombatSystem } from "../utils/CombatSystem";
 import { CharacterStatsUI } from "../ui/character-stats";
 import playerStatsService from "../utils/player/PlayerStatsService";
@@ -56,6 +61,44 @@ export class Game extends Scene {
 
     // Initialize item system
     this.itemSystem = new ItemSystem(this);
+    
+    // Preload item assets if they haven't been loaded yet
+    try {
+      const assetManager = this.itemSystem.getAssetManager();
+      if (assetManager) {
+        logger.info(LogCategory.ASSETS, "Initializing item asset manager");
+        // Set the asset manager for all items
+        BaseItem.setAssetManager(assetManager);
+        // Preload assets if needed
+        assetManager.preloadAssets();
+      } else {
+        logger.warn(LogCategory.ASSETS, "Asset manager not available in ItemSystem");
+      }
+    } catch (error) {
+      logger.error(LogCategory.ASSETS, "Error accessing asset manager:", error);
+    }
+
+    // Initialize inventory manager
+    this.inventoryManager = new InventoryManager(this, this.itemSystem);
+    
+    // Initialize inventory UI
+    this.inventoryUI = new InventoryUI(this, {
+      inventory: this.inventoryManager.getInventory(),
+      itemSystem: this.itemSystem,
+      onItemClick: (itemStack, index) => this.handleInventoryItemClick(itemStack, index),
+      onItemRightClick: (itemStack, index) => this.handleInventoryItemRightClick(itemStack, index),
+      onClose: () => {
+        // Reset the new items counter when inventory is closed
+        this.playerStats.newItems = 0;
+        this.uiManager.updateMenuBadge('inventory', 0);
+      }
+    });
+    
+    // Connect the inventory UI to the inventory manager
+    this.inventoryManager.setInventoryUI(this.inventoryUI);
+    
+    // Add default items to inventory for testing
+    this.inventoryManager.addDefaultItems();
 
     // Initialize combat system
     this.combatSystem = new CombatSystem(this);
@@ -126,6 +169,12 @@ export class Game extends Scene {
     this.events.on('openCharacter', () => {
       logger.info(LogCategory.UI, 'Opening character stats UI');
       this.characterStatsUI.show();
+    });
+
+    // Listen for openInventory event
+    this.events.on('openInventory', () => {
+      logger.info(LogCategory.UI, 'Opening inventory UI');
+      this.inventoryUI.show();
     });
   }
 
@@ -239,18 +288,85 @@ export class Game extends Scene {
     // Log the item being added
     logger.info(LogCategory.INVENTORY, `Adding ${data.quantity}x ${data.itemId} to inventory`);
     
-    // Here you would update the player's inventory
-    // For now, we'll just show a message
-    this.uiManager.showMedievalMessage(`Thou hast acquired ${data.quantity}x ${data.itemId}!`, "success");
+    // Get the item from the item system
+    const item = this.itemSystem.getItem(data.itemId);
+    if (!item) {
+      logger.error(LogCategory.INVENTORY, `Item ${data.itemId} not found in item database`);
+      return;
+    }
+    
+    // Ensure the item has the correct icon URL from the asset manager
+    try {
+      if (typeof item.updateIconUrl === 'function') {
+        item.updateIconUrl();
+      } else {
+        logger.warn(LogCategory.INVENTORY, "Item does not have updateIconUrl method");
+      }
+    } catch (error) {
+      logger.warn(LogCategory.INVENTORY, "Could not update item icon URL:", error);
+    }
+    
+    // Add the item to the player's inventory using the inventory manager
+    const added = this.inventoryManager.addItem(data.itemId, data.quantity);
+    
+    // Show appropriate message based on whether all items were added
+    if (!added) {
+      this.uiManager.showMedievalMessage(
+        `Thou cannot carry any more ${item.name}!`, 
+        "warning"
+      );
+    } else {
+      const quantity = this.inventoryManager.getItemQuantity(data.itemId);
+      this.uiManager.showMedievalMessage(`Thou hast acquired ${data.quantity}x ${item.name}!`, "success");
+    }
     
     // Update any UI elements that show inventory
-    // For example, update menu badges
     if (this.uiManager) {
       // Increment the new items counter
       this.playerStats.newItems = (this.playerStats.newItems || 0) + 1;
       // Update the inventory badge
       this.uiManager.updateMenuBadge('inventory', this.playerStats.newItems);
     }
+  }
+
+  /**
+   * Handle inventory item click
+   * @param {Object} itemStack - The clicked item stack
+   * @param {number} index - The index of the item in the inventory
+   */
+  handleInventoryItemClick(itemStack, index) {
+    const item = itemStack.item;
+    
+    // If the item is usable, use it
+    if (item.usable) {
+      logger.info(LogCategory.INVENTORY, `Using item: ${item.name}`);
+      
+      if (this.inventoryManager.useItem(index)) {
+        // If the item was used successfully
+        this.uiManager.showMedievalMessage(`Thou hast used ${item.name}!`, "info");
+      }
+    } else {
+      // Just show info about the item
+      this.uiManager.showMedievalMessage(`${item.name}: ${item.description}`, "info");
+    }
+  }
+  
+  /**
+   * Handle inventory item right click (context menu)
+   * @param {Object} itemStack - The right-clicked item stack
+   * @param {number} index - The index of the item in the inventory
+   */
+  handleInventoryItemRightClick(itemStack, index) {
+    const item = itemStack.item;
+    
+    // For now, just drop the item
+    logger.info(LogCategory.INVENTORY, `Dropping item: ${item.name}`);
+    
+    // Remove one of the item from inventory
+    this.inventoryManager.removeItemFromSlot(index, 1);
+    
+    // Show message
+    this.uiManager.showMedievalMessage(`Thou hast dropped ${item.name}!`, "info");
   }
 
   /**
@@ -415,6 +531,7 @@ export class Game extends Scene {
     this.events.off("double-click-move");
     this.events.off("add-item-to-inventory");
     this.events.off("monster-click");
+    this.events.off("openInventory");
 
     // Clean up managers
     if (this.playerManager) {
@@ -448,6 +565,16 @@ export class Game extends Scene {
     // Destroy character stats UI
     if (this.characterStatsUI) {
       this.characterStatsUI.destroy();
+    }
+    
+    // Destroy inventory manager
+    if (this.inventoryManager) {
+      this.inventoryManager.destroy();
+    }
+    
+    // Destroy inventory UI
+    if (this.inventoryUI) {
+      this.inventoryUI.destroy();
     }
 
     logger.info(LogCategory.GAME, "Game scene shutdown");

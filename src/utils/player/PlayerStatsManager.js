@@ -251,37 +251,6 @@ export class PlayerStatsManager extends CorePlayerManager {
         }
     }
 
-    /**
-     * Show a full heal effect (more dramatic than regular healing)
-     * @param {number} amount - The amount healed
-     */
-    showFullHealEffect(amount) {
-        // Show a more dramatic healing effect for full heal
-        if (this.player) {
-            // Create a larger healing effect
-            const fullHealEffect = this.scene.add.sprite(this.player.x, this.player.y, 'player');
-            fullHealEffect.setScale(1.5);
-            fullHealEffect.setAlpha(0.7);
-            fullHealEffect.setTint(0x00ff00);
-            fullHealEffect.setDepth(1998); // Below player
-            
-            // Animate the healing effect
-            this.scene.tweens.add({
-                targets: fullHealEffect,
-                scale: 2.5,
-                alpha: 0,
-                duration: 800,
-                onComplete: () => {
-                    fullHealEffect.destroy();
-                }
-            });
-        }
-        
-        // Show a message to the player if UI manager is available
-        if (this.scene.uiManager) {
-            this.scene.uiManager.showMedievalMessage('Fully healed!', 'success', 2000);
-        }
-    }
 
     /**
      * Show dodge effect above the player
@@ -294,7 +263,7 @@ export class PlayerStatsManager extends CorePlayerManager {
             this.player.x, 
             this.player.y - 20, 
             'DODGE!', 
-            { fontFamily: 'Arial', fontSize: '16px', color: '#00FF00', fontWeight: 'bold' }
+            { fontFamily: 'Arial', fontSize: '16px', color: '#29304e', fontWeight: 'bold' }
         );
         dodgeText.setDepth(2001);
         
@@ -305,25 +274,6 @@ export class PlayerStatsManager extends CorePlayerManager {
             alpha: 0,
             duration: 800,
             onComplete: () => dodgeText.destroy()
-        });
-        
-        // Add a visual effect around the player
-        const circle = this.scene.add.circle(
-            this.player.x,
-            this.player.y,
-            30,
-            0x00FF00,
-            0.5
-        );
-        circle.setDepth(2000);
-        
-        // Animate the circle
-        this.scene.tweens.add({
-            targets: circle,
-            scale: 1.5,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => circle.destroy()
         });
     }
 

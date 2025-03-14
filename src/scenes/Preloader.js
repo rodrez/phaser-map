@@ -51,6 +51,21 @@ export class Preloader extends Scene {
 		this.load.image('stag', '/monsters/stag.png');
 		this.load.image('wolf', '/monsters/wolf.png');
 		this.load.image('deer', '/monsters/deer.png');
+		
+		// Load individual item images
+		this.load.image('item-apple', '/items/apple.png');
+		this.load.image('item-leather', '/items/leather.png');
+		this.load.image('item-wood', '/items/wood.png');
+		this.load.image('default-item', '/items/default.png');
+
+		// Weapons
+		this.load.image('sword', '/weapons/sword-48.png');
+		this.load.image('crossbow', '/weapons/crossbow-48.png');
+		this.load.image('axe', '/weapons/axe-48.png');
+		this.load.image('staff', '/weapons/staff-48.png');
+
+		// Armor
+		
 	}
 
 	create() {

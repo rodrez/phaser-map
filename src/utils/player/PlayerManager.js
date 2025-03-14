@@ -103,12 +103,6 @@ export class PlayerManager {
         return this.healthSystem.heal(amount, source);
     }
 
-    /**
-     * Heal the player to full health
-     */
-    healPlayer() {
-        return this.healthSystem.healToFull('full heal');
-    }
 
     /**
      * Toggle god mode for the player

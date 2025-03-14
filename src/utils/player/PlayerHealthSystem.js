@@ -190,22 +190,6 @@ export class PlayerHealthSystem {
     }
     
     /**
-     * Heal the player to full health
-     * @param {string} source - The source of the full heal
-     * @returns {number} - The amount healed
-     */
-    healToFull(source = 'full heal') {
-        const amountHealed = this.statsService.healToFull(source);
-        
-        // Show full heal effect if available
-        if (amountHealed > 0 && this.scene.playerManager?.statsManager?.showFullHealEffect) {
-            this.scene.playerManager.statsManager.showFullHealEffect(amountHealed);
-        }
-        
-        return amountHealed;
-    }
-    
-    /**
      * Check if god mode should trigger healing
      */
     checkGodModeHealing() {

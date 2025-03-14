@@ -64,13 +64,6 @@ export class PlayerStatsService extends EventEmitter {
     heal(amount: number, source?: string): number;
 
     /**
-     * Heal the player to full health
-     * @param source - The source of the full heal
-     * @returns The amount healed
-     */
-    healToFull(source?: string): number;
-
-    /**
      * Toggle god mode
      * @returns The new god mode state
      */

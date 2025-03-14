@@ -1,0 +1,13 @@
+Metal Name,Attribute Type,Effects
+Mercurium,Debuff,Steals 20% of target's movement speed for a duration.
+Thornite,Debuff,Target takes additional damage upon attacking you.
+Sharpsium,Debuff,Reduces target's Defense by 4 for 60 seconds.
+Bluntiron,Debuff,Reduces target's Attack by 3 for 60 seconds.
+Obscurium,Debuff,Prevents target from healing for 15 seconds. Chance increases as HP decreases.
+Venomium,Debuff,Deals damage over time every 3.5 seconds for 60 seconds.
+Cryonite,Debuff,Reduces target's movement speed by 50% and Dodge ability by 15% for 30 seconds.
+Stormium,Debuff,Deals damage every 5 seconds based on the number of affected targets within 250m for 30 seconds.
+Infernium,Debuff,Deals damage over time every 3 seconds for 30 seconds and spreads to nearby targets.
+Gravitium,Debuff,Disables target's movement for 4 seconds. Target gains 4-second immunity after regaining movement.
+Etherealite,Buff,"During combat, your next movement within your circle will be a teleport instead of walking."
+Zephyrion,Buff,"During combat, steal 20% of your enemy's movement speed for a short period."

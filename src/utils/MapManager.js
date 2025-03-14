@@ -449,17 +449,17 @@ export class MapManager {
         return null;
       }
 
-      // Create custom icon for flag
-      const flagIcon = L.divIcon({
-        className: "flag-marker",
-        html: '<div style="width: 40px; height: 50px; background-image: url(assets/svg/flag.svg); background-size: contain; cursor: pointer;"></div>',
+      // Create a marker for the flag
+      const flagMarker = L.divIcon({
+        className: 'flag-marker',
+        html: '<div style="width: 40px; height: 50px; background-image: url(/svg/flag.svg); background-size: contain; cursor: pointer;"></div>',
         iconSize: [40, 50],
-        iconAnchor: [20, 45],
+        iconAnchor: [20, 50]
       });
 
       // Add flag marker to map
-      const flagMarker = L.marker([lat, lng], {
-        icon: flagIcon,
+      const flagMarkerObj = L.marker([lat, lng], {
+        icon: flagMarker,
         zIndexOffset: 500,
         interactive: true, // Make sure it's clickable
         riseOnHover: true, // Rise above other markers on hover
@@ -477,7 +477,7 @@ export class MapManager {
       }).addTo(this.map);
 
       // Add click handler to flag
-      flagMarker.on("click", (e) => {
+      flagMarkerObj.on("click", (e) => {
         if (this.debug) {
           logger.info(LogCategory.MAP, "Flag clicked at:", lat, lng);
         }
@@ -491,7 +491,7 @@ export class MapManager {
 
       // Store flag and territory
       const flag = {
-        marker: flagMarker,
+        marker: flagMarkerObj,
         territory: territoryCircle,
         lat: lat,
         lng: lng,
