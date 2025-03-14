@@ -130,6 +130,14 @@ export class EnhancedSkill {
   }
   
   /**
+   * Gets the current level of the skill (alias for level).
+   * This is used by the UI for compatibility.
+   */
+  get currentLevel(): number {
+    return this._level;
+  }
+  
+  /**
    * Sets the current level of the skill.
    */
   set level(value: number) {
@@ -165,6 +173,18 @@ export class EnhancedSkill {
     }
     
     return this.levels[level - 1].effects;
+  }
+  
+  /**
+   * Gets the level data for a specific level.
+   * This is used by the UI to display level information.
+   */
+  getLevelEffects(level: number): EnhancedSkillLevel {
+    if (level < 1 || level > this.maxLevel) {
+      throw new Error(`Invalid skill level: ${level}. Must be between 1 and ${this.maxLevel}.`);
+    }
+    
+    return this.levels[level - 1];
   }
   
   /**

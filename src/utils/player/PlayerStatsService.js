@@ -44,7 +44,7 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             armorSpeedPenaltyReductions: new Map(), // armorType -> percentage
             
             // Dodge chance
-            dodgeChance: 15,
+            dodgeChance: 0,
             
             // Healing bonuses
             healingMultiplier: 1.2,
@@ -146,6 +146,8 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         Object.assign(this.stats, statsUpdate);
         
         if (!silent) {
+            // Include the silent flag in the event data
+            statsUpdate.silent = silent;
             this.emit('stats-changed', statsUpdate);
         }
     }

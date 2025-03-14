@@ -16,3 +16,9 @@ export * from './skill-manager';
 
 // Export skill examples
 export * from './skill-examples';
+
+// Export skill definitions
+export * from './skill-definitions';
+
+// Export skill initializer
+export * from './skill-initializer';

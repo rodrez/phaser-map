@@ -36,6 +36,9 @@ export class PlayerDebugManager extends CorePlayerManager {
         this.playerMenu = null;
         this.godModeGlow = null;
         
+        // Initialize the debug menu
+        this.initializeDebugMenu();
+        
         // Set up keyboard listener for 'G' key to toggle god mode
         this.keyG = this.scene.input.keyboard.addKey('G');
         this.keyG.on('down', () => {
@@ -52,6 +55,31 @@ export class PlayerDebugManager extends CorePlayerManager {
     }
 
     /**
+     * Initialize the debug menu
+     */
+    initializeDebugMenu() {
+        try {
+            // Create a debug menu
+            this.playerMenu = new DebugMenu(this.scene, {
+                position: 'left',
+                menuButtonText: 'Debug Menu'
+            });
+            
+            // Add debug menu items
+            this.playerMenu.createMenuItem({
+                id: 'godmode',
+                label: 'God Mode: OFF',
+                icon: '��️',
+                onClick: () => this.toggleGodMode()
+            });
+            
+            logger.info(LogCategory.PLAYER, "Debug menu initialized");
+        } catch (error) {
+            logger.error(LogCategory.PLAYER, "Error initializing debug menu:", error);
+        }
+    }
+
+    /**
      * Toggle god mode for the player
      */
     toggleGodMode() {
@@ -59,12 +87,14 @@ export class PlayerDebugManager extends CorePlayerManager {
         if (this.scene.playerHealthSystem) {
             const isEnabled = this.scene.playerHealthSystem.toggleGodMode();
             
-            // Update the menu item label
-            const godModeItem = this.playerMenu.menuItems.get('godmode');
-            if (godModeItem) {
-                const label = godModeItem.querySelector('.medieval-menu-label');
-                if (label) {
-                    label.textContent = `God Mode: ${isEnabled ? 'ON' : 'OFF'}`;
+            // Update the menu item label if menu exists
+            if (this.playerMenu && this.playerMenu.menuItems) {
+                const godModeItem = this.playerMenu.menuItems.get('godmode');
+                if (godModeItem) {
+                    const label = godModeItem.querySelector('.medieval-menu-label');
+                    if (label) {
+                        label.textContent = `God Mode: ${isEnabled ? 'ON' : 'OFF'}`;
+                    }
                 }
             }
             

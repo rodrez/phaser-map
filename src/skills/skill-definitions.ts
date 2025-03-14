@@ -84,7 +84,7 @@ export function createMartialArtsSkill(): EnhancedSkill {
       },
       {
         level: 2,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.CONDITIONAL_EFFECT,
@@ -115,7 +115,7 @@ export function createMartialArtsSkill(): EnhancedSkill {
       },
       {
         level: 3,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.CONDITIONAL_EFFECT,
@@ -162,7 +162,7 @@ export function createSunderSkill(): EnhancedSkill {
   return new EnhancedSkill({
     id: 'sunder',
     name: 'Sunder',
-    description: 'A powerful melee skill granting your attacks a chance to hit multiple enemies simultaneously. Highly effective with melee weapons, but useless with ranged weapons.',
+    description: 'A powerful melee skill granting your attacks a chance to hit multiple enemies simultaneously. Highly effective with melee weapons (Sword, Axe, Dagger, Brass Knuckles, Spear, Staff), but useless with ranged weapons.',
     category: SkillCategory.COMBAT,
     isSpecialization: false,
     levels: [
@@ -193,7 +193,7 @@ export function createSunderSkill(): EnhancedSkill {
       },
       {
         level: 2,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.CONDITIONAL_EFFECT,
@@ -283,7 +283,7 @@ export function createArcherySkill(): EnhancedSkill {
       },
       {
         level: 2,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.WEAPON_ATTACK_BONUS,
@@ -307,7 +307,7 @@ export function createArcherySkill(): EnhancedSkill {
       },
       {
         level: 3,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.WEAPON_ATTACK_BONUS,
@@ -359,7 +359,7 @@ export function createStrategySkill(): EnhancedSkill {
       },
       {
         level: 2,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.SPECIAL_MECHANIC,
@@ -370,7 +370,7 @@ export function createStrategySkill(): EnhancedSkill {
       },
       {
         level: 3,
-        cost: 1,
+        cost: 2,
         effects: [
           {
             type: EffectType.SPECIAL_MECHANIC,

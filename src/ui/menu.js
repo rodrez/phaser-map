@@ -1,5 +1,6 @@
 import { DOMUIHelper } from '../utils/DOMUIHelper';
 import { logger, LogCategory } from '../utils/Logger';
+import { SkillsUI } from './skills-ui';
 
 /**
  * Options for the medieval menu
@@ -40,6 +41,9 @@ export class MedievalMenu {
         this.menuItems = new Map();
         this.activeItem = null;
         
+        // UI Components
+        this.skillsUI = null;
+        
         // State
         this.isVisible = false;
         this.menuItemConfigs = [];
@@ -71,6 +75,9 @@ export class MedievalMenu {
         
         // Hide the menu by default
         this.container.style.display = 'none';
+        
+        // Initialize UI components
+        this.initializeUIComponents();
     }
     
     /**
@@ -571,17 +578,96 @@ export class MedievalMenu {
     }
     
     /**
+     * Initializes UI components
+     */
+    initializeUIComponents() {
+        // Initialize Skills UI
+        this.skillsUI = new SkillsUI(this.scene);
+        
+        // Set click handler for skills menu item
+        this.setClickHandler('skills', () => {
+            logger.info(LogCategory.MENU, '[MedievalMenu] Skills menu item clicked');
+            this.skillsUI.show();
+            this.hide(); // Hide the menu when opening skills
+        });
+        
+        // Set click handler for character menu item
+        this.setClickHandler('character', () => {
+            logger.info(LogCategory.MENU, '[MedievalMenu] Character menu item clicked');
+            // Emit the openCharacter event to show the character stats UI
+            this.scene.events.emit('openCharacter');
+            this.hide(); // Hide the menu when opening character stats
+        });
+    }
+    
+    /**
      * Destroys the menu and removes it from the DOM
      */
     destroy() {
-        // Remove the menu container
-        if (this.container?.parentNode) {
-            this.container.parentNode.removeChild(this.container);
-        }
+        logger.info(LogCategory.MENU, '[MedievalMenu] Destroying menu');
         
-        // Remove the menu button
-        if (this.menuButton?.parentNode) {
-            this.menuButton.parentNode.removeChild(this.menuButton);
+        try {
+            // Hide the menu first to prevent visual glitches
+            if (this.isVisible) {
+                // Force immediate hide instead of animation
+                if (this.container) {
+                    this.container.style.display = 'none';
+                }
+                this.isVisible = false;
+            }
+            
+            // Destroy UI components first (to ensure proper cleanup order)
+            if (this.skillsUI) {
+                logger.info(LogCategory.MENU, '[MedievalMenu] Destroying skills UI component');
+                try {
+                    this.skillsUI.destroy();
+                } catch (error) {
+                    logger.error(LogCategory.MENU, '[MedievalMenu] Error destroying skills UI:', error);
+                }
+                this.skillsUI = null;
+            }
+            
+            // Remove event listeners from menu items by replacing them with clones
+            if (this.menuItems) {
+                this.menuItems.forEach((item, id) => {
+                    if (item && item.parentNode) {
+                        logger.info(LogCategory.MENU, `[MedievalMenu] Removing event listeners from menu item: ${id}`);
+                        const clone = item.cloneNode(true);
+                        item.parentNode.replaceChild(clone, item);
+                    }
+                });
+            }
+            
+            // Remove the menu container
+            if (this.container) {
+                logger.info(LogCategory.MENU, '[MedievalMenu] Removing menu container');
+                if (this.container.parentNode) {
+                    this.container.parentNode.removeChild(this.container);
+                }
+                this.container = null;
+            }
+            
+            // Remove the menu button
+            if (this.menuButton) {
+                logger.info(LogCategory.MENU, '[MedievalMenu] Removing menu button');
+                // Remove event listeners by replacing with clone
+                if (this.menuButton.parentNode) {
+                    const clone = this.menuButton.cloneNode(false);
+                    this.menuButton.parentNode.replaceChild(clone, this.menuButton);
+                    clone.parentNode.removeChild(clone);
+                }
+                this.menuButton = null;
+            }
+            
+            // Clear references
+            this.menuItems.clear();
+            this.menuItemConfigs = [];
+            this.activeItem = null;
+            this.menuContent = null;
+            
+            logger.info(LogCategory.MENU, '[MedievalMenu] Menu destroyed successfully');
+        } catch (error) {
+            logger.error(LogCategory.MENU, '[MedievalMenu] Error during menu destruction:', error);
         }
     }
 } 

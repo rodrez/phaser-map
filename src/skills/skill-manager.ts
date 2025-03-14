@@ -39,6 +39,7 @@ export class EnhancedSkillManager extends Phaser.Events.EventEmitter {
     
     // Listen for stats changes
     this.effectSystem.on('stats-changed', () => {
+      // Emit our own stats-changed event
       this.emit('stats-changed');
     });
   }
@@ -57,6 +58,13 @@ export class EnhancedSkillManager extends Phaser.Events.EventEmitter {
    * @returns The skill, or undefined if not found
    */
   getSkill(skillId: string): EnhancedSkill | undefined {
+    // First check if the player has learned this skill
+    const playerSkill = this.playerSkills.get(skillId);
+    if (playerSkill) {
+      return playerSkill;
+    }
+    
+    // Otherwise return the available skill
     return this.availableSkills.get(skillId);
   }
   

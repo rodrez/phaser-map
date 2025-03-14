@@ -98,8 +98,12 @@ export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
     this.playerSkills = playerSkills;
     
     // Listen for stats changes from the service
-    this.statsService.on('stats-changed', () => {
-      this.flagForRecalculation();
+    this.statsService.on('stats-changed', (statsUpdate) => {
+      // Only recalculate if this is not a silent update
+      // Silent updates are typically from us, so we don't need to recalculate
+      if (statsUpdate && !statsUpdate.silent) {
+        this.flagForRecalculation();
+      }
     });
   }
   
@@ -250,8 +254,12 @@ export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
     if (stats.speed !== currentStats.speed) updates.speed = stats.speed;
     if (stats.maxHp !== currentStats.maxHealth) updates.maxHealth = stats.maxHp;
     
+    // Add dodge chance to updates
+    if (stats.dodgeChance !== currentStats.dodgeChance) updates.dodgeChance = stats.dodgeChance;
+    
     // Only update if there are changes
     if (Object.keys(updates).length > 0) {
+      // Use silent update to avoid recursion
       this.statsService.updateStats(updates, true); // Silent update to avoid recursion
     }
   }
