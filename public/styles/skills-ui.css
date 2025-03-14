@@ -1,0 +1,228 @@
+/* Skills UI Styles */
+
+.skills-ui {
+    background-color: transparent;
+    color: #e8d4b8;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: scale(0.95);
+    max-width: 90vw;
+    max-height: 90vh;
+    z-index: 1000;
+}
+
+.skills-ui.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.skills-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100% - 60px);
+}
+
+/* Skill Points Display */
+.skill-points-container {
+    background-color: rgba(58, 46, 34, 0.8);
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #8c7853;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+
+.skill-points-label {
+    font-weight: bold;
+    margin-right: 5px;
+    color: #d4b483;
+}
+
+.skill-points-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+/* Tiers Container */
+.tiers-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Tier Sections */
+.tier-container {
+    background-color: rgba(58, 46, 34, 0.7);
+    border: 1px solid #8c7853;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.tier-header {
+    background-color: rgba(74, 60, 46, 0.9);
+    padding: 10px 15px;
+    border-bottom: 1px solid #8c7853;
+    position: relative;
+    z-index: 2;
+}
+
+.tier-title {
+    margin: 0;
+    color: #ffd700;
+    font-size: 1.3em;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.tier-skills {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    padding: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Skill Cards */
+.skill-card {
+    background-color: rgba(44, 33, 23, 0.8);
+    border: 1px solid #8c7853;
+    border-radius: 5px;
+    padding: 15px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.skill-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.skill-card.learnable {
+    border-color: #ffd700;
+}
+
+.skill-card.learned {
+    border-color: #4caf50;
+}
+
+.skill-card.locked {
+    opacity: 0.7;
+    border-color: #8c7853;
+}
+
+.skill-card.locked::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.skill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #8c7853;
+    padding-bottom: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+.skill-name {
+    margin: 0;
+    color: #ffd700;
+    font-size: 1.1em;
+}
+
+.skill-level {
+    background-color: rgba(58, 46, 34, 0.8);
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    color: #d4b483;
+}
+
+.skill-description {
+    font-size: 0.9em;
+    margin-bottom: 15px;
+    color: #e8d4b8;
+    line-height: 1.4;
+    position: relative;
+    z-index: 2;
+}
+
+.skill-effects {
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+.effects-title {
+    margin: 0 0 8px 0;
+    color: #d4b483;
+    font-size: 0.9em;
+}
+
+.effects-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.85em;
+    color: #c0a080;
+}
+
+.effects-list li {
+    margin-bottom: 5px;
+}
+
+.skill-upgrade-button {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #8c7853;
+    color: #e8d4b8;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'MedievalSharp', cursive, serif;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.skill-upgrade-button:hover:not(:disabled) {
+    background-color: #a18c63;
+}
+
+.skill-upgrade-button:disabled {
+    background-color: #5a4a35;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tier-skills {
+        grid-template-columns: 1fr;
+    }
+    
+    .skills-ui {
+        width: 95vw !important;
+        height: 95vh !important;
+    }
+} 

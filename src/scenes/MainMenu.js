@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { logger, LogCategory } from '../utils/Logger';
 
 export class MainMenu extends Scene
 {

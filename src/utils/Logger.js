@@ -30,6 +30,7 @@ export const LogCategory = {
     MAP: 'MAP',
     FLAG: 'FLAG',
     SKILL: 'SKILL',
+    SKILLS: 'SKILLS',
     GAME: 'GAME',
     MMO: 'MMO',
     POSITION: 'POSITION',

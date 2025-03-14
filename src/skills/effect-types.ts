@@ -63,6 +63,11 @@ export enum EffectType {
   MERCHANT_DISCOUNT = 'MERCHANT_DISCOUNT',
   AGGRESSIVE_TIMER_REDUCTION = 'AGGRESSIVE_TIMER_REDUCTION',
   SPECIAL_INTERACTION = 'SPECIAL_INTERACTION',
+  
+  // Additional effects
+  SPECIAL_ATTACK = 'SPECIAL_ATTACK',
+  RANGE_EXTENSION = 'RANGE_EXTENSION',
+  SPECIAL_MECHANIC = 'SPECIAL_MECHANIC',
 }
 
 /**
@@ -342,6 +347,35 @@ export interface SpecialInteractionEffect extends SkillEffect {
 }
 
 /**
+ * Special attack effect
+ */
+export interface SpecialAttackEffect extends SkillEffect {
+  type: EffectType.SPECIAL_ATTACK;
+  value: number; // Percentage of normal attack damage
+  targets: number; // Number of targets affected
+  description: string;
+}
+
+/**
+ * Range extension effect
+ */
+export interface RangeExtensionEffect extends SkillEffect {
+  type: EffectType.RANGE_EXTENSION;
+  weaponTypes: string[]; // Types of weapons affected
+  value: number; // Range extension amount
+  description: string;
+}
+
+/**
+ * Special mechanic effect
+ */
+export interface SpecialMechanicEffect extends SkillEffect {
+  type: EffectType.SPECIAL_MECHANIC;
+  mechanicType: string; // Type of mechanic
+  description: string;
+}
+
+/**
  * Union type of all possible skill effects
  */
 export type SkillEffectUnion = 
@@ -374,4 +408,7 @@ export type SkillEffectUnion =
   | HealBonusEffect
   | MerchantDiscountEffect
   | AggressiveTimerReductionEffect
-  | SpecialInteractionEffect; 
+  | SpecialInteractionEffect
+  | SpecialAttackEffect
+  | RangeExtensionEffect
+  | SpecialMechanicEffect; 

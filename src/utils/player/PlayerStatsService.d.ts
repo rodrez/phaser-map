@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { PlayerStats } from '../../skills/enhanced-skill-effect-system';
+import { PlayerStats } from '../../skills/skill-effect-system';
 
 /**
  * PlayerStatsService - Single source of truth for all player stats

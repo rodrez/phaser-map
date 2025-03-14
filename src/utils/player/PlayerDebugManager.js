@@ -36,9 +36,6 @@ export class PlayerDebugManager extends CorePlayerManager {
         this.playerMenu = null;
         this.godModeGlow = null;
         
-        // Create player debug menu
-        this.createPlayerDebugMenu();
-        
         // Set up keyboard listener for 'G' key to toggle god mode
         this.keyG = this.scene.input.keyboard.addKey('G');
         this.keyG.on('down', () => {
@@ -54,70 +51,6 @@ export class PlayerDebugManager extends CorePlayerManager {
         logger.info(LogCategory.PLAYER, "God mode keybind added (press 'G' to toggle)");
     }
 
-    /**
-     * Create a debug menu for the player with testing options
-     * This menu is triggered by pressing the 'C' key
-     */
-    createPlayerDebugMenu() {
-        // Create a menu for the player using our custom DebugMenu class
-        this.playerMenu = new DebugMenu(this.scene, {
-            position: 'center',
-            orientation: 'vertical',
-            width: '200px',
-            iconSize: '24px',
-            menuButtonIcon: '🛠️'
-        });
-        
-        // Configure menu items for player testing (simplified)
-        const menuItems = [
-            { 
-                id: 'godmode', 
-                label: 'God Mode: OFF', 
-                icon: '🛡️', 
-                onClick: () => this.toggleGodMode() 
-            },
-            { 
-                id: 'heal', 
-                label: 'Full Heal', 
-                icon: '❤️', 
-                onClick: () => this.healPlayer() 
-            },
-            { 
-                id: 'test', 
-                label: 'Test Features', 
-                icon: '🧪', 
-                onClick: () => this.testFeatures() 
-            }
-        ];
-        
-        // Add each menu item
-        for (const item of menuItems) {
-            this.playerMenu.createMenuItem(item);
-        }
-        
-        // Set up keyboard listener for 'C' key to toggle the menu
-        this.keyC = this.scene.input.keyboard.addKey('C');
-        this.keyC.on('down', () => {
-            if (this.playerMenu.isVisible) {
-                this.playerMenu.hide();
-            } else {
-                // Position the menu in the center of the screen
-                this.playerMenu.container.style.position = 'absolute';
-                this.playerMenu.container.style.left = '50%';
-                this.playerMenu.container.style.top = '50%';
-                this.playerMenu.container.style.transform = 'translate(-50%, -50%)';
-                this.playerMenu.container.style.zIndex = '2001'; // Above player
-                
-                this.playerMenu.show();
-            }
-        });
-        
-        // Initially hide the menu (only shown when 'C' is pressed)
-        this.playerMenu.hide();
-        
-        logger.info(LogCategory.PLAYER, "Player debug menu created (press 'C' to toggle)");
-    }
-    
     /**
      * Toggle god mode for the player
      */

@@ -1,6 +1,6 @@
-import { EventEmitter } from 'events';
+import Phaser from 'phaser';
 import { EffectType, SkillEffectUnion } from './effect-types';
-import { EnhancedSkill } from './enhanced-skill';
+import { EnhancedSkill } from './skill';
 import playerStatsService from '../utils/player/PlayerStatsService';
 
 /**
@@ -76,7 +76,7 @@ export interface PlayerStats {
 /**
  * System responsible for applying skill effects to the player.
  */
-export class EnhancedSkillEffectSystem extends EventEmitter {
+export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
   /** Map of player skills */
   private playerSkills: Map<string, EnhancedSkill>;
   

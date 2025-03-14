@@ -80,6 +80,7 @@ export class Game extends Scene {
     // Initialize character stats UI
     this.characterStatsUI = new CharacterStatsUI(this);
 
+
     // Set up event listeners
     this.setupEventListeners();
 

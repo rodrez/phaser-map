@@ -1,33 +1,18 @@
 /**
  * Enhanced skill system for handling complex skill effects
- * 
- * This is the main entry point for the skill system.
  */
 
-// Export all components from the enhanced skill system
-export * from './enhanced-index';
+// Export effect types
+export * from './effect-types';
 
-// Re-export the runSkillSystemExample function for easy access
-export { runSkillSystemExample } from './usage-example';
+// Export enhanced skill class
+export * from './skill';
 
-// Import skill creators and export a function to create all skills
-import {
-  createWarriorTrainingSkill,
-  createOiyoiMasterTrainingSkill,
-  createDragonMasterSkill,
-  createBlacksmithingSkill
-} from './skill-examples';
+// Export enhanced skill effect system
+export * from './skill-effect-system';
 
-/**
- * Creates all skills in the game.
- * @returns Array of all skills
- */
-export function createAllSkills() {
-  return [
-    createWarriorTrainingSkill(),
-    createOiyoiMasterTrainingSkill(),
-    createDragonMasterSkill(),
-    createBlacksmithingSkill()
-    // Add more skills here as they are implemented
-  ];
-} 
+// Export enhanced skill manager
+export * from './skill-manager';
+
+// Export skill examples
+export * from './skill-examples';

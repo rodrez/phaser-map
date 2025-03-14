@@ -16,7 +16,7 @@ import {
   PetBonusEffect,
   SpecialInteractionEffect
 } from './effect-types';
-import { EnhancedSkill, SkillCategory, SkillPrerequisite, SpecialUnlockRequirement } from './enhanced-skill';
+import { EnhancedSkill, SkillCategory, SkillPrerequisite, SpecialUnlockRequirement } from './skill';
 
 /**
  * Creates the Warrior Training skill

@@ -1,11 +1,11 @@
-import { EventEmitter } from 'events';
-import { EnhancedSkill } from './enhanced-skill';
-import { EnhancedSkillEffectSystem, PlayerStats } from './enhanced-skill-effect-system';
+import Phaser from 'phaser';
+import { EnhancedSkill } from './skill';
+import { EnhancedSkillEffectSystem, PlayerStats } from './skill-effect-system';
 
 /**
  * Manages all skills and their effects for a player.
  */
-export class EnhancedSkillManager extends EventEmitter {
+export class EnhancedSkillManager extends Phaser.Events.EventEmitter {
   /** Map of all available skills */
   private availableSkills: Map<string, EnhancedSkill> = new Map();
   
