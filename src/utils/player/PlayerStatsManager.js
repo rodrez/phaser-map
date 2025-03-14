@@ -1,4 +1,5 @@
 import { CorePlayerManager } from './CorePlayerManager';
+import playerStatsService from './PlayerStatsService';
 import { logger, LogCategory } from '../Logger';
 
 /**
@@ -17,13 +18,32 @@ export class PlayerStatsManager extends CorePlayerManager {
         this.healthBar = null;
         this.healthBarTimer = null;
         
-        // Use the scene's playerStats
+        // Use the stats service
+        this.statsService = playerStatsService;
+        
+        // For backward compatibility, also reference scene.playerStats
         this.playerStats = this.scene.playerStats;
         
         // Create player health bar
         this.createPlayerHealthBar();
         
+        // Listen for stats changes
+        this.setupEventListeners();
+        
         logger.info(LogCategory.PLAYER, "PlayerStatsManager initialized");
+    }
+
+    /**
+     * Set up event listeners for stats-related events
+     */
+    setupEventListeners() {
+        // Listen for stats changes
+        this.statsService.on('stats-changed', (changedStats) => {
+            // Update health bar if health changed
+            if ('health' in changedStats) {
+                this.updatePlayerHealthBar(true);
+            }
+        });
     }
 
     /**

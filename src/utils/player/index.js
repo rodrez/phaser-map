@@ -9,6 +9,7 @@ export { PlayerStatsManager } from './PlayerStatsManager';
 export { PlayerDebugManager } from './PlayerDebugManager';
 export { PlayerManager } from './PlayerManager';
 export { PlayerHealthSystem } from './PlayerHealthSystem';
+export { PlayerStatsService, playerStatsService } from './PlayerStatsService';
 
 // Default export for convenience
-export default { PlayerManager }; 
+export default { PlayerManager, playerStatsService }; 

@@ -9,6 +9,8 @@ import { logger, LogCategory } from "../utils/Logger";
 import { MonsterSystem, MonsterPopupSystem } from "../monsters";
 import { ItemSystem } from "../items/item";
 import { CombatSystem } from "../utils/CombatSystem";
+import { CharacterStatsUI } from "../ui/character-stats";
+import playerStatsService from "../utils/player/PlayerStatsService";
 
 export class Game extends Scene {
   constructor() {
@@ -43,15 +45,8 @@ export class Game extends Scene {
     // Initialize flag manager
     this.flagManager = new FlagManager(this, this.mapManager);
 
-    // Initialize player stats
-    this.playerStats = {
-      health: 100,
-      maxHealth: 100,
-      xp: 0,
-      xpToNextLevel: 100,
-      gold: 0,
-      level: 1,
-    };
+    // Use the PlayerStatsService instead of maintaining a separate playerStats object
+    this.playerStats = playerStatsService.getStats();
 
     // Initialize popup system
     this.popupSystem = new PopupSystem(this, this.mapManager);
@@ -81,6 +76,9 @@ export class Game extends Scene {
 
     // Initialize UI manager
     this.uiManager = new UIManager(this, this.mapManager);
+
+    // Initialize character stats UI
+    this.characterStatsUI = new CharacterStatsUI(this);
 
     // Set up event listeners
     this.setupEventListeners();
@@ -119,6 +117,12 @@ export class Game extends Scene {
     // Listen for monster-click event
     this.events.on("monster-click", (monster) => {
       this.handleMonsterClick(monster);
+    });
+
+    // Character stats UI events
+    this.events.on('openCharacter', () => {
+      logger.info(LogCategory.UI, 'Opening character stats UI');
+      this.characterStatsUI.show();
     });
   }
 
@@ -269,6 +273,44 @@ export class Game extends Scene {
   }
 
   /**
+   * Add XP to the player
+   * @param {number} amount - The amount of XP to add
+   */
+  addXP(amount) {
+    // Use PlayerStatsService to add XP
+    const leveledUp = playerStatsService.addXP(amount);
+    
+    // Update our reference to the stats
+    this.playerStats = playerStatsService.getStats();
+    
+    // Show a message to the player
+    if (this.uiManager) {
+      this.uiManager.showMedievalMessage(`Gained ${amount} experience!`, 'success', 2000);
+      
+      if (leveledUp) {
+        this.uiManager.showMedievalMessage(`Level Up! Thou art now level ${this.playerStats.level}!`, 'success', 3000);
+      }
+    }
+  }
+
+  /**
+   * Add gold to the player
+   * @param {number} amount - The amount of gold to add
+   */
+  addGold(amount) {
+    // Use PlayerStatsService to add gold
+    playerStatsService.addGold(amount);
+    
+    // Update our reference to the stats
+    this.playerStats = playerStatsService.getStats();
+    
+    // Show a message to the player
+    if (this.uiManager) {
+      this.uiManager.showMedievalMessage(`Gained ${amount} gold!`, 'success', 2000);
+    }
+  }
+
+  /**
    * Handle a click on a monster
    * @param {Object} monster - The monster that was clicked
    */
@@ -398,6 +440,11 @@ export class Game extends Scene {
     
     if (this.monsterPopupSystem) {
       this.monsterPopupSystem.destroy();
+    }
+
+    // Destroy character stats UI
+    if (this.characterStatsUI) {
+      this.characterStatsUI.destroy();
     }
 
     logger.info(LogCategory.GAME, "Game scene shutdown");

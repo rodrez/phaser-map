@@ -4,6 +4,7 @@ import { PlayerInteractionManager } from './PlayerInteractionManager';
 import { PlayerStatsManager } from './PlayerStatsManager';
 import { PlayerDebugManager } from './PlayerDebugManager';
 import { PlayerHealthSystem } from './PlayerHealthSystem';
+import playerStatsService from './PlayerStatsService';
 import { logger, LogCategory } from '../Logger';
 
 /**
@@ -19,6 +20,9 @@ export class PlayerManager {
     constructor(scene, mapManager) {
         this.scene = scene;
         this.mapManager = mapManager;
+        
+        // Store a reference to the stats service
+        this.statsService = playerStatsService;
         
         // Initialize health system first (as other systems depend on it)
         this.healthSystem = new PlayerHealthSystem(scene);
@@ -45,7 +49,7 @@ export class PlayerManager {
      * @returns {Object} - The player stats
      */
     getPlayerStats() {
-        return this.scene.playerStats;
+        return this.statsService.getStats();
     }
 
     /**

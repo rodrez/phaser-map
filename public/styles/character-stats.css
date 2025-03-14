@@ -1,0 +1,197 @@
+/* Character Stats UI Styles */
+.character-stats-ui {
+    font-family: 'Times New Roman', serif;
+    color: #d4b483;
+    background-color: rgba(40, 30, 20, 0.95);
+    border: 4px solid #8B4513;
+    border-radius: 8px;
+}
+
+.character-stats-ui .parchment-texture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/assets/textures/dark-parchment.jpg');
+    background-size: cover;
+    opacity: 0.3;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 4px;
+}
+
+/* Decorative borders */
+.character-stats-ui .popup-border {
+    position: absolute;
+    background-color: #d4b483;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.character-stats-ui .border-top {
+    top: 8px;
+    left: 30px;
+    right: 30px;
+    height: 2px;
+}
+
+.character-stats-ui .border-right {
+    top: 30px;
+    right: 8px;
+    bottom: 30px;
+    width: 2px;
+}
+
+.character-stats-ui .border-bottom {
+    bottom: 8px;
+    left: 30px;
+    right: 30px;
+    height: 2px;
+}
+
+.character-stats-ui .border-left {
+    top: 30px;
+    left: 8px;
+    bottom: 30px;
+    width: 2px;
+}
+
+/* Decorative corners */
+.character-stats-ui .popup-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.character-stats-ui .corner-top-left {
+    top: 4px;
+    left: 4px;
+    background-image: url('/assets/ui/corner-top-left.png');
+}
+
+.character-stats-ui .corner-top-right {
+    top: 4px;
+    right: 4px;
+    background-image: url('/assets/ui/corner-top-right.png');
+}
+
+.character-stats-ui .corner-bottom-left {
+    bottom: 4px;
+    left: 4px;
+    background-image: url('/assets/ui/corner-bottom-left.png');
+}
+
+.character-stats-ui .corner-bottom-right {
+    bottom: 4px;
+    right: 4px;
+    background-image: url('/assets/ui/corner-bottom-right.png');
+}
+
+.character-stats-ui .stats-content {
+    padding: 0 10px;
+}
+
+.character-stats-ui .stat-section {
+    margin-bottom: 20px;
+}
+
+.character-stats-ui .section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #d4b483;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #8B4513;
+    padding-bottom: 5px;
+}
+
+.character-stats-ui .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted #8B4513;
+}
+
+.character-stats-ui .stat-label {
+    font-weight: bold;
+    color: #d4b483;
+}
+
+.character-stats-ui .stat-value {
+    color: #e6ccb3;
+}
+
+.character-stats-ui .health-bar-container {
+    border: 1px solid #8B4513;
+    background-color: #3d2c1f;
+}
+
+.character-stats-ui .health-bar {
+    background: linear-gradient(to right, #c0392b, #e74c3c);
+}
+
+.character-stats-ui .xp-bar-container {
+    border: 1px solid #8B4513;
+    background-color: #3d2c1f;
+}
+
+.character-stats-ui .xp-bar {
+    background: linear-gradient(to right, #27ae60, #2ecc71);
+}
+
+.character-stats-ui .gold-value {
+    color: #f1c40f;
+    font-weight: bold;
+}
+
+.character-stats-ui .ability-row {
+    padding: 5px 0;
+    border-bottom: 1px dotted #8B4513;
+    color: #d4b483;
+}
+
+.character-stats-ui .item-badge {
+    background-color: #3d2c1f;
+    color: #d4b483;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    display: inline-block;
+    margin: 2px;
+    border: 1px solid #8B4513;
+}
+
+.character-stats-ui .stats-close-button {
+    color: #d4b483;
+}
+
+.character-stats-ui .stats-close-button:hover {
+    color: #e74c3c;
+}
+
+.character-stats-ui .stats-title {
+    color: #d4b483;
+}
+
+/* Scrollbar styling */
+.character-stats-ui .stats-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.character-stats-ui .stats-content::-webkit-scrollbar-track {
+    background: rgba(61, 44, 31, 0.5);
+    border-radius: 4px;
+}
+
+.character-stats-ui .stats-content::-webkit-scrollbar-thumb {
+    background-color: rgba(139, 69, 19, 0.7);
+    border-radius: 4px;
+}
+
+.character-stats-ui .stats-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(139, 69, 19, 0.9);
+} 

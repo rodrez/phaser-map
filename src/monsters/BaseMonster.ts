@@ -298,44 +298,31 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     protected rewardPlayer(): void {
         const gameScene = this.scene as any;
         
-        // Only proceed if we have access to player stats
-        if (!gameScene.playerStats) {
-            console.warn('Cannot reward player: playerStats not found');
-            return;
-        }
-        
         // Add gold to player
         if (this.goldReward > 0) {
-            gameScene.playerStats.gold += this.goldReward;
-            
-            // Update inventory gold if available
-            if (gameScene.inventorySystem) {
-                gameScene.inventorySystem.addGold(this.goldReward);
+            // Use the Game scene's addGold method if available
+            if (gameScene.addGold) {
+                gameScene.addGold(this.goldReward);
+            } else {
+                // Fallback for backward compatibility
+                gameScene.playerStats.gold += this.goldReward;
+                
+                // Show gold reward text
+                this.showRewardText(this.goldReward, '#FFD700');
             }
-            
-            // Show gold reward text
-            this.showRewardText(this.goldReward, '#FFD700');
         }
         
         // Add XP to player
         if (this.xpReward > 0) {
-            gameScene.playerStats.xp += this.xpReward;
-            
-            // Show XP reward text
-            this.showRewardText(`+${this.xpReward} XP`, '#00FFFF');
-            
-            // Check if player can level up
-            if (gameScene.playerStats.xp >= gameScene.playerStats.xpToNextLevel) {
-                // This will be handled by the game scene's update method
-                // Just update UI if available
-                if (gameScene.medievalVitals) {
-                    gameScene.medievalVitals.showMessage('Level up available!', 'success', 5000);
-                }
-            }
-            
-            // Update UI if available
-            if (gameScene.medievalVitals) {
-                gameScene.medievalVitals.updateUI();
+            // Use the Game scene's addXP method instead of directly modifying playerStats
+            if (gameScene.addXP) {
+                gameScene.addXP(this.xpReward);
+            } else {
+                // Fallback for backward compatibility
+                gameScene.playerStats.xp += this.xpReward;
+                
+                // Show XP reward text
+                this.showRewardText(`+${this.xpReward} XP`, '#00FFFF');
             }
         }
     }
