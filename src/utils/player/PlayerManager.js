@@ -67,7 +67,30 @@ export class PlayerManager {
      * @returns {number} - The actual damage taken
      */
     takeDamage(damage, source = 'unknown') {
-        return this.healthSystem.takeDamage(damage, source);
+        try {
+            // Ensure damage is a valid number
+            if (isNaN(damage) || damage === undefined) {
+                logger.error(LogCategory.PLAYER, `PlayerManager received invalid damage: ${damage}, defaulting to 0`);
+                damage = 0;
+            }
+            
+            // Convert to number to ensure proper calculation
+            damage = Number(damage);
+            
+            // Pass to health system and get the actual damage applied
+            const actualDamage = this.healthSystem.takeDamage(damage, source);
+            
+            // Ensure the return value is a valid number
+            if (isNaN(actualDamage)) {
+                logger.error(LogCategory.PLAYER, `PlayerManager received NaN from healthSystem.takeDamage, returning 0`);
+                return 0;
+            }
+            
+            return Number(actualDamage);
+        } catch (error) {
+            logger.error(LogCategory.PLAYER, `Error in PlayerManager.takeDamage: ${error.message}`);
+            return 0;
+        }
     }
 
     /**

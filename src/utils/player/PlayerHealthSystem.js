@@ -15,6 +15,7 @@ export class PlayerHealthSystem {
         
         // Initialize recursion guard
         this._updatingFromEvent = false;
+        this._updatingHealthBar = false;
         
         // Store a reference to the stats service
         this.statsService = playerStatsService;
@@ -25,8 +26,13 @@ export class PlayerHealthSystem {
         // Register this system in the scene for other systems to access
         this.scene.playerHealthSystem = this;
         
-        // Set up event listeners
-        this.setupEventListeners();
+        // Set up event listeners with error handling
+        try {
+            this.setupEventListeners();
+        } catch (error) {
+            logger.error(LogCategory.HEALTH, `Error setting up event listeners: ${error.message}`);
+            console.error("Error in PlayerHealthSystem.setupEventListeners:", error);
+        }
         
         logger.info(LogCategory.HEALTH, "PlayerHealthSystem initialized");
     }
@@ -36,37 +42,22 @@ export class PlayerHealthSystem {
      */
     setupEventListeners() {
         if (this.scene.events) {
-            // Listen for god mode toggle events
-            this.scene.events.on('godModeEnabled', (enabled) => {
-                if (enabled !== this.statsService.getStat('godMode')) {
-                    if (enabled) {
-                        this.statsService.setStat('godMode', true);
-                        this.checkGodModeHealing();
-                    } else {
-                        this.statsService.setStat('godMode', false);
-                    }
-                    logger.info(LogCategory.PLAYER, `God mode ${enabled ? 'enabled' : 'disabled'} via event`);
-                }
+            // Listen for scene shutdown to clean up
+            this.scene.events.once('shutdown', () => {
+                this.cleanupEventListeners();
             });
             
-            // Listen for stats service events and forward them to the scene
-            this.statsService.on('stats-changed', (changedStats) => {
-                if (this._updatingFromEvent) return;
-                this._updatingFromEvent = true;
-                
-                // Update UI if health changed
-                if ('health' in changedStats) {
-                    this.updateUI(true);
+            // Listen for health changes
+            this.statsService.on('stats-changed', (stats) => {
+                if ('health' in stats) {
+                    // Check for player death
+                    if (stats.health <= 0) {
+                        this.handlePlayerDeath();
+                    }
+                    
+                    // Update UI if available
+                    this.updateUI();
                 }
-                
-                // Check for player death
-                if (changedStats.health !== undefined && 
-                    changedStats.health <= 0 && 
-                    !this.statsService.getStat('godMode')) {
-                    this.handlePlayerDeath();
-                }
-                
-                this._updatingFromEvent = false;
             });
             
             // Listen for damage events
@@ -81,6 +72,41 @@ export class PlayerHealthSystem {
                 
                 // Check if god mode should trigger healing
                 this.checkGodModeHealing();
+            });
+            
+            // Listen for dodge events
+            this.statsService.on('attack-dodged', (data) => {
+                // Show dodge effect if player manager is available
+                if (this.scene.playerManager?.statsManager?.showDodgeEffect) {
+                    this.scene.playerManager.statsManager.showDodgeEffect();
+                } else {
+                    // Fallback: Show a text indicator for dodge
+                    if (this.scene.playerManager?.statsManager?.showDamageText) {
+                        // Use the damage text system to show "DODGE!" instead
+                        const player = this.scene.playerManager.getPlayer();
+                        if (player) {
+                            const dodgeText = this.scene.add.text(
+                                player.x, 
+                                player.y - 20, 
+                                'DODGE!', 
+                                { fontFamily: 'Arial', fontSize: '16px', color: '#00FF00', fontWeight: 'bold' }
+                            );
+                            dodgeText.setDepth(2001);
+                            
+                            // Animate the dodge text
+                            this.scene.tweens.add({
+                                targets: dodgeText,
+                                y: dodgeText.y - 30,
+                                alpha: 0,
+                                duration: 800,
+                                onComplete: () => dodgeText.destroy()
+                            });
+                        }
+                    }
+                }
+                
+                // Emit event to scene
+                this.safeEmitEvent('player-attack-dodged', data.source);
             });
             
             // Listen for healing events
@@ -107,13 +133,50 @@ export class PlayerHealthSystem {
     }
     
     /**
+     * Clean up event listeners when the scene is shut down
+     */
+    cleanupEventListeners() {
+        // Remove all listeners from the stats service
+        this.statsService.removeAllListeners('stats-changed');
+        this.statsService.removeAllListeners('damage-taken');
+        this.statsService.removeAllListeners('attack-dodged');
+        this.statsService.removeAllListeners('healing');
+        this.statsService.removeAllListeners('god-mode-healing');
+        
+        logger.info(LogCategory.HEALTH, "PlayerHealthSystem event listeners cleaned up");
+    }
+    
+    /**
      * Apply damage to the player
      * @param {number} damage - The amount of damage to apply
      * @param {string} source - The source of the damage
      * @returns {number} - The actual damage applied
      */
     takeDamage(damage, source = 'unknown') {
-        return this.statsService.takeDamage(damage, source);
+        try {
+            // Ensure damage is a valid number before passing it to the stats service
+            if (isNaN(damage) || damage === undefined) {
+                logger.error(LogCategory.HEALTH, `PlayerHealthSystem received invalid damage: ${damage}, defaulting to 0`);
+                damage = 0;
+            }
+            
+            // Convert to number to ensure proper calculation
+            damage = Number(damage);
+            
+            // Pass to stats service and get the actual damage applied
+            const actualDamage = this.statsService.takeDamage(damage, source);
+            
+            // Ensure the return value is a valid number
+            if (isNaN(actualDamage)) {
+                logger.error(LogCategory.HEALTH, `PlayerHealthSystem received NaN from statsService.takeDamage, returning 0`);
+                return 0;
+            }
+            
+            return Number(actualDamage);
+        } catch (error) {
+            logger.error(LogCategory.HEALTH, `Error in PlayerHealthSystem.takeDamage: ${error.message}`);
+            return 0;
+        }
     }
     
     /**

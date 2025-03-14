@@ -1,6 +1,7 @@
 import { MedievalMenu } from './ui/menu';
 import { logger, LogCategory } from './utils/Logger';
 import { getSkillInitializer } from './skills';
+import playerStatsService from './utils/player/PlayerStatsService';
 
 /**
  * Test function to demonstrate the skills UI
@@ -19,7 +20,39 @@ export function testSkillsUI(scene) {
     let menu = null;
     try {
         // Initialize the skill system if not already initialized
-        getSkillInitializer().initialize();
+        const skillInitializer = getSkillInitializer();
+        skillInitializer.initialize();
+        
+        // Get the skill manager
+        const skillManager = skillInitializer.getSkillManager();
+        
+        // Add some skill points for testing
+        skillManager.setSkillPoints(10);
+        
+        // Log initial dodge chance
+        logger.info(LogCategory.SKILLS, '[TestSkillsUI] Initial dodge chance:', 
+            playerStatsService.getStat('dodgeChance'));
+        
+        // Add event listener for skill learned events
+        skillManager.on('skill-learned', (skillId, level) => {
+            logger.info(LogCategory.SKILLS, `[TestSkillsUI] Skill learned: ${skillId} (Level ${level})`);
+            
+            // Log updated dodge chance
+            logger.info(LogCategory.SKILLS, '[TestSkillsUI] Updated dodge chance:', 
+                playerStatsService.getStat('dodgeChance'));
+            
+            // If it's the Martial Arts skill level 2, show a message about dodge chance
+            if (skillId === 'martial_arts' && level === 2) {
+                logger.info(LogCategory.SKILLS, 
+                    '[TestSkillsUI] Martial Arts Level 2 learned! You now have a 15% dodge chance when unarmed or using Oiyoi Gear.');
+            }
+            
+            // If it's the Martial Arts skill level 3, show a message about dodge chance
+            if (skillId === 'martial_arts' && level === 3) {
+                logger.info(LogCategory.SKILLS, 
+                    '[TestSkillsUI] Martial Arts Level 3 learned! You now have a 30% dodge chance when unarmed or using Oiyoi Gear.');
+            }
+        });
         
         // Create the menu
         menu = new MedievalMenu(scene);

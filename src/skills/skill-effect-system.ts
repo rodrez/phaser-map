@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EffectType, SkillEffectUnion } from './effect-types';
+import { EffectType, SkillEffectUnion, DodgeChanceEffect } from './effect-types';
 import { EnhancedSkill } from './skill';
 import playerStatsService from '../utils/player/PlayerStatsService';
 
@@ -130,109 +130,107 @@ export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
    * @returns Player stats with all skill effects applied
    */
   getPlayerStats(baseStats?: Partial<PlayerStats>): PlayerStats {
-    if (!this.needsRecalculation && this.cachedPlayerStats) {
+    // If we have cached stats and don't need recalculation, return the cached stats
+    if (this.cachedPlayerStats && !this.needsRecalculation && !baseStats) {
       return this.cachedPlayerStats;
     }
     
-    // Get base stats from the service if not provided
-    const serviceStats = this.statsService.getStats();
-    const baseStatsToUse = baseStats || {
-      attack: serviceStats.attack,
-      defense: serviceStats.defense,
-      speed: serviceStats.speed,
-      maxHp: serviceStats.maxHealth,
-      weaponAttackBonuses: serviceStats.weaponAttackBonuses,
-      weaponDefenseBonuses: serviceStats.weaponDefenseBonuses,
-      weaponRangeBonuses: serviceStats.weaponRangeBonuses,
-      armorDefenseBonuses: serviceStats.armorDefenseBonuses,
-      armorSpeedPenaltyReductions: serviceStats.armorSpeedPenaltyReductions,
-      dodgeChance: serviceStats.dodgeChance,
-      healingMultiplier: serviceStats.healingMultiplier,
-      merchantDiscounts: serviceStats.merchantDiscounts,
-      aggressiveTimerReduction: serviceStats.aggressiveTimerReduction,
-      craftingTimeReduction: serviceStats.craftingTimeReduction,
-      craftingExtraItems: serviceStats.craftingExtraItems,
-      resourceBonuses: serviceStats.resourceBonuses,
-      durabilityMultipliers: serviceStats.durabilityMultipliers,
-      unlockedAbilities: serviceStats.unlockedAbilities,
-      abilityCooldownReductions: serviceStats.abilityCooldownReductions,
-      abilityDurationIncreases: serviceStats.abilityDurationIncreases,
-      abilityEffectIncreases: serviceStats.abilityEffectIncreases,
-      petBonuses: serviceStats.petBonuses,
-      unlockedMinions: serviceStats.unlockedMinions,
-      minionBonuses: serviceStats.minionBonuses,
-      specialInteractions: serviceStats.specialInteractions,
-      targetAttackBonuses: serviceStats.targetAttackBonuses,
-      targetDefenseBonuses: serviceStats.targetDefenseBonuses,
-      environmentSpeedBonuses: serviceStats.environmentSpeedBonuses,
-      craftableItems: serviceStats.craftableItems,
-    };
+    // Get the current stats from the service
+    const currentStats = this.statsService.getStats();
     
-    // Initialize stats with base values or defaults
+    // Start with base stats or create default stats
+    // Important: We need to use base stats without any skill effects
     const stats: PlayerStats = {
-      attack: baseStatsToUse.attack || 0,
-      defense: baseStatsToUse.defense || 0,
-      speed: baseStatsToUse.speed || 0,
-      maxHp: baseStatsToUse.maxHp || 100,
+      attack: baseStats?.attack ?? (currentStats as any).baseAttack ?? 10,
+      defense: baseStats?.defense ?? (currentStats as any).baseDefense ?? 5,
+      speed: baseStats?.speed ?? (currentStats as any).baseSpeed ?? 5,
+      maxHp: baseStats?.maxHp ?? (currentStats as any).baseMaxHealth ?? 100,
       
-      weaponAttackBonuses: new Map(baseStatsToUse.weaponAttackBonuses || []),
-      weaponDefenseBonuses: new Map(baseStatsToUse.weaponDefenseBonuses || []),
-      weaponRangeBonuses: new Map(baseStatsToUse.weaponRangeBonuses || []),
+      // Initialize maps and sets with empty collections to avoid accumulating effects
+      weaponAttackBonuses: new Map(),
+      weaponDefenseBonuses: new Map(),
+      weaponRangeBonuses: new Map(),
       
-      armorDefenseBonuses: new Map(baseStatsToUse.armorDefenseBonuses || []),
-      armorSpeedPenaltyReductions: new Map(baseStatsToUse.armorSpeedPenaltyReductions || []),
+      armorDefenseBonuses: new Map(),
+      armorSpeedPenaltyReductions: new Map(),
       
-      dodgeChance: baseStatsToUse.dodgeChance || 0,
+      // Reset dodge chance to 0 before applying skill effects
+      dodgeChance: 0,
       
-      healingMultiplier: baseStatsToUse.healingMultiplier || 1,
+      healingMultiplier: baseStats?.healingMultiplier ?? 1,
       
-      merchantDiscounts: new Map(baseStatsToUse.merchantDiscounts || []),
+      merchantDiscounts: new Map(),
       
-      aggressiveTimerReduction: baseStatsToUse.aggressiveTimerReduction || 0,
+      aggressiveTimerReduction: 0,
       
-      craftingTimeReduction: baseStatsToUse.craftingTimeReduction || 0,
-      craftingExtraItems: new Map(baseStatsToUse.craftingExtraItems || []),
+      craftingTimeReduction: 0,
+      craftingExtraItems: new Map(),
       
-      resourceBonuses: new Map(baseStatsToUse.resourceBonuses || []),
+      resourceBonuses: new Map(),
       
-      durabilityMultipliers: new Map(baseStatsToUse.durabilityMultipliers || []),
+      durabilityMultipliers: new Map(),
       
-      unlockedAbilities: new Set(baseStatsToUse.unlockedAbilities || []),
+      unlockedAbilities: new Set(),
       
-      abilityCooldownReductions: new Map(baseStatsToUse.abilityCooldownReductions || []),
-      abilityDurationIncreases: new Map(baseStatsToUse.abilityDurationIncreases || []),
-      abilityEffectIncreases: new Map(baseStatsToUse.abilityEffectIncreases || []),
+      abilityCooldownReductions: new Map(),
+      abilityDurationIncreases: new Map(),
+      abilityEffectIncreases: new Map(),
       
-      petBonuses: new Map(baseStatsToUse.petBonuses || []),
+      petBonuses: new Map(),
       
-      unlockedMinions: new Map(baseStatsToUse.unlockedMinions || []),
-      minionBonuses: new Map(baseStatsToUse.minionBonuses || []),
+      unlockedMinions: new Map(),
+      minionBonuses: new Map(),
       
-      specialInteractions: new Map(baseStatsToUse.specialInteractions || []),
+      specialInteractions: new Map(),
       
-      targetAttackBonuses: new Map(baseStatsToUse.targetAttackBonuses || []),
-      targetDefenseBonuses: new Map(baseStatsToUse.targetDefenseBonuses || []),
+      targetAttackBonuses: new Map(),
+      targetDefenseBonuses: new Map(),
       
-      environmentSpeedBonuses: new Map(baseStatsToUse.environmentSpeedBonuses || []),
+      environmentSpeedBonuses: new Map(),
       
-      craftableItems: new Set(baseStatsToUse.craftableItems || []),
+      craftableItems: new Set(),
     };
     
-    // Apply effects from all skills
+    // Copy base craftable items from current stats
+    if ((currentStats as any).baseCraftableItems) {
+      (currentStats as any).baseCraftableItems.forEach((item: string) => {
+        stats.craftableItems.add(item);
+      });
+    }
+    
+    // Apply effects from all player skills
     for (const skill of this.playerSkills.values()) {
-      if (skill.level > 0) {
-        const effects = skill.getAllEffects();
-        for (const effect of effects) {
-          this.applyEffect(stats, effect);
+      // Only apply effects from learned skill levels
+      for (let level = 1; level <= skill.level; level++) {
+        const skillLevel = skill.levels.find(l => l.level === level);
+        if (skillLevel) {
+          for (const effect of skillLevel.effects) {
+            // Handle conditional effects
+            if (effect.type === EffectType.CONDITIONAL_EFFECT) {
+              // For now, we'll apply conditional effects directly
+              // In a real game, you'd check the condition against the current game state
+              // For example, for Martial Arts level 2, we'd check if the player is unarmed or using Oiyoi Gear
+              
+              // For demonstration purposes, we'll apply the effect directly
+              // In a real implementation, you'd check the condition first
+              this.applyEffect(stats, effect.effect as SkillEffectUnion);
+            } else if (effect.type === EffectType.CHANCE_EFFECT) {
+              // For chance effects, we'll apply the effect directly for stat calculation
+              // In a real game, you'd roll the chance when the effect is triggered
+              this.applyEffect(stats, effect.effect as SkillEffectUnion);
+            } else {
+              this.applyEffect(stats, effect);
+            }
+          }
         }
       }
     }
     
-    // Cache the calculated stats
+    // Cache the stats and reset the recalculation flag
     this.cachedPlayerStats = stats;
     this.needsRecalculation = false;
     
-    // Update the stats service with the new calculated values
+    // Update the stats service with the new stats
     this.updateStatsService(stats);
     
     return stats;
@@ -249,13 +247,41 @@ export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
     // Create an update object with only the changed values
     const updates: any = {};
     
+    // Update basic stats
     if (stats.attack !== currentStats.attack) updates.attack = stats.attack;
     if (stats.defense !== currentStats.defense) updates.defense = stats.defense;
     if (stats.speed !== currentStats.speed) updates.speed = stats.speed;
     if (stats.maxHp !== currentStats.maxHealth) updates.maxHealth = stats.maxHp;
     
-    // Add dodge chance to updates
+    // Update dodge chance
     if (stats.dodgeChance !== currentStats.dodgeChance) updates.dodgeChance = stats.dodgeChance;
+    
+    // Update weapon attack bonuses
+    if (stats.weaponAttackBonuses.size > 0) {
+      const weaponAttackBonuses = new Map();
+      stats.weaponAttackBonuses.forEach((value, key) => {
+        weaponAttackBonuses.set(key, value);
+      });
+      updates.weaponAttackBonuses = weaponAttackBonuses;
+    }
+    
+    // Update weapon range bonuses
+    if (stats.weaponRangeBonuses.size > 0) {
+      const weaponRangeBonuses = new Map();
+      stats.weaponRangeBonuses.forEach((value, key) => {
+        weaponRangeBonuses.set(key, value);
+      });
+      updates.weaponRangeBonuses = weaponRangeBonuses;
+    }
+    
+    // Update craftable items
+    if (stats.craftableItems.size > 0) {
+      const craftableItems = new Set();
+      stats.craftableItems.forEach(item => {
+        craftableItems.add(item);
+      });
+      updates.craftableItems = craftableItems;
+    }
     
     // Only update if there are changes
     if (Object.keys(updates).length > 0) {
@@ -435,7 +461,9 @@ export class EnhancedSkillEffectSystem extends Phaser.Events.EventEmitter {
         break;
         
       case EffectType.DODGE_CHANCE:
-        stats.dodgeChance += effect.chance;
+        // Handle both 'value' and 'chance' properties for backward compatibility
+        const dodgeValue = 'value' in effect ? (effect as any).value : ('chance' in effect ? (effect as DodgeChanceEffect).chance : 0);
+        stats.dodgeChance += dodgeValue;
         break;
         
       case EffectType.HEAL_BONUS:

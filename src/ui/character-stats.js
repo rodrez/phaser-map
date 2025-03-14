@@ -321,7 +321,6 @@ export class CharacterStatsUI {
         basicStatsSection.appendChild(this.createStatRow('Attack', stats.attack));
         basicStatsSection.appendChild(this.createStatRow('Defense', stats.defense));
         basicStatsSection.appendChild(this.createStatRow('Speed', stats.speed));
-        basicStatsSection.appendChild(this.createStatRow('Dodge Chance', `${stats.dodgeChance}%`));
         
         // Add god mode status
         const godModeRow = this.createStatRow('God Mode', stats.godMode ? 'Enabled' : 'Disabled');
@@ -335,6 +334,12 @@ export class CharacterStatsUI {
         
         // Create combat bonuses section
         const combatSection = this.createStatSection('Combat Bonuses');
+        
+        // Add critical hit chance
+        combatSection.appendChild(this.createStatRow('Critical Hit Chance', `${stats.criticalHitChance || 0}%`));
+        
+        // Add dodge chance (moved from basic stats to combat section)
+        combatSection.appendChild(this.createStatRow('Dodge Chance', `${stats.dodgeChance || 0}%`));
         
         // Add weapon bonuses if any exist
         if (stats.weaponAttackBonuses.size > 0) {

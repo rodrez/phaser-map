@@ -47,6 +47,9 @@ export class Game extends Scene {
 
     // Use the PlayerStatsService instead of maintaining a separate playerStats object
     this.playerStats = playerStatsService.getStats();
+    
+    // Make the playerStatsService available to the scene
+    this.playerStatsService = playerStatsService;
 
     // Initialize popup system
     this.popupSystem = new PopupSystem(this, this.mapManager);
@@ -79,7 +82,6 @@ export class Game extends Scene {
 
     // Initialize character stats UI
     this.characterStatsUI = new CharacterStatsUI(this);
-
 
     // Set up event listeners
     this.setupEventListeners();

@@ -132,6 +132,15 @@ export class PlayerStatsManager extends CorePlayerManager {
     showDamageText(amount) {
         if (!this.player) return;
         
+        // Ensure amount is a valid number
+        if (isNaN(amount) || amount === undefined) {
+            logger.error(LogCategory.PLAYER, `Invalid damage amount for display: ${amount}, defaulting to 1`);
+            amount = 1;
+        }
+        
+        // Convert to number and ensure it's positive for display
+        amount = Math.abs(Number(amount));
+        
         // Create a damage text
         const damageText = this.scene.add.text(
             this.player.x, 
@@ -272,6 +281,50 @@ export class PlayerStatsManager extends CorePlayerManager {
         if (this.scene.uiManager) {
             this.scene.uiManager.showMedievalMessage('Fully healed!', 'success', 2000);
         }
+    }
+
+    /**
+     * Show dodge effect above the player
+     */
+    showDodgeEffect() {
+        if (!this.player) return;
+        
+        // Create a dodge text
+        const dodgeText = this.scene.add.text(
+            this.player.x, 
+            this.player.y - 20, 
+            'DODGE!', 
+            { fontFamily: 'Arial', fontSize: '16px', color: '#00FF00', fontWeight: 'bold' }
+        );
+        dodgeText.setDepth(2001);
+        
+        // Animate the dodge text
+        this.scene.tweens.add({
+            targets: dodgeText,
+            y: dodgeText.y - 30,
+            alpha: 0,
+            duration: 800,
+            onComplete: () => dodgeText.destroy()
+        });
+        
+        // Add a visual effect around the player
+        const circle = this.scene.add.circle(
+            this.player.x,
+            this.player.y,
+            30,
+            0x00FF00,
+            0.5
+        );
+        circle.setDepth(2000);
+        
+        // Animate the circle
+        this.scene.tweens.add({
+            targets: circle,
+            scale: 1.5,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => circle.destroy()
+        });
     }
 
     /**

@@ -27,6 +27,15 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             defense: 10,
             speed: 8,
             
+            // Base stats (without skill effects)
+            baseAttack: 15,
+            baseDefense: 10,
+            baseSpeed: 8,
+            baseMaxHealth: 100,
+            
+            // Combat stats
+            criticalHitChance: 5, // 5% base critical hit chance
+            
             // Special modes
             godMode: false,
             
@@ -101,6 +110,14 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
                 'Iron Sword',
                 'Leather Armor'
             ]),
+            
+            // Base craftable items (without skill effects)
+            baseCraftableItems: new Set([
+                'Health Potion',
+                'Strength Potion',
+                'Iron Sword',
+                'Leather Armor'
+            ]),
         };
         
         logger.info(LogCategory.PLAYER, "PlayerStatsService initialized");
@@ -139,16 +156,59 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
     
     /**
      * Update multiple stats at once
-     * @param {Object} statsUpdate - Object with stat names and values to update
+     * @param {Object} updates - Object containing stat updates
      * @param {boolean} silent - Whether to emit the stats-changed event
      */
-    updateStats(statsUpdate, silent = false) {
-        Object.assign(this.stats, statsUpdate);
+    updateStats(updates, silent = false) {
+        const changedStats = {};
         
-        if (!silent) {
-            // Include the silent flag in the event data
-            statsUpdate.silent = silent;
-            this.emit('stats-changed', statsUpdate);
+        // Apply all updates
+        for (const [statName, value] of Object.entries(updates)) {
+            // Handle special cases for Maps and Sets
+            if (value instanceof Map) {
+                if (!this.stats[statName]) {
+                    this.stats[statName] = new Map();
+                }
+                
+                // Clear existing map and add new values
+                this.stats[statName].clear();
+                value.forEach((val, key) => {
+                    this.stats[statName].set(key, val);
+                });
+            } else if (value instanceof Set) {
+                if (!this.stats[statName]) {
+                    this.stats[statName] = new Set();
+                }
+                
+                // Clear existing set and add new values
+                this.stats[statName].clear();
+                value.forEach(item => {
+                    this.stats[statName].add(item);
+                });
+            } else {
+                // Regular value update
+                this.stats[statName] = value;
+                
+                // Update base stats if needed
+                if (statName === 'attack' && !('baseAttack' in updates)) {
+                    this.stats.baseAttack = value;
+                }
+                if (statName === 'defense' && !('baseDefense' in updates)) {
+                    this.stats.baseDefense = value;
+                }
+                if (statName === 'speed' && !('baseSpeed' in updates)) {
+                    this.stats.baseSpeed = value;
+                }
+                if (statName === 'maxHealth' && !('baseMaxHealth' in updates)) {
+                    this.stats.baseMaxHealth = value;
+                }
+            }
+            
+            changedStats[statName] = value;
+        }
+        
+        if (!silent && Object.keys(changedStats).length > 0) {
+            this.emit('stats-changed', changedStats);
         }
     }
     
@@ -159,8 +219,45 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
      * @returns {number} - The actual damage applied
      */
     takeDamage(damage, source = 'unknown') {
-        // Calculate actual damage (can be modified by defense, etc.)
-        const actualDamage = Math.max(1, damage);
+        // Ensure damage is a valid number
+        if (isNaN(damage) || damage === undefined) {
+            logger.error(LogCategory.HEALTH, `Invalid damage amount: ${damage}, defaulting to 0`);
+            damage = 0;
+        }
+        
+        // Convert damage to a number to ensure it's not a string
+        damage = Number(damage);
+        
+        // Check for dodge chance
+        if (this.stats.dodgeChance > 0) {
+            // Ensure dodge chance is a valid number
+            const dodgeChance = isNaN(this.stats.dodgeChance) ? 0 : Number(this.stats.dodgeChance);
+            
+            // Roll for dodge
+            const dodgeRoll = Math.random() * 100;
+            if (dodgeRoll <= dodgeChance) {
+                // Successfully dodged the attack
+                logger.info(
+                    LogCategory.COMBAT,
+                    `Player dodged attack from ${source}!`
+                );
+                
+                // Emit dodge event
+                this.emit('attack-dodged', { 
+                    source,
+                    dodgeChance: dodgeChance
+                });
+                
+                return 0; // No damage taken
+            }
+        }
+        
+        // Calculate actual damage (modified by defense)
+        // Formula: damage = max(1, baseDamage - (defense * 0.5))
+        // This means each point of defense reduces damage by 0.5
+        const defense = isNaN(this.stats.defense) ? 0 : Number(this.stats.defense);
+        const damageReduction = defense * 0.5;
+        const actualDamage = Math.max(1, Math.floor(damage - damageReduction));
         
         // Store current health before damage
         const oldHealth = this.stats.health;
@@ -171,12 +268,14 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         // Log the damage
         logger.info(
             LogCategory.HEALTH, 
-            `Player took ${actualDamage} damage from ${source}. Health: ${oldHealth} -> ${this.stats.health}/${this.stats.maxHealth}`
+            `Player took ${actualDamage} damage from ${source} (${damage} base, ${damageReduction.toFixed(1)} reduced by defense). Health: ${oldHealth} -> ${this.stats.health}/${this.stats.maxHealth}`
         );
         
         // Emit damage taken event
         this.emit('damage-taken', { 
             damage: actualDamage, 
+            baseDamage: damage,
+            damageReduction,
             source, 
             oldHealth, 
             newHealth: this.stats.health 
