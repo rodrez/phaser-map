@@ -13,6 +13,9 @@ export class SkillDetailsModal {
         this.modal = null;
         this.content = null;
         
+        // State
+        this.lastLearnedLevel = 0;
+        
         // Create the modal
         this.createModal();
     }
@@ -87,10 +90,45 @@ export class SkillDetailsModal {
     }
     
     /**
+     * Updates the modal with new skill details without closing and reopening it
+     */
+    update(skill, currentLevel, skillPoints) {
+        logger.info(LogCategory.UI, `[SkillDetailsModal] Updating details for skill: ${skill.id}, level: ${currentLevel}`);
+        
+        // Check if this is a level up
+        const previousLevel = this.lastLearnedLevel;
+        if (currentLevel > previousLevel) {
+            // Store the current level as the most recently learned
+            this.lastLearnedLevel = currentLevel;
+            logger.info(LogCategory.UI, `[SkillDetailsModal] Level up detected: ${previousLevel} -> ${currentLevel}`);
+        }
+        
+        // Update content without closing the modal
+        this.updateContent(skill, currentLevel, skillPoints);
+    }
+    
+    /**
      * Shows the modal with skill details
      */
     show(skill, currentLevel, skillPoints) {
+        logger.info(LogCategory.UI, `[SkillDetailsModal] Showing details for skill: ${skill.id}, level: ${currentLevel}`);
+        
+        // Reset the last learned level when showing a new skill
+        this.lastLearnedLevel = 0;
+        
         // Update content
+        this.updateContent(skill, currentLevel, skillPoints);
+        
+        // Show the modal
+        this.modal.style.display = 'flex';
+    }
+    
+    /**
+     * Updates the content of the modal
+     * This is a helper method used by both show() and update()
+     */
+    updateContent(skill, currentLevel, skillPoints) {
+        // Clear existing content
         this.content.innerHTML = '';
         
         const nextLevel = currentLevel + 1;
@@ -150,7 +188,10 @@ export class SkillDetailsModal {
             const isLearned = currentLevel >= levelNum;
             const isNext = currentLevel + 1 === levelNum;
             
-            const levelNode = this.createLevelDetailNode(skill, level, levelNum, isLearned, isNext);
+            // Check if this is the most recently learned level
+            const isJustLearned = levelNum === currentLevel && currentLevel === this.lastLearnedLevel;
+            
+            const levelNode = this.createLevelDetailNode(skill, level, levelNum, isLearned, isNext, isJustLearned);
             levelsSection.appendChild(levelNode);
         });
         
@@ -190,17 +231,28 @@ export class SkillDetailsModal {
         this.content.appendChild(description);
         this.content.appendChild(levelsSection);
         this.content.appendChild(buttonsSection);
-        
-        // Show the modal
-        this.modal.style.display = 'flex';
     }
     
     /**
      * Creates a level detail node
      */
-    createLevelDetailNode(skill, level, levelNum, isLearned, isNext) {
+    createLevelDetailNode(skill, level, levelNum, isLearned, isNext, isJustLearned) {
         const levelNode = this.uiHelper.createElement('div', `level-detail${isLearned ? ' learned' : ''}${isNext ? ' next' : ''}`);
         levelNode.dataset.level = levelNum;
+        
+        // Add animation class if this is the most recently learned level
+        if (isJustLearned) {
+            levelNode.classList.add('just-learned');
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                if (levelNode) {
+                    levelNode.classList.remove('just-learned');
+                }
+            }, 1000);
+            
+            logger.info(LogCategory.UI, `[SkillDetailsModal] Adding animation to level ${levelNum} detail node`);
+        }
         
         // Create level header
         const levelHeader = this.uiHelper.createElement('div', 'level-header');

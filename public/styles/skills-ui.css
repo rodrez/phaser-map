@@ -467,4 +467,44 @@
 
 .skill-node.just-learned {
     animation: glow 0.5s ease-in-out;
+}
+
+/* Animation for newly learned level indicators */
+@keyframes levelGlow {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 5px rgba(76, 120, 40, 0.5);
+    }
+    50% {
+        transform: scale(1.3);
+        box-shadow: 0 0 15px rgba(76, 120, 40, 0.8);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 5px rgba(76, 120, 40, 0.5);
+    }
+}
+
+.skill-level.just-learned {
+    animation: levelGlow 0.8s ease-in-out;
+}
+
+/* Animation for newly learned level in details view */
+@keyframes levelDetailGlow {
+    0% {
+        box-shadow: 0 0 5px rgba(76, 120, 40, 0.3);
+        border-color: rgba(76, 120, 40, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(76, 120, 40, 0.8);
+        border-color: rgba(76, 120, 40, 1);
+    }
+    100% {
+        box-shadow: 0 0 5px rgba(76, 120, 40, 0.3);
+        border-color: rgba(76, 120, 40, 0.5);
+    }
+}
+
+.level-detail.just-learned {
+    animation: levelDetailGlow 1s ease-in-out;
 } 

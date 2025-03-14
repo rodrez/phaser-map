@@ -148,21 +148,29 @@ export class SkillNodeComponent {
     updateLevel(currentLevel) {
         if (!this.node) return;
         
+        // Get previous level to determine which level indicators need animation
+        const previousLevel = this.levelNodes.filter(node => 
+            node.classList.contains('learned')).length;
+        
         // Add or remove learned class based on level
         if (currentLevel > 0) {
             this.node.classList.add('learned');
-            this.node.classList.add('just-learned');
+            
+            // Only add animation if the skill wasn't previously learned
+            if (previousLevel === 0) {
+                this.node.classList.add('just-learned');
+                
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    if (this.node) {
+                        this.node.classList.remove('just-learned');
+                    }
+                }, 500);
+            }
             
             // Apply learned styles directly
             this.node.style.backgroundColor = 'rgba(200, 161, 101, 0.2)';
             this.node.style.borderColor = 'rgba(76, 120, 40, 0.5)';
-            
-            // Remove animation class after animation completes
-            setTimeout(() => {
-                if (this.node) {
-                    this.node.classList.remove('just-learned');
-                }
-            }, 500);
         } else {
             // If skill is not learned, ensure the learned class is removed
             this.node.classList.remove('learned');
@@ -175,9 +183,23 @@ export class SkillNodeComponent {
         // Update level indicators
         this.levelNodes.forEach((node, index) => {
             const level = index + 1;
+            const wasLearned = node.classList.contains('learned');
+            
             if (level <= currentLevel) {
                 // Apply learned styles
                 node.classList.add('learned');
+                
+                // Add animation class only to newly learned levels
+                if (!wasLearned) {
+                    node.classList.add('just-learned');
+                    
+                    // Remove animation class after animation completes
+                    setTimeout(() => {
+                        if (node) {
+                            node.classList.remove('just-learned');
+                        }
+                    }, 800);
+                }
                 
                 // Apply styles directly to ensure they take effect
                 node.style.backgroundColor = 'rgba(76, 120, 40, 0.7)'; // Brighter green
@@ -189,6 +211,7 @@ export class SkillNodeComponent {
             } else {
                 // If level is not learned, ensure the learned class is removed
                 node.classList.remove('learned');
+                node.classList.remove('just-learned');
                 
                 // Reset the style to default
                 node.style.backgroundColor = 'rgba(139, 69, 19, 0.2)';

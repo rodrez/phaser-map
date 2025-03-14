@@ -169,23 +169,18 @@ export class SkillsUI {
                     // Update player skills from the skill manager
                     this.updatePlayerSkillsFromManager();
                     
-                    // Hide details modal
-                    this.hideSkillDetails();
+                    // Update the skill details modal without closing it
+                    const updatedLevel = this.playerSkills.get(skill.id) || 0;
+                    this.detailsModal.update(skill, updatedLevel, this.skillPoints);
                     
-                    // Add a small delay before showing the details again to ensure DOM updates
-                    setTimeout(() => {
-                        // Show skill details again with updated info
-                        this.showSkillDetails(skill);
-                        
-                        // Show notification
-                        const message = currentLevel === 0 
-                            ? `You have learned the ${skill.name} skill!` 
-                            : `You have upgraded ${skill.name} to level ${nextLevel}!`;
-                        this.notification.show(message);
-                        
-                        // Log the successful skill learning
-                        logger.info(LogCategory.SKILLS, `[SkillsUI] Successfully learned/upgraded skill: ${skill.id} to level ${nextLevel} (previous level: ${currentLevel})`);
-                    }, 50);
+                    // Show notification
+                    const message = currentLevel === 0 
+                        ? `You have learned the ${skill.name} skill!` 
+                        : `You have upgraded ${skill.name} to level ${nextLevel}!`;
+                    this.notification.show(message);
+                    
+                    // Log the successful skill learning
+                    logger.info(LogCategory.SKILLS, `[SkillsUI] Successfully learned/upgraded skill: ${skill.id} to level ${nextLevel} (previous level: ${currentLevel})`);
                 } else {
                     this.notification.show('Failed to learn skill!', 'error');
                 }
