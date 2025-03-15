@@ -5,6 +5,7 @@ import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { ChatScene } from './scenes/ChatScene'; // Import the ChatScene
 import { LoginScene } from './scenes/LoginScene'; // Import the LoginScene
+import { DungeonScene } from './scenes/DungeonScene'; // Import the DungeonScene
 import { loggerPanel } from './ui/logger-panel'; // Import the logger panel
 import { getSkillInitializer } from './skills'; // Import the skill initializer
 
@@ -47,6 +48,7 @@ const config = {
         Preloader,
         MainMenu,
         Game,
+        DungeonScene, // Add DungeonScene
         GameOver,
         ChatScene,
     ]

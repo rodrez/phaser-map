@@ -529,4 +529,27 @@ export class CombatSystem {
             this.scene.events.emit('player-death');
         }
     }
+    
+    /**
+     * Clean up resources when the combat system is destroyed
+     */
+    destroy() {
+        try {
+            // Clear references
+            this.lastAttackingMonster = null;
+            this.playerStats = null;
+            this.playerManager = null;
+            this.playerHealthSystem = null;
+            
+            // Clear timers if any
+            if (this.retaliationTimer) {
+                this.scene.time.removeEvent(this.retaliationTimer);
+                this.retaliationTimer = null;
+            }
+            
+            logger.info(LogCategory.COMBAT, 'Combat system destroyed');
+        } catch (error) {
+            logger.error(LogCategory.COMBAT, `Error destroying combat system: ${error}`);
+        }
+    }
 } 

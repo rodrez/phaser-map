@@ -38,6 +38,19 @@ export class MonsterFactory {
             case MonsterType.LIZARDFOLK:
                 return new Lizardfolk(scene, x, y, monsterData, playerSprite, itemSystem);
                 
+            case MonsterType.LIZARDFOLK_KING:
+                // For now, use Lizardfolk with enhanced stats for the king
+                logger.info(LogCategory.MONSTER, 'Creating Lizardfolk King (boss monster)');
+                // Enhance the monster data for the boss
+                const bossData = { ...monsterData };
+                bossData.scale = 2.0; // Make the boss larger
+                bossData.attributes = bossData.attributes || {};
+                bossData.attributes.health = bossData.attributes?.health || 200;
+                bossData.attributes.maxHealth = bossData.attributes?.maxHealth || 200;
+                bossData.attributes.damage = bossData.attributes?.damage || 20;
+                bossData.attributes.defense = bossData.attributes?.defense || 10;
+                return new Lizardfolk(scene, x, y, bossData, playerSprite, itemSystem);
+                
             case MonsterType.DRAGON:
                 return new Dragon(scene, x, y, monsterData, playerSprite, itemSystem);
                 

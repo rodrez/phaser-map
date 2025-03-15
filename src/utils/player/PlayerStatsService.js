@@ -16,7 +16,7 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         this.stats = {
             // Character info
             playerName: 'Adventurer', // Default player name
-            level: 1,
+            level: 5,
             xp: 0,
             xpToNextLevel: 100,
             gold: 50,

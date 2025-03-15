@@ -56,6 +56,9 @@ export class Preloader extends Scene {
 		this.load.image('ogre', '/monsters/ogre-64.png');
 		this.load.image('lizardfolk', '/monsters/lizardfolk-64.png');
 		this.load.image('grizzly', '/monsters/grizzly-128.png');
+
+		// Dungeon Bosses
+		this.load.image('lizardfolk-king', '/dungeons/lost-swamp/lizardfolk-king-128.png');
 		
 		// Load individual item images
 		this.load.image('item-apple', '/items/apple.png');

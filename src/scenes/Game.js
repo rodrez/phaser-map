@@ -22,6 +22,7 @@ import { EquipmentManager } from "../items/equipment-manager";
 import { MedievalEquipmentUI } from "../ui/equipment-ui/index";
 import { ChatExample } from "../ui/chat-ui";
 import { chatService } from "../utils/ChatService";
+import { DungeonManager } from "../utils/DungeonManager";
 
 export class Game extends Scene {
   constructor() {
@@ -144,6 +145,12 @@ export class Game extends Scene {
     // Connect monster system with environment
     this.monsterSystem.setEnvironment(this.environment);
 
+    // Initialize dungeon manager
+    this.dungeonManager = new DungeonManager(this);
+    
+    // Initialize dungeons
+    this.dungeonManager.initDungeons();
+
     // Initialize UI manager
     this.uiManager = new UIManager(this, this.mapManager);
 
@@ -186,6 +193,9 @@ export class Game extends Scene {
     logger.info(LogCategory.GAME, "Player:", this.playerManager.getPlayer());
     logger.info(LogCategory.GAME, "Environment initialized");
     logger.info(LogCategory.GAME, "Monster system initialized");
+    
+    // Emit create-complete event to signal that the scene is fully created
+    this.events.emit('create-complete');
   }
 
   setupEventListeners() {
@@ -774,5 +784,38 @@ export class Game extends Scene {
     
     // Show the chat UI
     this.chatExample.show();
+  }
+
+  // After the create method, add a new method to handle scene initialization
+  init() {
+    // Check if we need to update dungeon status
+    const updateDungeonStatus = this.registry.get('updateDungeonStatus');
+    if (updateDungeonStatus) {
+      // Update the dungeon status
+      if (this.dungeonManager) {
+        this.dungeonManager.updateDungeonStatus(
+          updateDungeonStatus.id,
+          updateDungeonStatus.completed
+        );
+      }
+      
+      // Clear the registry value
+      this.registry.remove('updateDungeonStatus');
+    }
+    
+    // Check if we need to add items to inventory
+    const addItemToInventory = this.registry.get('addItemToInventory');
+    if (addItemToInventory) {
+      // Add the item to inventory when the scene is fully created
+      this.events.once('create-complete', () => {
+        if (this.inventoryManager) {
+          this.inventoryManager.addItemById(addItemToInventory);
+          logger.info(LogCategory.INVENTORY, `Added item from dungeon: ${addItemToInventory}`);
+        }
+      });
+      
+      // Clear the registry value
+      this.registry.remove('addItemToInventory');
+    }
   }
 }

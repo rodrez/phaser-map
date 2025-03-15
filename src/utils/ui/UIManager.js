@@ -6,6 +6,7 @@ import { EnvironmentUIManager } from './EnvironmentUIManager';
 import { uiRegistry } from './UIComponentRegistry';
 import { logger, LogCategory } from '../Logger';
 import { MedievalMenu } from '../../ui/menu';
+import { PopupSystem } from '../../ui/popup';
 
 /**
  * UIManager - Main UI manager that coordinates all specialized UI managers
@@ -26,6 +27,9 @@ export class UIManager {
         this.notificationManager = new NotificationManager(scene);
         this.vitalsManager = new VitalsManager(scene);
         this.environmentManager = new EnvironmentUIManager(scene);
+        
+        // Initialize popup system
+        this.popupSystem = new PopupSystem(scene, mapManager);
         
         // Register managers in the registry
         uiRegistry.register('core', this.coreManager);
@@ -412,6 +416,59 @@ export class UIManager {
                 this.scene.events.emit('openChat');
                 this.menu.hide();
             });
+        }
+    }
+
+    /**
+     * Show a custom popup with the given content and options
+     * @param {Object} content - The popup content object with html and buttons
+     * @param {Object} options - The popup options
+     * @returns {HTMLElement|null} The created popup element or null if creation failed
+     */
+    showCustomPopup(content, options = {}) {
+        logger.info(LogCategory.UI, 'Showing custom popup');
+        
+        // If no popup system, create one
+        if (!this.popupSystem) {
+            logger.info(LogCategory.UI, 'Creating PopupSystem for UIManager');
+            this.popupSystem = new PopupSystem(this.scene, this.mapManager);
+        }
+        
+        // Default to centered popup if no position is specified
+        if (options.centered || (!options.x && !options.y && !options.lat && !options.lon)) {
+            return this.popupSystem.createCenteredPopup(content, options);
+        }
+        
+        // Create popup at screen position if x and y are provided
+        if (options.x !== undefined && options.y !== undefined) {
+            return this.popupSystem.createPopupAtScreenPosition(content, options, options.x, options.y);
+        }
+        
+        // Create popup at lat/lon position if lat and lon are provided
+        if (options.lat !== undefined && options.lon !== undefined) {
+            return this.popupSystem.createPopup(options.lat, options.lon, content, options);
+        }
+        
+        // Fallback to centered popup
+        return this.popupSystem.createCenteredPopup(content, options);
+    }
+    
+    /**
+     * Close a specific popup
+     * @param {HTMLElement} popup - The popup element to close
+     */
+    closePopup(popup) {
+        if (this.popupSystem) {
+            this.popupSystem.closePopup(popup);
+        }
+    }
+    
+    /**
+     * Close all popups
+     */
+    closeAllPopups() {
+        if (this.popupSystem) {
+            this.popupSystem.closeAllPopups();
         }
     }
 } 

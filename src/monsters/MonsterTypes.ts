@@ -6,6 +6,7 @@ export enum MonsterType {
     DRAGON = 'dragon',
     OGRE = 'ogre',
     LIZARDFOLK = 'lizardfolk',
+    LIZARDFOLK_KING = 'lizardfolk-king',
 }
 
 export enum MonsterBehavior {

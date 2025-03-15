@@ -30,10 +30,19 @@ export class PlayerManager {
         // Initialize status effect system
         this.statusEffectSystem = new StatusEffectSystem(this);
         
-        // Initialize managers
-        this.coreManager = new CorePlayerManager(scene, mapManager);
-        this.interactionManager = new PlayerInteractionManager(scene, mapManager);
-        this.statsManager = new PlayerStatsManager(scene, mapManager);
+        // Check if we're in the DungeonScene
+        const isDungeonScene = scene.constructor.name === 'DungeonScene' || scene.scene.key === 'DungeonScene';
+        
+        if (isDungeonScene) {
+            // In DungeonScene, we don't need the CorePlayerManager or PlayerStatsManager with mapManager
+            // The player is created directly in the DungeonScene
+            logger.info(LogCategory.PLAYER, "PlayerManager initialized for DungeonScene without CorePlayerManager");
+        } else {
+            // Initialize managers for regular scenes
+            this.coreManager = new CorePlayerManager(scene, mapManager);
+            this.interactionManager = new PlayerInteractionManager(scene, mapManager);
+            this.statsManager = new PlayerStatsManager(scene, mapManager);
+        }
         
         // Default player name and class
         this.playerName = 'Adventurer';
@@ -87,7 +96,18 @@ export class PlayerManager {
      * @returns {Phaser.GameObjects.GameObject} - The player sprite
      */
     getPlayer() {
-        return this.coreManager.getPlayer();
+        // If we're in DungeonScene, return the player from the scene
+        if (this.scene.player) {
+            return this.scene.player;
+        }
+        
+        // Otherwise, return from coreManager if it exists
+        if (this.coreManager) {
+            return this.coreManager.getPlayer();
+        }
+        
+        // Fallback
+        return null;
     }
 
     /**
@@ -164,6 +184,12 @@ export class PlayerManager {
     showGodModeHealEffect(amount) {
         if (this.statsManager && typeof this.statsManager.showGodModeHealEffect === 'function') {
             this.statsManager.showGodModeHealEffect(amount);
+        } else {
+            // Log the healing without visual effect
+            logger.info(
+                LogCategory.PLAYER, 
+                `God Mode healed player for ${amount}. Health now at ${this.statsService.getStats().health}/${this.statsService.getStats().maxHealth}`
+            );
         }
     }
 
@@ -215,10 +241,18 @@ export class PlayerManager {
      * @param {number} delta - Time delta in milliseconds
      */
     update(delta) {
-        // Update all managers
-        this.coreManager.update(delta);
-        this.interactionManager.update(delta);
-        this.statsManager.update(delta);
+        // Update all managers if they exist
+        if (this.coreManager) {
+            this.coreManager.update(delta);
+        }
+        
+        if (this.interactionManager) {
+            this.interactionManager.update(delta);
+        }
+        
+        if (this.statsManager) {
+            this.statsManager.update(delta);
+        }
         
         // Update status effects
         this.statusEffectSystem.update(delta);
@@ -231,10 +265,18 @@ export class PlayerManager {
      * Clean up resources when destroying the manager
      */
     destroy() {
-        // Destroy all managers
-        this.statsManager.destroy();
-        this.interactionManager.destroy();
-        this.coreManager.destroy();
+        // Destroy all managers if they exist
+        if (this.statsManager) {
+            this.statsManager.destroy();
+        }
+        
+        if (this.interactionManager) {
+            this.interactionManager.destroy();
+        }
+        
+        if (this.coreManager) {
+            this.coreManager.destroy();
+        }
         
         // Note: PlayerHealthSystem and StatusEffectSystem don't have destroy methods as they're event-based
         // and don't create any resources that need explicit cleanup

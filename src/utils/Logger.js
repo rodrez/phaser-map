@@ -41,6 +41,7 @@ export const LogCategory = {
     HEALTH: 'HEALTH',
     AUTH: 'AUTH',     // Authentication and login-related logs
     ASSETS: 'ASSETS', // Asset loading logs
+    DUNGEON: 'DUNGEON', // Dungeon system logs
 
     // Add more categories as needed
 };

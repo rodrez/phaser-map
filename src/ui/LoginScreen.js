@@ -99,7 +99,9 @@ export class LoginScreen {
                                 
                                 <div class="login-form-group">
                                     <label for="password" class="login-label">Secret Password</label>
-                                    <input type="password" id="password" class="login-input" placeholder="Enter password" required>
+                                    <input type="password" id="password" class="login-input" placeholder="Enter password" required
+                                    value="123Pass"
+                                    >
                                 </div>
                                 
                                 <div class="login-form-options">
