@@ -514,6 +514,11 @@ export class Game extends Scene {
     // Log the monster click
     logger.info(LogCategory.MONSTER, `Clicked on monster: ${monster.monsterName}`);
     
+    // Make sure the map is not in a drag state
+    if (this.mapManager) {
+      this.mapManager.exitDragState();
+    }
+    
     // Attack the monster with a base damage of 10
     // In a real game, this would be based on the player's weapon, stats, etc.
     if (this.combatSystem) {

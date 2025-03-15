@@ -2,7 +2,7 @@ import type { Scene } from 'phaser';
 import { BaseMonster } from './BaseMonster';
 import type { PopupSystem, PopupContent, PopupOptions, StandardPopupOptions } from '../ui/popup';
 import { MonsterBehavior } from './MonsterTypes';
-import { logger, LogCategory } from '../utils/Logger';
+import { logger, LogCategory } from '../utils/Logger.js';
 
 /**
  * MonsterPopupSystem - Handles displaying information popups for monsters
@@ -31,11 +31,23 @@ export class MonsterPopupSystem {
         
         // Add pointer down event to the scene's input manager
         this.scene.input.on('gameobjectdown', (pointer: Phaser.Input.Pointer, gameObject: unknown) => {
-            logger.info(LogCategory.MONSTER, `Clicked on object: ${gameObject}`);
-            
             // Check if the clicked object is a monster
             if (gameObject instanceof BaseMonster) {
                 logger.info(LogCategory.MONSTER, `Clicked on monster: ${gameObject.monsterName}`);
+                
+                // Stop event propagation to prevent map drag
+                pointer.event.stopPropagation();
+                
+                // Prevent default browser behavior - safely handle this to avoid passive listener warnings
+                try {
+                    if (pointer.event instanceof MouseEvent) {
+                        pointer.event.preventDefault();
+                    }
+                } catch (e) {
+                    // Silently catch the error if preventDefault is not allowed
+                    logger.debug(LogCategory.MONSTER, "Could not preventDefault on monster popup click");
+                }
+                
                 this.showMonsterPopup(gameObject, pointer.worldX, pointer.worldY);
             }
         });
@@ -53,6 +65,20 @@ export class MonsterPopupSystem {
             for (const monster of monsters) {
                 monster.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
                     logger.info(LogCategory.MONSTER, `Direct click on monster: ${monster.monsterName}`);
+                    
+                    // Stop event propagation to prevent map drag
+                    pointer.event.stopPropagation();
+                    
+                    // Prevent default browser behavior - safely handle this to avoid passive listener warnings
+                    try {
+                        if (pointer.event instanceof MouseEvent) {
+                            pointer.event.preventDefault();
+                        }
+                    } catch (e) {
+                        // Silently catch the error if preventDefault is not allowed
+                        logger.debug(LogCategory.MONSTER, "Could not preventDefault on direct monster click");
+                    }
+                    
                     this.showMonsterPopup(monster, pointer.worldX, pointer.worldY);
                 });
             }

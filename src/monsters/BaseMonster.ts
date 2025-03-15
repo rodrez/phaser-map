@@ -56,7 +56,25 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         }
         
         // Make monster interactive (clickable)
-        this.setInteractive({ useHandCursor: true });
+        this.setInteractive({ useHandCursor: true, draggable: false });
+        
+        // Instead of trying to prevent default on passive events,
+        // we'll handle the click in a way that doesn't require preventDefault
+        this.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // Stop event propagation to prevent map drag
+            if (pointer.event) {
+                pointer.event.stopPropagation();
+            }
+            
+            // Force exit any existing map drag state if available
+            if (this.scene && (this.scene as any).mapManager && typeof (this.scene as any).mapManager.exitDragState === 'function') {
+                (this.scene as any).mapManager.exitDragState();
+            }
+            
+            // Handle the monster click here
+            // This approach doesn't rely on preventDefault
+            this.handleMonsterClick();
+        });
         
         // Set appropriate depth to ensure monsters are visible
         // We want monsters to be above the map but below the player (player depth is 100)
@@ -596,5 +614,28 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         
         // Otherwise use normal physics
         return super.setVelocity(x, y);
+    }
+
+    protected handleMonsterClick(): void {
+        // Handle the monster click here
+        // This method is called when the monster is clicked
+        
+        // If the monster is dead, do nothing
+        if (this.currentState === MonsterState.DEAD) return;
+        
+        // Notify the combat system if available
+        const combatSystem = (this.scene as any).combatSystem;
+        if (combatSystem && typeof combatSystem.playerClickedMonster === 'function') {
+            combatSystem.playerClickedMonster(this);
+        } else {
+            // Fallback behavior - attack the monster directly
+            const playerSystem = (this.scene as any).playerSystem;
+            if (playerSystem && typeof playerSystem.attackMonster === 'function') {
+                playerSystem.attackMonster(this);
+            }
+        }
+        
+        // Emit an event that the monster was clicked
+        this.scene.events.emit('monsterClicked', this);
     }
 } 

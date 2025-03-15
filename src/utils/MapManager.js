@@ -80,6 +80,14 @@ export class MapManager {
         scrollWheelZoom: true,
         boxZoom: false,
         keyboard: false,
+        // Set higher drag threshold to prevent accidental drags
+        draggingInertia: false,
+        inertiaDeceleration: 3000,
+        inertiaMaxSpeed: 1500,
+        // Increase click tolerance to make it easier to click on objects
+        tapTolerance: 15,
+        // Increase touch tolerance
+        touchZoomInertia: false
       });
 
       // Add tile layer
@@ -97,8 +105,8 @@ export class MapManager {
       
       // Initialize coordinate cache
       this.coordinateCache = new CoordinateCache(this);
-
-      // Add double-click handler for map to move player (replacing the click handler)
+      
+      // Add double-click handler for map to move player
       this.map.on("dblclick", (e) => {
         if (this.debug) {
           logger.info(LogCategory.MAP, "Map double-clicked at:", e.latlng);
@@ -143,6 +151,25 @@ export class MapManager {
       this.map.on("dragend", () => {
         this.updatePlayerPixelPosition();
       });
+      
+      // Add a handler to exit drag state when clicking on game objects
+      this.map.on('mousedown', (e) => {
+        // Check if the click is directly on the map (not on a game object)
+        if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.id === 'map') {
+          // This is a direct map click, allow normal behavior
+        } else if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.classList.contains('leaflet-container')) {
+          // This is a direct map click, allow normal behavior
+        } else {
+          // This is likely a click on a game object, prevent map drag
+          if (this.debug) {
+            logger.debug(LogCategory.MAP, 'Preventing map drag for non-map element click');
+          }
+          // Stop propagation to prevent map drag
+          e.originalEvent.stopPropagation();
+          // Force exit any existing drag state
+          this.exitDragState();
+        }
+      });
 
       // Force a resize to ensure proper rendering
       setTimeout(() => {
@@ -154,7 +181,7 @@ export class MapManager {
 
       return this.map;
     } catch (error) {
-      logger.error(LogCategory.MAP, "Error initializing map:", error);
+      logger.error(LogCategory.MAP, `Error initializing map: ${error.message}`);
       return null;
     }
   }
@@ -832,5 +859,38 @@ export class MapManager {
       lat2 * 180 / Math.PI,
       lng2 * 180 / Math.PI
     );
+  }
+
+  /**
+   * Force exit the map drag state
+   * This can be called when interactions with game objects cause the map to get stuck in a drag state
+   */
+  exitDragState() {
+    if (!this.map) return;
+    
+    try {
+      // Simulate a mouseup event to exit drag state
+      const mapContainer = this.map.getContainer();
+      if (mapContainer) {
+        // Create and dispatch a mouseup event
+        const mouseUpEvent = new MouseEvent('mouseup', {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        });
+        mapContainer.dispatchEvent(mouseUpEvent);
+        
+        // Also dispatch a dragend event directly to the map
+        if (this.map._dragState) {
+          this.map.fire('dragend');
+        }
+        
+        if (this.debug) {
+          logger.debug(LogCategory.MAP, 'Forced exit of map drag state');
+        }
+      }
+    } catch (error) {
+      logger.error(LogCategory.MAP, `Error exiting drag state: ${error.message}`);
+    }
   }
 }

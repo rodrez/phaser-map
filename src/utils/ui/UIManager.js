@@ -2,10 +2,10 @@ import { Scene } from 'phaser';
 import { CoreUIManager } from './CoreUIManager';
 import { NotificationManager } from './NotificationManager';
 import { VitalsManager } from './VitalsManager';
-import { MenuManager } from './MenuManager';
 import { EnvironmentUIManager } from './EnvironmentUIManager';
 import { uiRegistry } from './UIComponentRegistry';
 import { logger, LogCategory } from '../Logger';
+import { MedievalMenu } from '../../ui/menu';
 
 /**
  * UIManager - Main UI manager that coordinates all specialized UI managers
@@ -25,15 +25,16 @@ export class UIManager {
         this.coreManager = new CoreUIManager(scene);
         this.notificationManager = new NotificationManager(scene);
         this.vitalsManager = new VitalsManager(scene);
-        this.menuManager = new MenuManager(scene);
         this.environmentManager = new EnvironmentUIManager(scene);
         
         // Register managers in the registry
         uiRegistry.register('core', this.coreManager);
         uiRegistry.register('notification', this.notificationManager);
         uiRegistry.register('vitals', this.vitalsManager);
-        uiRegistry.register('menu', this.menuManager);
         uiRegistry.register('environment', this.environmentManager);
+        
+        // Initialize the main menu directly
+        this.menu = new MedievalMenu(scene);
         
         // Create basic UI elements
         this.createBasicUI();
@@ -160,21 +161,21 @@ export class UIManager {
         this.scene.events.on('flagPlaced', () => {
             this.updateFlagCounter();
             // Update menu badge if menu exists
-            this.menuManager.updateMenuBadge('placeFlag', this.mapManager.flags.length);
+            this.updateMenuBadge('placeFlag', this.mapManager.flags.length);
         });
         
         // Listen for flag removal events
         this.scene.events.on('flagRemoved', () => {
             this.updateFlagCounter();
             // Update menu badge if menu exists
-            this.menuManager.updateMenuBadge('placeFlag', this.mapManager.flags.length);
+            this.updateMenuBadge('placeFlag', this.mapManager.flags.length);
         });
         
         // Listen for all flags cleared event
         this.scene.events.on('flagsCleared', () => {
             this.updateFlagCounter();
             // Update menu badge if menu exists
-            this.menuManager.updateMenuBadge('placeFlag', 0);
+            this.updateMenuBadge('placeFlag', 0);
         });
     }
 
@@ -230,32 +231,38 @@ export class UIManager {
     }
 
     /**
-     * Get the medieval menu component
-     * @returns {MedievalMenu|null} The medieval menu component or null if not available
+     * Get the menu instance
+     * @returns {MedievalMenu} The menu instance
      */
     getMenu() {
-        return this.menuManager.menu;
+        return this.menu;
     }
 
     /**
-     * Show the medieval menu
+     * Show the menu
      */
     showMenu() {
-        this.menuManager.showMenu();
+        if (this.menu) {
+            this.menu.show();
+        }
     }
 
     /**
-     * Hide the medieval menu
+     * Hide the menu
      */
     hideMenu() {
-        this.menuManager.hideMenu();
+        if (this.menu) {
+            this.menu.hide();
+        }
     }
 
     /**
-     * Toggle the medieval menu visibility
+     * Toggle the menu visibility
      */
     toggleMenu() {
-        this.menuManager.toggleMenu();
+        if (this.menu) {
+            this.menu.toggle();
+        }
     }
 
     /**
@@ -264,7 +271,9 @@ export class UIManager {
      * @param {Function} handler - The click handler function
      */
     setMenuItemHandler(id, handler) {
-        this.menuManager.setMenuItemHandler(id, handler);
+        if (this.menu) {
+            this.menu.setClickHandler(id, handler);
+        }
     }
 
     /**
@@ -273,7 +282,9 @@ export class UIManager {
      * @param {number|string} value - The badge value to display
      */
     updateMenuBadge(id, value) {
-        this.menuManager.updateMenuBadge(id, value);
+        if (this.menu) {
+            this.menu.updateBadge(id, value);
+        }
     }
 
     /**
@@ -281,23 +292,25 @@ export class UIManager {
      * @param {string} id - The ID of the menu item to set as active
      */
     setActiveMenuItem(id) {
-        this.menuManager.setActiveMenuItem(id);
+        if (this.menu) {
+            this.menu.setActiveItem(id);
+        }
     }
 
     /**
-     * Add a custom menu item to the medieval menu
+     * Add a custom menu item to the menu
      * @param {Object} config - The menu item configuration
      */
     addMenuItem(config) {
-        this.menuManager.addMenuItem(config);
+        logger.warn(LogCategory.UI, 'addMenuItem not implemented in simplified menu');
     }
 
     /**
-     * Remove a menu item from the medieval menu
+     * Remove a menu item from the menu
      * @param {string} id - The ID of the menu item to remove
      */
     removeMenuItem(id) {
-        this.menuManager.removeMenuItem(id);
+        logger.warn(LogCategory.UI, 'removeMenuItem not implemented in simplified menu');
     }
 
     /**
@@ -321,15 +334,19 @@ export class UIManager {
     }
 
     /**
-     * Clean up resources when destroying the manager
+     * Destroy all UI elements and managers
      */
     destroy() {
-        // Destroy all registered components
-        uiRegistry.destroyAll();
+        // Destroy all managers
+        this.coreManager.destroy();
+        this.notificationManager.destroy();
+        this.vitalsManager.destroy();
+        this.environmentManager.destroy();
         
-        // Remove event listeners
-        this.scene.events.off('flagPlaced');
-        this.scene.events.off('flagRemoved');
-        this.scene.events.off('flagsCleared');
+        // Destroy the menu directly
+        if (this.menu) {
+            this.menu.destroy();
+            this.menu = null;
+        }
     }
 } 

@@ -2,7 +2,6 @@ import { Scene } from 'phaser';
 import { CorePlayerManager } from './CorePlayerManager';
 import { PlayerInteractionManager } from './PlayerInteractionManager';
 import { PlayerStatsManager } from './PlayerStatsManager';
-import { PlayerDebugManager } from './PlayerDebugManager';
 import { PlayerHealthSystem } from './PlayerHealthSystem';
 import playerStatsService from './PlayerStatsService';
 import { logger, LogCategory } from '../Logger';
@@ -35,10 +34,17 @@ export class PlayerManager {
         this.coreManager = new CorePlayerManager(scene, mapManager);
         this.interactionManager = new PlayerInteractionManager(scene, mapManager);
         this.statsManager = new PlayerStatsManager(scene, mapManager);
-        this.debugManager = new PlayerDebugManager(scene, mapManager);
         
         // Register this manager in the scene for other systems to access
         this.scene.playerManager = this;
+        
+        // TESTING
+        // Add key listener for god mode toggle
+        this.godModeKey = this.scene.input.keyboard.addKey('G');
+        this.godModeKey.on('down', () => {
+            this.toggleGodMode();
+            logger.info(LogCategory.PLAYER, "God mode toggled by keyboard");
+        });
         
         logger.info(LogCategory.PLAYER, "PlayerManager initialized");
     }
@@ -129,13 +135,6 @@ export class PlayerManager {
     }
 
     /**
-     * Test the God Mode and Full Heal features
-     */
-    testFeatures() {
-        this.debugManager.testFeatures();
-    }
-
-    /**
      * Apply a status effect to the player
      * @param {string} type - The type of status effect
      * @param {Object} config - Configuration for the status effect
@@ -187,7 +186,6 @@ export class PlayerManager {
         this.coreManager.update(delta);
         this.interactionManager.update(delta);
         this.statsManager.update(delta);
-        this.debugManager.update(delta);
         
         // Update status effects
         this.statusEffectSystem.update(delta);
@@ -201,7 +199,6 @@ export class PlayerManager {
      */
     destroy() {
         // Destroy all managers
-        this.debugManager.destroy();
         this.statsManager.destroy();
         this.interactionManager.destroy();
         this.coreManager.destroy();

@@ -127,7 +127,43 @@ export class PopupSystem {
           this.closePopup(overlay);
         }
         event.stopPropagation();
+        event.preventDefault();
       });
+      
+      // Prevent all mouse events from propagating through the overlay
+      // This is crucial to prevent map dragging when interacting with the popup
+      const overlayMouseEvents = [
+        "mousedown",
+        "mouseup",
+        "mousemove",
+        "mouseover",
+        "mouseout",
+        "mouseenter",
+        "mouseleave",
+        "contextmenu",
+        "dragstart",
+        "drag",
+        "dragend"
+      ];
+      
+      for (const eventType of overlayMouseEvents) {
+        overlay.addEventListener(eventType, (event) => {
+          // Only stop propagation if the click is directly on the overlay
+          // or if it's on the popup (to prevent map dragging)
+          event.stopPropagation();
+          
+          // Prevent default browser behavior for mouse events
+          // This helps prevent map dragging
+          if (event.type === "mousedown" || event.type === "dragstart") {
+            event.preventDefault();
+          }
+          
+          // Force exit any existing map drag state
+          if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+            this.mapManager.exitDragState();
+          }
+        });
+      }
 
       // Get screen coordinates for the popup using MapManager's latLngToPixel method
       const screenPos = this.mapManager.latLngToPixel(lat, lon);
@@ -191,7 +227,7 @@ export class PopupSystem {
       customPopup.style.zIndex = options.zIndex ? options.zIndex.toString() : "99999";
 
       // Prevent all mouse events from propagating through the popup
-      const mouseEvents = [
+      const popupMouseEvents = [
         "click",
         "mousedown",
         "mouseup",
@@ -201,11 +237,23 @@ export class PopupSystem {
         "mouseenter",
         "mouseleave",
         "contextmenu",
+        "dragstart",
+        "drag",
+        "dragend"
       ];
-      for (const eventType of mouseEvents) {
+      for (const eventType of popupMouseEvents) {
         customPopup.addEventListener(eventType, (event) => {
           event.stopPropagation();
-          event.preventDefault();
+          
+          // Prevent default browser behavior for mouse events that could trigger map drag
+          if (eventType === "mousedown" || eventType === "dragstart") {
+            event.preventDefault();
+          }
+          
+          // Force exit any existing map drag state
+          if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+            this.mapManager.exitDragState();
+          }
         });
       }
 
@@ -218,7 +266,24 @@ export class PopupSystem {
               // Prevent event from propagating to elements behind the popup
               event.stopPropagation();
               event.preventDefault();
+              
+              // Force exit any existing map drag state
+              if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+                this.mapManager.exitDragState();
+              }
+              
               button.onClick();
+            });
+            
+            // Also prevent mousedown events to avoid map dragging
+            element.addEventListener("mousedown", (event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              
+              // Force exit any existing map drag state
+              if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+                this.mapManager.exitDragState();
+              }
             });
           }
         }
@@ -282,7 +347,43 @@ export class PopupSystem {
           this.closePopup(overlay);
         }
         event.stopPropagation();
+        event.preventDefault();
       });
+      
+      // Prevent all mouse events from propagating through the overlay
+      // This is crucial to prevent map dragging when interacting with the popup
+      const overlayScreenPosEvents = [
+        "mousedown",
+        "mouseup",
+        "mousemove",
+        "mouseover",
+        "mouseout",
+        "mouseenter",
+        "mouseleave",
+        "contextmenu",
+        "dragstart",
+        "drag",
+        "dragend"
+      ];
+      
+      for (const eventType of overlayScreenPosEvents) {
+        overlay.addEventListener(eventType, (event) => {
+          // Only stop propagation if the click is directly on the overlay
+          // or if it's on the popup (to prevent map dragging)
+          event.stopPropagation();
+          
+          // Prevent default browser behavior for mouse events
+          // This helps prevent map dragging
+          if (event.type === "mousedown" || event.type === "dragstart") {
+            event.preventDefault();
+          }
+          
+          // Force exit any existing map drag state
+          if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+            this.mapManager.exitDragState();
+          }
+        });
+      }
 
       // Get screen position
       const screenPos = { x, y };
@@ -345,7 +446,7 @@ export class PopupSystem {
       customPopup.style.zIndex = options.zIndex ? options.zIndex.toString() : "99999";
 
       // Prevent all mouse events from propagating through the popup
-      const mouseEvents = [
+      const popupMouseEvents = [
         "click",
         "mousedown",
         "mouseup",
@@ -355,11 +456,23 @@ export class PopupSystem {
         "mouseenter",
         "mouseleave",
         "contextmenu",
+        "dragstart",
+        "drag",
+        "dragend"
       ];
-      for (const eventType of mouseEvents) {
+      for (const eventType of popupMouseEvents) {
         customPopup.addEventListener(eventType, (event) => {
           event.stopPropagation();
-          event.preventDefault();
+          
+          // Prevent default browser behavior for mouse events that could trigger map drag
+          if (eventType === "mousedown" || eventType === "dragstart") {
+            event.preventDefault();
+          }
+          
+          // Force exit any existing map drag state
+          if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+            this.mapManager.exitDragState();
+          }
         });
       }
 
@@ -372,7 +485,24 @@ export class PopupSystem {
               // Prevent event from propagating to elements behind the popup
               event.stopPropagation();
               event.preventDefault();
+              
+              // Force exit any existing map drag state
+              if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+                this.mapManager.exitDragState();
+              }
+              
               button.onClick();
+            });
+            
+            // Also prevent mousedown events to avoid map dragging
+            element.addEventListener("mousedown", (event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              
+              // Force exit any existing map drag state
+              if (this.mapManager && typeof this.mapManager.exitDragState === 'function') {
+                this.mapManager.exitDragState();
+              }
             });
           }
         }

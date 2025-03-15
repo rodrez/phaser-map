@@ -346,7 +346,7 @@ export class TreeSystem {
         }
         
         // Make tree interactive
-        tree.setInteractive({ useHandCursor: true });
+        tree.setInteractive({ useHandCursor: true, draggable: false });
         
         // Add event listeners
         this.setupTreeInteractionsForTree(tree);
@@ -558,7 +558,7 @@ export class TreeSystem {
      * Make a tree interactive
      */
     makeTreeInteractive(tree) {
-        tree.setInteractive({ useHandCursor: true });
+        tree.setInteractive({ useHandCursor: true, draggable: false });
 
         const originalScale = tree.scale;
 
@@ -588,7 +588,27 @@ export class TreeSystem {
         tree.setData('clickCount', 0);
         
         // Click effect
-        tree.on('pointerdown', () => {
+        tree.on('pointerdown', (pointer) => {
+            // Stop event propagation to prevent map drag
+            if (pointer.event) {
+                pointer.event.stopPropagation();
+                
+                // Prevent default browser behavior - safely handle this to avoid passive listener warnings
+                try {
+                    if (pointer.event instanceof MouseEvent) {
+                        pointer.event.preventDefault();
+                    }
+                } catch (e) {
+                    // Silently catch the error if preventDefault is not allowed
+                    logger.debug(LogCategory.ENVIRONMENT, "Could not preventDefault on tree click");
+                }
+            }
+            
+            // Make sure the map is not in a drag state
+            if (this.scene.mapManager) {
+                this.scene.mapManager.exitDragState();
+            }
+            
             const currentTime = this.scene.time.now;
             const lastClickTime = tree.getData('lastClickTime') || 0;
             const clickCount = tree.getData('clickCount') || 0;

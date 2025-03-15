@@ -106,10 +106,20 @@ export class FlagManager {
       flagSprite.flagData = flag;
       
       // Make the sprite interactive
-      flagSprite.setInteractive();
+      flagSprite.setInteractive({ useHandCursor: true, draggable: false });
       
       // Add click handler
-      flagSprite.on('pointerdown', () => {
+      flagSprite.on('pointerdown', (pointer) => {
+        // Stop event propagation to prevent map drag
+        if (pointer.event) {
+          pointer.event.stopPropagation();
+        }
+        
+        // Make sure the map is not in a drag state
+        if (this.scene.mapManager) {
+          this.scene.mapManager.exitDragState();
+        }
+        
         logger.info(LogCategory.FLAG, `Flag sprite clicked at: ${flag.lat}, ${flag.lng}`);
         this.handleFlagClick(flag);
       });
@@ -156,7 +166,17 @@ export class FlagManager {
       container.setInteractive(new Phaser.Geom.Rectangle(-15, -40, 30, 70), Phaser.Geom.Rectangle.Contains);
       
       // Add click handler
-      container.on('pointerdown', () => {
+      container.on('pointerdown', (pointer) => {
+        // Stop event propagation to prevent map drag
+        if (pointer.event) {
+          pointer.event.stopPropagation();
+        }
+        
+        // Make sure the map is not in a drag state
+        if (this.scene.mapManager) {
+          this.scene.mapManager.exitDragState();
+        }
+        
         logger.info(LogCategory.FLAG, `Flag container clicked at: ${flag.lat}, ${flag.lng}`);
         this.handleFlagClick(flag);
       });
@@ -229,13 +249,28 @@ export class FlagManager {
    * @param {Object} flag - The flag object that was clicked
    */
   handleFlagClick(flag) {
+    // Validate flag object
+    if (!flag || !flag.lat || !flag.lng) {
+      logger.error(LogCategory.FLAG, 'Invalid flag object in handleFlagClick');
+      return;
+    }
+    
     logger.info(LogCategory.FLAG, `Handling flag click, jumping to: ${flag.lat}, ${flag.lng}`);
     
     // Jump to the flag using the MapManager's method after a short delay
     // This delay helps the user see the visual feedback
     setTimeout(() => {
-      this.mapManager.jumpToFlag(flag.lat, flag.lng);
+      if (this.mapManager && typeof this.mapManager.jumpToFlag === 'function') {
+        this.mapManager.jumpToFlag(flag.lat, flag.lng);
+      } else {
+        logger.error(LogCategory.FLAG, 'MapManager or jumpToFlag method not available');
+      }
     }, 100);
+    
+    // Emit an event that can be listened to by other systems
+    if (this.scene && this.scene.events) {
+      this.scene.events.emit('flagClicked', flag);
+    }
   }
   
 
