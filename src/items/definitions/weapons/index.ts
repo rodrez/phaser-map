@@ -1,4 +1,4 @@
-import { ItemType, WeaponType, ItemRarity } from '../../item';
+import { ItemType, WeaponType, ItemRarity } from '../../item-types';
 import { WeaponDefinition } from '../item-registry';
 import metalWeaponDefinitions from './metal-weapons';
 

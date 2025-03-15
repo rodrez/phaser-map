@@ -1,4 +1,4 @@
-import { ItemType, ArmorType, ItemRarity } from '../../item';
+import { ItemType, ArmorType, ItemRarity } from '../../item-types';
 import { ArmorDefinition } from '../item-registry';
 
 // Define all armor pieces

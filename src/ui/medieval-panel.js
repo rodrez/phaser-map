@@ -232,6 +232,8 @@ export class MedievalPanel {
      * Show the panel
      */
     show() {
+        // Center the panel before showing it
+        this.centerPanel();
         this.setVisible(true);
     }
     
@@ -255,6 +257,31 @@ export class MedievalPanel {
     destroy() {
         if (this.container && document.body.contains(this.container)) {
             document.body.removeChild(this.container);
+        }
+    }
+    
+    /**
+     * Center the panel on the screen
+     */
+    centerPanel() {
+        // Set position to center
+        this.container.style.left = '50%';
+        this.container.style.top = '50%';
+        this.container.style.transform = 'translate(-50%, -50%)';
+        
+        // Make sure the panel is visible within the viewport
+        const rect = this.container.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Adjust if panel is too wide for the viewport
+        if (rect.width > viewportWidth * 0.9) {
+            this.container.style.width = `${viewportWidth * 0.9}px`;
+        }
+        
+        // Adjust if panel is too tall for the viewport
+        if (rect.height > viewportHeight * 0.9) {
+            this.container.style.maxHeight = `${viewportHeight * 0.9}px`;
         }
     }
 } 

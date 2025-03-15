@@ -1,14 +1,17 @@
 import { logger, LogCategory } from '../../utils/Logger';
 import { 
-    ItemType, 
-    WeaponType, 
-    ArmorType, 
-    ItemRarity, 
     BaseItem, 
     WeaponItem, 
     ArmorItem, 
-    ConsumableItem 
+    ConsumableItem,
+    RingItem
 } from '../item';
+import {
+    ItemType,
+    WeaponType,
+    ArmorType,
+    ItemRarity
+} from '../item-types';
 
 // Base interface for all item definitions
 export interface ItemDefinition {
@@ -60,6 +63,12 @@ export interface ConsumableDefinition extends ItemDefinition {
 export interface ResourceDefinition extends ItemDefinition {
     type: ItemType.RESOURCE;
     // Add resource-specific properties here
+}
+
+// Ring-specific definition
+export interface RingDefinition extends ItemDefinition {
+    type: ItemType.RING;
+    // Add ring-specific properties here
 }
 
 // Central registry for all item definitions
@@ -115,6 +124,8 @@ export class ItemRegistry {
                 return this.createWeaponFromDefinition(definition as WeaponDefinition);
             case ItemType.ARMOR:
                 return this.createArmorFromDefinition(definition as ArmorDefinition);
+            case ItemType.RING:
+                return this.createRingFromDefinition(definition as RingDefinition);
             case ItemType.CONSUMABLE:
                 return this.createConsumableFromDefinition(definition as ConsumableDefinition);
             default:
@@ -208,6 +219,28 @@ export class ItemRegistry {
             manaRestore: definition.manaRestore,
             effectDuration: definition.effectDuration,
             tempAttributes: definition.attributes
+        });
+    }
+    
+    private createRingFromDefinition(definition: RingDefinition): RingItem {
+        return new RingItem({
+            id: definition.id,
+            name: definition.name,
+            description: definition.description,
+            iconUrl: definition.imagePath,
+            type: ItemType.RING,
+            rarity: definition.rarity,
+            weight: definition.weight,
+            value: definition.value,
+            level: definition.level,
+            stackable: definition.stackable,
+            maxStackSize: definition.maxStackSize,
+            usable: definition.usable,
+            durability: definition.durability,
+            maxDurability: definition.maxDurability,
+            uses: definition.uses,
+            maxUses: definition.maxUses,
+            attributes: definition.attributes
         });
     }
 } 

@@ -1,20 +1,23 @@
-// Export monster types and interfaces
-export * from './MonsterTypes';
-
-// Export monster registry and definitions
-export * from './definitions';
-
-// Export base monster class
-export * from './BaseMonster';
-
-// Export monster factory
-export * from './MonsterFactory';
-
 // Export monster system
-export * from './MonsterSystem';
+export { MonsterSystem } from './MonsterSystem';
 
 // Export monster popup system
-export * from './MonsterPopupSystem';
+export { MonsterPopupSystem } from './MonsterPopupSystem';
+
+// Export monster types
+export { MonsterType, MonsterBehavior, MonsterState } from './MonsterTypes';
+
+// Export base monster class
+export { BaseMonster } from './BaseMonster';
+
+// Export monster factory
+export { MonsterFactory } from './MonsterFactory';
+
+// Export monster registry
+export { MonsterRegistry } from './definitions';
+
+// Export monster position manager
+export { MonsterPositionManager } from './MonsterPositionManager';
 
 // Export monster implementations
 export * from './Stag';

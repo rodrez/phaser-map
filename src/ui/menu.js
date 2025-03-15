@@ -1,6 +1,7 @@
 import { DOMUIHelper } from '../utils/DOMUIHelper';
 import { logger, LogCategory } from '../utils/Logger';
 import { SkillsUI } from './skills-ui';
+import { MedievalEquipmentUI } from './equipment-ui/index';
 
 /**
  * Options for the medieval menu
@@ -43,6 +44,7 @@ export class MedievalMenu {
         
         // UI Components
         this.skillsUI = null;
+        this.equipmentUI = null;
         
         // State
         this.isVisible = false;
@@ -232,6 +234,7 @@ export class MedievalMenu {
     addDefaultMenuItems() {
         this.menuItemConfigs = [
             { id: 'inventory', label: 'Inventory', icon: '🎒' },
+            { id: 'equipment', label: 'Equipment', icon: '🛡️' },
             { id: 'communication', label: 'Communication', icon: '💬' },
             { id: 'craft', label: 'Craft', icon: '⚒️' },
             { id: 'map', label: 'Map', icon: '🗺️' },
@@ -598,6 +601,41 @@ export class MedievalMenu {
             this.scene.events.emit('openCharacter');
             this.hide(); // Hide the menu when opening character stats
         });
+        
+        // Set click handler for equipment menu item
+        this.setClickHandler('equipment', () => {
+            logger.info(LogCategory.MENU, '[MedievalMenu] Equipment menu item clicked');
+            // Emit the openEquipment event to show the equipment UI
+            this.scene.events.emit('openEquipment');
+            this.hide(); // Hide the menu when opening equipment
+        });
+        
+        // Set up keyboard shortcuts
+        this.setupKeyboardShortcuts();
+    }
+    
+    /**
+     * Set up keyboard shortcuts for menu items
+     */
+    setupKeyboardShortcuts() {
+        // Add keyboard event listener for the E key to open equipment
+        const keyHandler = (event) => {
+            // E key to toggle equipment
+            if (event.key === 'e' || event.key === 'E') {
+                // Only trigger if not typing in an input field
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    logger.info(LogCategory.MENU, '[MedievalMenu] E key pressed, opening equipment');
+                    this.setActiveMenuItem('equipment');
+                    this.scene.events.emit('openEquipment');
+                }
+            }
+        };
+        
+        // Add the event listener
+        document.addEventListener('keydown', keyHandler);
+        
+        // Store the handler so we can remove it later
+        this.keyboardHandler = keyHandler;
     }
     
     /**
@@ -614,6 +652,12 @@ export class MedievalMenu {
                     this.container.style.display = 'none';
                 }
                 this.isVisible = false;
+            }
+            
+            // Remove keyboard event listeners
+            if (this.keyboardHandler) {
+                document.removeEventListener('keydown', this.keyboardHandler);
+                this.keyboardHandler = null;
             }
             
             // Destroy UI components first (to ensure proper cleanup order)

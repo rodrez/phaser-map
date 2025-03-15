@@ -1,4 +1,4 @@
-import { ItemType, ItemRarity } from '../../item';
+import { ItemType, ItemRarity } from '../../item-types';
 import { ConsumableDefinition } from '../item-registry';
 
 // Define all consumables

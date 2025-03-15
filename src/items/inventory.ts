@@ -1,4 +1,5 @@
-import { BaseItem, ItemStack, ItemType } from './item';
+import { BaseItem, ItemStack } from './item';
+import { ItemType } from './item-types';
 
 /**
  * Represents a player's inventory that can hold and manage items

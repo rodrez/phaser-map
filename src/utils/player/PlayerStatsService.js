@@ -33,6 +33,10 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             baseSpeed: 8,
             baseMaxHealth: 100,
             
+            // Equipment stats (bonuses from equipped items)
+            equipmentAttack: 0,
+            equipmentDefense: 0,
+            
             // Combat stats
             criticalHitChance: 5, // 5% base critical hit chance
             
@@ -64,63 +68,41 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             // Aggressive timer reduction
             aggressiveTimerReduction: 0,
             
-            // Crafting bonuses
-            craftingTimeReduction: 10,
-            craftingExtraItems: new Map(), // ratio type -> value
+            // Equipment stats - simplified
+            equippedWeapon: null,
+            equippedArmor: null,
+            equippedRingLeft: null,
+            equippedRingRight: null,
+            equippedShield: null,
             
-            // Resource gathering bonuses
-            resourceBonuses: new Map(), // resourceType -> (bonusType -> value)
-            
-            // Durability bonuses
-            durabilityMultipliers: new Map(), // itemType -> multiplier
-            
-            // Unlocked abilities
-            unlockedAbilities: new Set([
-                'Double Strike',
-                'Quick Dodge',
-                'Power Attack'
-            ]),
-            
-            // Ability modifiers
-            abilityCooldownReductions: new Map(), // abilityName -> seconds/percentage
-            abilityDurationIncreases: new Map(), // abilityName -> seconds/percentage
-            abilityEffectIncreases: new Map(), // abilityName -> (effectType -> value)
-            
-            // Pet bonuses
-            petBonuses: new Map(), // bonusType -> value
-            
-            // Minion unlocks and bonuses
-            unlockedMinions: new Map(), // minionType -> count
-            minionBonuses: new Map(), // minionType -> (bonusType -> value)
-            
-            // Special interactions
-            specialInteractions: new Map(), // interactionType -> description
-            
-            // Target-specific bonuses
-            targetAttackBonuses: new Map(), // targetType -> bonus
-            targetDefenseBonuses: new Map(), // targetType -> bonus
-            
-            // Environment-specific bonuses
-            environmentSpeedBonuses: new Map(), // environment -> bonus
-            
-            // Crafting unlocks
-            craftableItems: new Set([
-                'Health Potion',
-                'Strength Potion',
-                'Iron Sword',
-                'Leather Armor'
-            ]),
-            
-            // Base craftable items (without skill effects)
-            baseCraftableItems: new Set([
-                'Health Potion',
-                'Strength Potion',
-                'Iron Sword',
-                'Leather Armor'
-            ]),
+            // For compatibility with skill system
+            unlockedAbilities: new Set(),
+            craftableItems: new Set(),
+            craftingTimeReduction: 0,
+            baseCraftableItems: new Set()
         };
         
-        logger.info(LogCategory.PLAYER, "PlayerStatsService initialized");
+        // Initialize derived stats
+        this.updateDerivedStats();
+        
+        logger.info(LogCategory.PLAYER, 'PlayerStatsService initialized with simplified equipment');
+    }
+    
+    /**
+     * Update derived stats based on base stats and equipment
+     */
+    updateDerivedStats() {
+        // Calculate total attack (base + equipment)
+        this.stats.attack = this.stats.baseAttack + this.stats.equipmentAttack;
+        
+        // Calculate total defense (base + equipment)
+        this.stats.defense = this.stats.baseDefense + this.stats.equipmentDefense;
+        
+        // Emit stats changed event
+        this.emit('stats-changed', { 
+            attack: this.stats.attack,
+            defense: this.stats.defense
+        });
     }
     
     /**
@@ -434,10 +416,13 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             // Increase max health
             const oldMaxHealth = this.stats.maxHealth;
             this.stats.maxHealth += 10;
+            this.stats.baseMaxHealth += 10; // Update base max health too
             this.stats.health = this.stats.maxHealth; // Heal to full on level up
             
             // Increase attack and defense
+            this.stats.baseAttack += 2; // Update base attack
             this.stats.attack += 2;
+            this.stats.baseDefense += 1; // Update base defense
             this.stats.defense += 1;
             
             leveledUp = true;
@@ -532,6 +517,52 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         );
         
         return true;
+    }
+    
+    /**
+     * Update equipment stats
+     * @param {Object} equipmentStats - Object containing equipment stat updates
+     */
+    updateEquipmentStats(equipmentStats) {
+        // Update equipment stats
+        if (equipmentStats.damage !== undefined) {
+            this.stats.equipmentAttack = equipmentStats.damage;
+        }
+        
+        if (equipmentStats.defense !== undefined) {
+            this.stats.equipmentDefense = equipmentStats.defense;
+        }
+        
+        // Update derived stats
+        this.updateDerivedStats();
+        
+        logger.info(LogCategory.PLAYER, `Updated equipment stats: attack=${this.stats.equipmentAttack}, defense=${this.stats.equipmentDefense}`);
+    }
+    
+    /**
+     * Update equipped items
+     * @param {Object} equipment - Object containing equipped items
+     */
+    updateEquippedItems(equipment) {
+        // Update equipped items
+        if (equipment.weapon !== undefined) {
+            this.stats.equippedWeapon = equipment.weapon;
+        }
+        
+        if (equipment.armor !== undefined) {
+            this.stats.equippedArmor = equipment.armor;
+        }
+        
+        if (equipment.ringLeft !== undefined) {
+            this.stats.equippedRingLeft = equipment.ringLeft;
+        }
+        
+        if (equipment.ringRight !== undefined) {
+            this.stats.equippedRingRight = equipment.ringRight;
+        }
+        
+        // Emit equipped items changed event
+        this.emit('equipped-items-changed', equipment);
     }
 }
 

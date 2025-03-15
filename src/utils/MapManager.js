@@ -1,4 +1,5 @@
 import { logger, LogCategory } from "./Logger"; 
+import { CoordinateCache } from "./CoordinateCache";
 
 /**
  * MapManager class to handle Leaflet map integration
@@ -41,6 +42,9 @@ export class MapManager {
 
     // Debug flag
     this.debug = false;
+    
+    // Coordinate cache for optimized position calculations
+    this.coordinateCache = null;
   }
 
   /**
@@ -90,6 +94,9 @@ export class MapManager {
 
       // Initialize boundary circle
       this.initBoundaryCircle();
+      
+      // Initialize coordinate cache
+      this.coordinateCache = new CoordinateCache(this);
 
       // Add double-click handler for map to move player (replacing the click handler)
       this.map.on("dblclick", (e) => {
@@ -661,7 +668,8 @@ export class MapManager {
   }
 
   /**
-   * Convert latitude/longitude to pixel coordinates relative to the map container
+   * Convert latitude/longitude to pixel coordinates
+   * This method is optimized to use the coordinate cache when possible
    * @param {number} lat - Latitude
    * @param {number} lng - Longitude
    * @returns {Object} - Pixel coordinates {x, y}
@@ -752,5 +760,77 @@ export class MapManager {
     if (enabled) {
       logger.info(LogCategory.MAP, "Debug mode enabled");
     }
+  }
+
+  /**
+   * Get the coordinate cache instance
+   * @returns {CoordinateCache} - The coordinate cache instance
+   */
+  getCoordinateCache() {
+    return this.coordinateCache;
+  }
+
+  /**
+   * Clean up resources when the map manager is destroyed
+   */
+  destroy() {
+    // Clean up coordinate cache
+    if (this.coordinateCache) {
+      this.coordinateCache.destroy();
+      this.coordinateCache = null;
+    }
+    
+    // Remove map event listeners
+    if (this.map) {
+      this.map.off();
+      this.map.remove();
+      this.map = null;
+    }
+    
+    // Clear flags and territories
+    this.flags = [];
+    this.territories = [];
+  }
+
+  /**
+   * Calculate a destination point given a starting point, bearing and distance
+   * @param {L.LatLng|Object} latlng - Starting point (either L.LatLng or {lat, lng})
+   * @param {number} bearing - Bearing in radians (0 = north, Math.PI/2 = east, etc.)
+   * @param {number} distance - Distance in meters
+   * @returns {L.LatLng} - Destination point
+   */
+  destinationPoint(latlng, bearing, distance) {
+    // Convert latlng to L.LatLng if it's not already
+    const startLatLng = latlng instanceof L.LatLng ? latlng : L.latLng(latlng.lat, latlng.lng);
+    
+    // Earth's radius in meters
+    const R = 6371000;
+    
+    // Angular distance in radians
+    const angularDistance = distance / R;
+    
+    // Convert bearing to radians if needed
+    const bearingRad = bearing;
+    
+    // Convert lat/lng to radians
+    const lat1 = startLatLng.lat * Math.PI / 180;
+    const lng1 = startLatLng.lng * Math.PI / 180;
+    
+    // Calculate destination point
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angularDistance) +
+      Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(bearingRad)
+    );
+    
+    const lng2 = lng1 + Math.atan2(
+      Math.sin(bearingRad) * Math.sin(angularDistance) * Math.cos(lat1),
+      Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2)
+    );
+    
+    // Convert back to degrees
+    return L.latLng(
+      lat2 * 180 / Math.PI,
+      lng2 * 180 / Math.PI
+    );
   }
 }

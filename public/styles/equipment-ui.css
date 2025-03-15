@@ -1,0 +1,275 @@
+/* Equipment UI specific styles that extend the popup.css styles */
+
+/* Equipment specific styles that work with the popup system */
+.equipment-content {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+/* Equipment slots container */
+.equipment-slots {
+    position: relative;
+    min-height: 250px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Equipment slot styling */
+.equipment-slot {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    background-color: rgba(200, 161, 101, 0.1);
+    border: 2px solid #8c7853;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.equipment-slot:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-color: #c8a165;
+    background-color: rgba(200, 161, 101, 0.2);
+}
+
+.equipment-slot.equipped {
+    background-color: rgba(200, 161, 101, 0.3);
+    border-color: #c8a165;
+}
+
+/* Slot positions - now using flex layout instead of absolute positioning */
+.slot-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.slot-bottom-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    width: 100%;
+}
+
+/* Slot label */
+.slot-label {
+    position: absolute;
+    bottom: -25px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #e8d4b9;
+    font-weight: bold;
+}
+
+/* Empty slot icon */
+.slot-icon {
+    font-size: 24px;
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Equipped item */
+.equipped-item {
+    width: 90%;
+    height: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.equipped-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Item rarity colors */
+.equipped-item.common {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.equipped-item.uncommon {
+    box-shadow: 0 0 5px rgba(30, 255, 0, 0.5);
+}
+
+.equipped-item.rare {
+    box-shadow: 0 0 5px rgba(0, 112, 221, 0.5);
+}
+
+.equipped-item.epic {
+    box-shadow: 0 0 5px rgba(163, 53, 238, 0.5);
+}
+
+.equipped-item.legendary {
+    box-shadow: 0 0 5px rgba(255, 128, 0, 0.5);
+}
+
+.equipped-item.mythic {
+    box-shadow: 0 0 5px rgba(230, 204, 128, 0.5);
+}
+
+/* Stats section */
+.equipment-stats {
+    position: relative;
+    z-index: 1;
+    background-color: rgba(200, 161, 101, 0.1);
+    border-radius: 4px;
+    padding: 15px;
+    border: 1px solid #8c7853;
+    margin-top: 10px;
+}
+
+.stats-title {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: #eda21f;
+    text-align: center;
+    border-bottom: 1px solid #8c7853;
+    padding-bottom: 5px;
+}
+
+.stats-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: rgba(200, 161, 101, 0.1);
+    border-radius: 4px;
+}
+
+.stat-name {
+    font-weight: bold;
+    color: #e8d4b9;
+}
+
+.stat-value {
+    color: #eda21f;
+    font-weight: bold;
+}
+
+/* Tooltip */
+.equipment-tooltip {
+    position: fixed;
+    background-color: #2a1a0a;
+    border: 2px solid #c8a165;
+    border-radius: 8px;
+    padding: 10px;
+    width: 200px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    font-family: 'Cinzel', serif;
+    color: #e8d4b9;
+    pointer-events: none;
+}
+
+.tooltip-header {
+    margin-bottom: 5px;
+    border-bottom: 1px solid #8c7853;
+    padding-bottom: 5px;
+}
+
+.tooltip-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.tooltip-type {
+    font-style: italic;
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: #c8a165;
+}
+
+.tooltip-stats {
+    margin-bottom: 8px;
+}
+
+.tooltip-stat {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.tooltip-description {
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-style: italic;
+    color: #e8d4b9;
+}
+
+.tooltip-footer {
+    font-size: 11px;
+    text-align: center;
+    color: #c8a165;
+    font-style: italic;
+    border-top: 1px solid #8c7853;
+    padding-top: 5px;
+}
+
+/* Rarity colors in tooltip */
+.tooltip-name.common {
+    color: #ffffff;
+}
+
+.tooltip-name.uncommon {
+    color: #1eff00;
+}
+
+.tooltip-name.rare {
+    color: #0070dd;
+}
+
+.tooltip-name.epic {
+    color: #a335ee;
+}
+
+.tooltip-name.legendary {
+    color: #ff8000;
+}
+
+.tooltip-name.mythic {
+    color: #e6cc80;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+    .slot-row, .slot-bottom-row {
+        gap: 20px;
+    }
+    
+    .equipment-slot {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .stats-list {
+        grid-template-columns: 1fr;
+    }
+} 

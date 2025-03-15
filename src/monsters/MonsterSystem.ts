@@ -11,6 +11,7 @@ import { MonsterFactory } from './MonsterFactory';
 // @ts-expect-error - No type definitions available
 import { logger, LogCategory } from '../utils/Logger';
 import { MonsterRegistry, initializeMonsterDefinitions } from './definitions';
+import { MonsterPositionManager } from './MonsterPositionManager';
 
 export class MonsterSystem {
     private scene: Scene;
@@ -22,6 +23,9 @@ export class MonsterSystem {
     private monsterRegistry!: MonsterRegistry; // Using definite assignment assertion
     private spawnTimer = 0;
     private maxMonsters = 15;
+    private positionManager: MonsterPositionManager;
+    private environment: any; // Using any type since Environment doesn't have TypeScript definitions
+    private coordinateCache: any; // Using any type since CoordinateCache doesn't have TypeScript definitions
 
     constructor(scene: Scene, mapManager: MapManager, playerManager: PlayerManager, itemSystem: ItemSystem) {
         this.scene = scene;
@@ -31,6 +35,12 @@ export class MonsterSystem {
         
         // Initialize monster registry
         this.initializeMonsterRegistry();
+        
+        // Initialize position manager
+        this.positionManager = new MonsterPositionManager(scene, mapManager);
+        
+        // Get coordinate cache from map manager
+        this.coordinateCache = this.mapManager.getCoordinateCache();
         
         // Create monster physics group
         this.monsterGroup = this.scene.physics.add.group({
@@ -150,56 +160,75 @@ export class MonsterSystem {
         const data = this.monsterRegistry.getDefinition(type);
         
         if (!data) {
-            logger.error(LogCategory.MONSTER, `Monster type ${type} not found in monster registry`);
+            logger.error(LogCategory.MONSTER, `Monster type ${type} not found in registry`);
             return null;
         }
         
-        // Check if the required texture exists
-        if (!this.scene.textures.exists(data.spriteKey)) {
-            logger.warn(LogCategory.MONSTER, `Texture ${data.spriteKey} not found for monster type ${type}. Creating a placeholder texture.`);
+        try {
+            // Create monster instance using factory
+            const monster = MonsterFactory.createMonster(
+                this.scene,
+                x,
+                y,
+                data,
+                this.playerManager.getPlayer() as Physics.Arcade.Sprite,
+                this.itemSystem
+            );
             
-            // Create a placeholder texture
-            const graphics = this.scene.make.graphics({x: 0, y: 0});
-            graphics.fillStyle(0xFF0000);
-            graphics.fillRect(0, 0, 64, 64);
-            graphics.generateTexture(data.spriteKey, 64, 64);
-        }
-        
-        // Create the monster using the factory
-        const monster = MonsterFactory.createMonster(
-            this.scene,
-            x,
-            y,
-            data,
-            this.playerManager.getPlayer() as Physics.Arcade.Sprite,
-            this.itemSystem
-        );
-        
-        // Set depth to ensure monsters are visible but below player
-        monster.setDepth(50);
-        
-        // Add to group and track
-        this.monsterGroup.add(monster);
-        this.monsters.push(monster);
-        
-        // If there's a MonsterPopupSystem, register direct click handlers for this monster
-        const scene = this.scene as { monsterPopupSystem?: { showMonsterPopup: (monster: BaseMonster, x: number, y: number) => void } };
-        
-        if (scene.monsterPopupSystem) {
-            monster.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-                scene.monsterPopupSystem?.showMonsterPopup(monster, pointer.worldX, pointer.worldY);
+            if (!monster) {
+                logger.error(LogCategory.MONSTER, `Failed to create monster of type ${type}`);
+                return null;
+            }
+            
+            // Add to physics group
+            this.monsterGroup.add(monster);
+            
+            // Add to monsters array
+            this.monsters.push(monster);
+            
+            // Register with position manager
+            const latLng = this.positionManager.pixelToLatLng(x, y);
+            const cacheId = this.positionManager.registerMonster(monster, latLng.lat, latLng.lng);
+            
+            // Ensure the monster has its lat/lng data set
+            monster.setData('lat', latLng.lat);
+            monster.setData('lng', latLng.lng);
+            
+            // If we have a cacheId, store it on the monster and enable coordinate cache
+            if (cacheId) {
+                monster.setData('cacheId', cacheId);
+                monster.useCoordinateCache = true;
+                
+                // Disable physics body's movement if using coordinate cache
+                if (monster.body) {
+                    // Use type assertion to access the 'moves' property
+                    (monster.body as Physics.Arcade.Body).moves = false;
+                }
+                
+                logger.info(LogCategory.MONSTER, `Monster ${monster.monsterName} registered with coordinate cache`);
+            }
+            
+            // Set up click handler
+            monster.on('pointerdown', () => {
+                this.scene.events.emit('monster-click', monster);
             });
+            
+            return monster;
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(LogCategory.MONSTER, `Error spawning monster: ${errorMessage}`);
+            return null;
         }
-        
-        return monster;
     }
     
-    // Spawn random monsters around the player
     public spawnRandomMonsters(count: number, radius: number): void {
         // Get player position
         const player = this.playerManager.getPlayer() as Physics.Arcade.Sprite;
         const playerX = player.x;
         const playerY = player.y;
+        
+        // Convert player position to lat/lng
+        const playerLatLng = this.positionManager.pixelToLatLng(playerX, playerY);
         
         for (let i = 0; i < count; i++) {
             // Skip if we've hit the monster limit
@@ -207,18 +236,22 @@ export class MonsterSystem {
                 break;
             }
             
-            // Generate a random position
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.random() * radius;
-            const x = playerX + Math.cos(angle) * distance;
-            const y = playerY + Math.sin(angle) * distance;
+            // Generate a random position using the position manager
+            const position = this.positionManager.generateRandomPosition(
+                playerLatLng.lat,
+                playerLatLng.lng,
+                radius
+            );
+            
+            // Convert lat/lng to pixel coordinates
+            const pixelPos = this.positionManager.latLngToPixel(position.lat, position.lng);
             
             // Choose a random monster type
             const types = this.monsterRegistry.getAllDefinitions().map(def => def.type);
             const randomType = types[Math.floor(Math.random() * types.length)];
             
             // Spawn the monster
-            this.spawnMonster(randomType, x, y);
+            this.spawnMonster(randomType, pixelPos.x, pixelPos.y);
         }
     }
     
@@ -230,30 +263,49 @@ export class MonsterSystem {
     
     // Update all monsters
     public update(time: number, delta: number): void {
-        // Update each monster
+        // Update all monsters
         for (let i = this.monsters.length - 1; i >= 0; i--) {
             const monster = this.monsters[i];
             
-            // Skip destroyed monsters and remove them from the array
-            if (!monster.active) {
+            // Skip destroyed monsters
+            if (monster.active === false) {
+                // Unregister from position manager before removing
+                this.positionManager.unregisterMonster(monster);
+                
+                // Remove from array
                 this.monsters.splice(i, 1);
                 continue;
             }
             
             // Update monster
             monster.update(time, delta);
+            
+            // If monster has moved, update its lat/lng position
+            if (monster.getData('lat') && monster.getData('lng')) {
+                const currentLatLng = this.positionManager.pixelToLatLng(monster.x, monster.y);
+                const storedLat = monster.getData('lat');
+                const storedLng = monster.getData('lng');
+                
+                // Only update if position has changed significantly
+                const threshold = 0.00001; // Small threshold to avoid unnecessary updates
+                if (
+                    Math.abs(currentLatLng.lat - storedLat) > threshold ||
+                    Math.abs(currentLatLng.lng - storedLng) > threshold
+                ) {
+                    this.positionManager.updateMonsterPosition(
+                        monster,
+                        currentLatLng.lat,
+                        currentLatLng.lng
+                    );
+                }
+            }
         }
         
-        // Periodically spawn new monsters
+        // Spawn new monsters periodically
         this.spawnTimer += delta;
-        if (this.spawnTimer > 10000) { // Every 10 seconds
+        if (this.spawnTimer > 10000 && this.monsters.length < this.maxMonsters) { // Every 10 seconds
             this.spawnTimer = 0;
-            
-            // Only spawn if we're below the monster limit
-            if (this.monsters.length < this.maxMonsters) {
-                const spawnCount = Math.min(3, this.maxMonsters - this.monsters.length);
-                this.spawnRandomMonsters(spawnCount, 800);
-            }
+            this.spawnRandomMonsters(1, 600);
         }
     }
     
@@ -291,40 +343,32 @@ export class MonsterSystem {
      * Clean up resources when destroying the system
      */
     public destroy(): void {
-        try {
-            // Destroy all monsters
-            for (let i = this.monsters.length - 1; i >= 0; i--) {
-                const monster = this.monsters[i];
-                if (monster && monster.active) {
-                    try {
-                        monster.destroy();
-                    } catch (error) {
-                        logger.error(LogCategory.MONSTER, `Error destroying monster: ${error}`);
-                    }
-                }
-            }
-            
-            // Clear the monsters array
-            this.monsters = [];
-            
-            // Destroy the monster group
-            if (this.monsterGroup) {
-                this.monsterGroup.destroy(true);
-            }
-            
-            // Remove collision handlers
-            if (this.scene && this.scene.physics) {
-                this.scene.physics.world.colliders.destroy();
-            }
-            
-            // Clear references
-            this.playerManager = null as unknown as PlayerManager;
-            this.itemSystem = null as unknown as ItemSystem;
-            this.mapManager = null as unknown as MapManager;
-            
-            logger.info(LogCategory.MONSTER, "Monster system destroyed");
-        } catch (error) {
-            logger.error(LogCategory.MONSTER, `Error in MonsterSystem.destroy(): ${error}`);
+        // Clean up position manager
+        this.positionManager.destroy();
+        
+        // Clean up monsters
+        for (const monster of this.monsters) {
+            monster.destroy();
         }
+        
+        this.monsters = [];
+        
+        // Clean up physics group
+        this.monsterGroup.clear(true, true);
+        
+        // Clear references
+        this.playerManager = null as unknown as PlayerManager;
+        this.itemSystem = null as unknown as ItemSystem;
+        this.mapManager = null as unknown as MapManager;
+        
+        logger.info(LogCategory.MONSTER, "Monster system destroyed");
+    }
+
+    /**
+     * Set the environment reference
+     * @param environment The environment object
+     */
+    public setEnvironment(environment: any): void {
+        this.environment = environment;
     }
 } 

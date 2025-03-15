@@ -18,6 +18,8 @@ import { CharacterStatsUI } from "../ui/character-stats";
 import playerStatsService from "../utils/player/PlayerStatsService";
 import { StatusEffectsUI } from "../ui/StatusEffectsUI";
 import { StatusEffectType } from "../utils/StatusEffectSystem";
+import { EquipmentManager } from "../items/equipment-manager";
+import { MedievalEquipmentUI } from "../ui/equipment-ui/index";
 
 export class Game extends Scene {
   constructor() {
@@ -102,8 +104,22 @@ export class Game extends Scene {
     // Add default items to inventory for testing
     this.inventoryManager.addDefaultItems();
 
+    // Initialize equipment manager
+    this.equipmentManager = new EquipmentManager(this, this.playerManager, this.inventoryManager);
+    
+    // Initialize equipment UI with the equipment manager
+    this.equipmentUI = new MedievalEquipmentUI(this, {
+      equipmentManager: this.equipmentManager
+    });
+
     // Initialize combat system
     this.combatSystem = new CombatSystem(this);
+
+    // Initialize environment system
+    this.environment = new Environment(this);
+    
+    // Connect environment with popup system
+    this.environment.setPopupSystem(this.popupSystem);
 
     // Initialize monster popup system
     this.monsterPopupSystem = new MonsterPopupSystem(this, this.popupSystem);
@@ -115,12 +131,9 @@ export class Game extends Scene {
       this.playerManager, 
       this.itemSystem
     );
-
-    // Initialize environment system
-    this.environment = new Environment(this);
     
-    // Connect environment with popup system
-    this.environment.setPopupSystem(this.popupSystem);
+    // Connect monster system with environment
+    this.monsterSystem.setEnvironment(this.environment);
 
     // Initialize UI manager
     this.uiManager = new UIManager(this, this.mapManager);
@@ -137,9 +150,26 @@ export class Game extends Scene {
     // Add DOM event listeners to handle interactions
     this.setupDOMEventListeners();
 
-    // Generate environment elements around the player
+    // Generate environment elements around the player with a small delay to ensure all systems are properly initialized
     const player = this.playerManager.getPlayer();
-    this.environment.generateEnvironment(player.x, player.y, 300);
+    this.time.delayedCall(500, () => {
+      // Log that we're generating environment
+      logger.info(LogCategory.GAME, "Generating environment around player");
+      
+      // Make sure all textures are loaded before generating environment
+      this.textures.once('onload', () => {
+        logger.info(LogCategory.GAME, "Textures loaded, generating environment");
+        this.environment.generateEnvironment(player.x, player.y, 300);
+      });
+      
+      // Check if textures are still loading
+      if (this.textures.isLoading) {
+        logger.info(LogCategory.GAME, "Waiting for textures to load before generating environment");
+      } else {
+        // If textures are already loaded, generate environment immediately
+        this.environment.generateEnvironment(player.x, player.y, 300);
+      }
+    });
 
     // Log debug info
     logger.info(LogCategory.GAME, "Game scene created");
@@ -177,9 +207,23 @@ export class Game extends Scene {
     });
 
     // Listen for openInventory event
-    this.events.on('openInventory', () => {
+    this.events.on('openInventory', (data) => {
       logger.info(LogCategory.UI, 'Opening inventory UI');
-      this.inventoryUI.show();
+      
+      // If data is provided with filter parameters
+      if (data && typeof data === 'object') {
+        // Show the inventory with the provided options
+        this.inventoryUI.show(data);
+      } else {
+        // Just show the inventory without filters
+        this.inventoryUI.show();
+      }
+    });
+
+    // Listen for openEquipment event
+    this.events.on('openEquipment', () => {
+      logger.info(LogCategory.UI, 'Opening equipment UI');
+      this.equipmentUI.show();
     });
   }
 
@@ -341,6 +385,32 @@ export class Game extends Scene {
    */
   handleInventoryItemClick(itemStack, index) {
     const item = itemStack.item;
+    
+    // Check if we're in equipment selection mode
+    if (this.inventoryUI.options.equipToSlot) {
+      // Get the slot we're equipping to
+      const slotId = this.inventoryUI.options.equipToSlot;
+      
+      // Try to equip the item
+      if (this.equipmentManager.equipFromInventory(index)) {
+        // Emit the itemEquipped event for the equipment UI to handle
+        this.events.emit('itemEquipped', {
+          slotId: slotId,
+          item: item
+        });
+        
+        // Show success message
+        this.uiManager.showMedievalMessage(`Thou hast equipped ${item.name}!`, "success");
+        
+        // Clear the equip mode
+        this.inventoryUI.options.equipToSlot = null;
+      } else {
+        // Show error message if equipping failed
+        this.uiManager.showMedievalMessage(`Thou cannot equip ${item.name} in that slot!`, "warning");
+      }
+      
+      return;
+    }
     
     // If the item is usable, use it
     if (item.usable) {
@@ -514,6 +584,9 @@ export class Game extends Scene {
         this.playerInHealingAura = false;
         this.events.emit('player-left-healing-aura');
       }
+      
+      // Update environment positions to ensure fruits stay with their trees
+      this.environment.updateEnvironmentPositions();
     }
     
     // Update status effects UI
@@ -542,6 +615,7 @@ export class Game extends Scene {
     this.events.off("add-item-to-inventory");
     this.events.off("monster-click");
     this.events.off("openInventory");
+    this.events.off("openEquipment");
 
     // Clean up managers
     if (this.playerManager) {
@@ -585,6 +659,16 @@ export class Game extends Scene {
     // Destroy inventory UI
     if (this.inventoryUI) {
       this.inventoryUI.destroy();
+    }
+
+    // Destroy equipment manager
+    if (this.equipmentManager) {
+      this.equipmentManager.destroy();
+    }
+    
+    // Destroy equipment UI
+    if (this.equipmentUI) {
+      this.equipmentUI.destroy();
     }
 
     // Destroy status effects UI

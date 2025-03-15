@@ -8,12 +8,44 @@ export class TreeSystem {
     environmentGroup;
     popupSystem;
     mapManager;
+    environment;
 
     constructor(scene, environmentGroup) {
         this.scene = scene;
         this.environmentGroup = environmentGroup;
         this.mapManager = scene.mapManager;
+        
+        // The environment reference will be set by the Environment class after initialization
+        this.environment = null;
+        this.popupSystem = null;
+        
+        // Tree types and their properties
+        this.treeTypes = {
+            oak: {
+                texture: 'tree',
+                scale: 1.2,
+                health: 150,
+                woodYield: 3,
+                description: 'A sturdy oak tree with strong branches.'
+            },
+            healingSpruce: {
+                texture: 'spruce-tree',
+                scale: 1.3,
+                health: 130,
+                woodYield: 2,
+                description: 'A magical spruce tree with healing properties.',
+                healingPower: 5
+            }
+        };
+        
+        // Create fallback textures if the tree textures don't exist
+        this.createFallbackTextures();
+        
+        // Setup global tree interaction events
         this.setupTreeInteractions();
+        
+        // Debug log to confirm initialization
+        console.log("TreeSystem initialized, tree interactions set up");
     }
 
     /**
@@ -24,7 +56,7 @@ export class TreeSystem {
     }
 
     /**
-     * Setup tree interaction events
+     * Setup global tree interaction events
      */
     setupTreeInteractions() {
         this.scene.events.on('tree-interact', (tree) => {
@@ -33,16 +65,54 @@ export class TreeSystem {
     }
 
     /**
+     * Setup interactions for a specific tree
+     * @param {Phaser.GameObjects.Sprite} tree - The tree sprite to set up interactions for
+     */
+    setupTreeInteractionsForTree(tree) {
+        if (!tree) return;
+        
+        // Set up hover effects
+        tree.on('pointerover', () => {
+            this.scene.tweens.add({
+                targets: tree,
+                scale: tree.scale * 1.1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
+        
+        tree.on('pointerout', () => {
+            this.scene.tweens.add({
+                targets: tree,
+                scale: tree.scale / 1.1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+        });
+        
+        // Set up click handler
+        tree.on('pointerdown', () => {
+            this.scene.events.emit('tree-interact', tree);
+        });
+    }
+
+    /**
      * Show tree interaction popup
      */
     showTreeInteractionPopup(tree) {
-        if (!this.popupSystem) return;
+        if (!this.popupSystem) {
+            console.error("Cannot show tree interaction popup: popupSystem is not set");
+            return;
+        }
+
+        console.log("Showing tree interaction popup for tree:", tree);
 
         const treeName = tree.getData('treeName') || 'Tree';
         const isHealingSpruce = tree.getData('isHealingSpruce') || false;
 
         // Check if the tree has fruits
         const hasFruits = this.checkTreeHasFruits(tree);
+        console.log("Tree has fruits:", hasFruits);
 
         // Create tree icon SVG based on tree type
         const treeIcon = isHealingSpruce 
@@ -108,7 +178,7 @@ export class TreeSystem {
 
         // Create a centered standard popup
         this.popupSystem.createCenteredStandardPopup({
-            title: treeName,
+            title: tree.getData('treeName') || 'Tree',
             description: description,
             icon: treeIcon,
             actions: actions,
@@ -116,22 +186,204 @@ export class TreeSystem {
             closeButton: true,
             width: 400
         });
+        
+        console.log("Tree popup created");
     }
 
     /**
      * Check if a tree has fruits
      */
     checkTreeHasFruits(tree) {
+        if (!tree) {
+            console.error("Cannot check fruits: tree is null");
+            return false;
+        }
+        
+        console.log("Checking for fruits on tree at position:", tree.x, tree.y);
+        
         // Get all sprites at the tree's position
         const sprites = this.scene.children.list.filter(obj => {
             // Check if it's a sprite and has fruitType data
-            return obj instanceof Phaser.GameObjects.Sprite &&
-                obj.getData('fruitType') !== undefined &&
-                // Check if it's close to the tree (within the tree's canopy)
-                Phaser.Math.Distance.Between(obj.x, obj.y, tree.x, tree.y) < tree.displayWidth * 0.6;
+            const isFruit = obj instanceof Phaser.GameObjects.Sprite && 
+                obj.getData('fruitType') !== undefined;
+                
+            // Check if it's close to the tree (within the tree's canopy)
+            const distance = Phaser.Math.Distance.Between(obj.x, obj.y, tree.x, tree.y);
+            const isNearTree = distance < tree.displayWidth * 0.6;
+            
+            if (isFruit && isNearTree) {
+                console.log("Found fruit near tree:", obj.getData('fruitType'));
+            }
+            
+            return isFruit && isNearTree;
         });
 
+        console.log(`Found ${sprites.length} fruits near tree`);
         return sprites.length > 0;
+    }
+
+    /**
+     * Generate trees around a center point using lat/lng coordinates
+     * @param {number} centerLat - Center latitude
+     * @param {number} centerLng - Center longitude
+     * @param {number} radiusMeters - Radius in meters
+     * @param {number} count - Number of trees to generate (default: 12)
+     */
+    generateTrees(centerLat, centerLng, radiusMeters, count = 12) {
+        // Log generation attempt
+        logger.info(LogCategory.ENVIRONMENT, `Generating ${count} trees around ${centerLat.toFixed(6)}, ${centerLng.toFixed(6)} with radius ${radiusMeters}m`);
+        
+        // Track successful tree creations
+        let treesCreated = 0;
+        
+        // Generate random positions within the circle
+        for (let i = 0; i < count; i++) {
+            try {
+                // Generate random angle and distance
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * radiusMeters * 0.8; // 80% of radius to keep away from edges
+                
+                // Calculate position using MapManager's destinationPoint function
+                const position = this.mapManager.destinationPoint(
+                    { lat: centerLat, lng: centerLng }, 
+                    angle, 
+                    distance
+                );
+                
+                // Create tree at this position
+                const tree = this.createTree(position.lat, position.lng);
+                
+                if (tree) {
+                    treesCreated++;
+                }
+            } catch (error) {
+                logger.error(LogCategory.ENVIRONMENT, `Error generating tree ${i}: ${error}`);
+            }
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, `Successfully created ${treesCreated}/${count} trees`);
+    }
+    
+    /**
+     * Set the environment reference
+     */
+    setEnvironment(environment) {
+        this.environment = environment;
+    }
+    
+    /**
+     * Create a tree at the specified lat/lng position
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @returns {Phaser.GameObjects.Sprite} - The created tree sprite
+     */
+    createTree(lat, lng) {
+        // Select a random tree type
+        const treeTypeKeys = Object.keys(this.treeTypes);
+        const randomTreeType = treeTypeKeys[Math.floor(Math.random() * treeTypeKeys.length)];
+        const treeData = this.treeTypes[randomTreeType];
+        
+        logger.info(LogCategory.ENVIRONMENT, `Creating tree of type: ${randomTreeType}`);
+        
+        if (!treeData || !treeData.texture) {
+            logger.error(LogCategory.ENVIRONMENT, `Invalid tree type or missing texture: ${randomTreeType}`);
+            return null;
+        }
+        
+        // Check if texture exists, if not try to create it
+        if (!this.scene.textures.exists(treeData.texture)) {
+            logger.warn(LogCategory.ENVIRONMENT, `Texture ${treeData.texture} not found, creating emergency fallback`);
+            
+            try {
+                // Create a simple fallback texture
+                const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+                graphics.clear();
+                graphics.fillStyle(0x8B4513); // Brown
+                graphics.fillRect(15, 40, 10, 40); // Trunk
+                graphics.fillStyle(0x228B22); // Forest green
+                graphics.fillCircle(20, 25, 20); // Canopy
+                graphics.generateTexture(treeData.texture, 40, 80);
+                graphics.destroy();
+            } catch (error) {
+                logger.error(LogCategory.ENVIRONMENT, `Failed to create emergency texture: ${error}`);
+                return null;
+            }
+        }
+        
+        // Convert lat/lng to pixel coordinates
+        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+        
+        // Create tree sprite
+        let tree;
+        try {
+            tree = this.scene.add.sprite(pixelPos.x, pixelPos.y, treeData.texture);
+            logger.info(LogCategory.ENVIRONMENT, `Tree sprite created at ${pixelPos.x}, ${pixelPos.y}`);
+        } catch (error) {
+            logger.error(LogCategory.ENVIRONMENT, `Failed to create tree sprite: ${error}`);
+            return null;
+        }
+        
+        tree.setOrigin(0.5, 1); // Set origin to bottom center for proper placement
+        tree.setScale(treeData.scale || 1);
+        tree.setDepth(pixelPos.y); // Use y position for depth sorting
+        
+        // Store tree data
+        tree.setData('treeType', randomTreeType);
+        tree.setData('isTree', true);
+        tree.setData('health', treeData.health || 100);
+        tree.setData('isHealingSpruce', randomTreeType === 'healingSpruce');
+        
+        // Store lat/lng position
+        tree.setData('lat', lat);
+        tree.setData('lng', lng);
+        
+        // Add to environment group
+        this.environmentGroup.add(tree);
+        
+        // Register with coordinate cache if available
+        if (this.environment && this.environment.registerEnvironmentObject) {
+            this.environment.registerEnvironmentObject(tree, lat, lng);
+        }
+        
+        // Make tree interactive
+        tree.setInteractive({ useHandCursor: true });
+        
+        // Add event listeners
+        this.setupTreeInteractionsForTree(tree);
+        
+        // Add fruits to the tree if fruit system is available
+        if (this.environment && this.environment.fruitSystem && lat && lng) {
+            // Add 1-3 fruits to the tree (using FruitSystem's random logic)
+            this.environment.fruitSystem.generateFruitsOnTree(tree);
+        }
+        
+        return tree;
+    }
+    
+    /**
+     * Update a tree's position based on its lat/lng
+     * @param {Phaser.GameObjects.Sprite} tree - The tree sprite to update
+     */
+    updateTreePosition(tree) {
+        // If the environment has the new coordinate system, use it
+        if (this.environment && this.environment.updateEnvironmentObjectPosition) {
+            const lat = tree.getData('lat');
+            const lng = tree.getData('lng');
+            if (lat && lng) {
+                this.environment.updateEnvironmentObjectPosition(tree, lat, lng);
+            }
+            return;
+        }
+        
+        // Legacy fallback
+        const lat = tree.getData('lat');
+        const lng = tree.getData('lng');
+        if (lat && lng) {
+            const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+            tree.x = pixelPos.x;
+            tree.y = pixelPos.y;
+            tree.setDepth(pixelPos.y); // Update depth based on new y position
+        }
     }
 
     /**
@@ -233,6 +485,12 @@ export class TreeSystem {
 
         // Add to environment group
         this.environmentGroup.add(tree);
+        
+        // Add fruits to the tree if fruit system is available
+        if (this.environment && this.environment.fruitSystem && latLng) {
+            // Add 1-3 fruits to the tree (using FruitSystem's random logic)
+            this.environment.fruitSystem.generateFruitsOnTree(tree);
+        }
 
         return tree;
     }
@@ -374,6 +632,7 @@ export class TreeSystem {
                         repeat: 3,
                         ease: 'Sine.easeInOut',
                         onComplete: () => {
+                            console.log("Emitting tree-interact event");
                             this.scene.events.emit('tree-interact', tree);
                             this.createLeafParticles(tree.x, tree.y - tree.height * 0.6);
                         }
@@ -381,6 +640,14 @@ export class TreeSystem {
                 }
             });
         });
+        
+        // Set tree name if not already set
+        if (!tree.getData('treeName')) {
+            const isHealingSpruce = tree.getData('isHealingSpruce') || false;
+            const treeName = isHealingSpruce ? 'Healing Spruce' : 'Oak Tree';
+            tree.setData('treeName', treeName);
+            console.log(`Set tree name to: ${treeName}`);
+        }
     }
 
     /**
@@ -1051,5 +1318,53 @@ export class TreeSystem {
                 });
             }
         });
+    }
+
+    /**
+     * Create fallback textures for trees if they don't exist
+     */
+    createFallbackTextures() {
+        const requiredTextures = ['tree_oak', 'tree_pine', 'tree_birch', 'tree_spruce'];
+        
+        logger.info(LogCategory.ENVIRONMENT, "Checking tree textures...");
+        
+        for (const textureName of requiredTextures) {
+            if (!this.scene.textures.exists(textureName)) {
+                logger.warn(LogCategory.ENVIRONMENT, `Texture ${textureName} not found, creating fallback`);
+                
+                try {
+                    // Create a graphics object for the fallback texture
+                    const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+                    
+                    // Draw a simple tree shape
+                    graphics.clear();
+                    
+                    // Draw trunk
+                    graphics.fillStyle(0x8B4513); // Brown
+                    graphics.fillRect(15, 40, 10, 40); // Trunk
+                    
+                    // Draw canopy
+                    graphics.fillStyle(0x228B22); // Forest green
+                    graphics.fillCircle(20, 25, 20); // Canopy
+                    
+                    // Generate the texture
+                    graphics.generateTexture(textureName, 40, 80);
+                    
+                    // Clean up the graphics object
+                    graphics.destroy();
+                    
+                    // Verify the texture was created
+                    if (this.scene.textures.exists(textureName)) {
+                        logger.info(LogCategory.ENVIRONMENT, `Successfully created fallback texture for ${textureName}`);
+                    } else {
+                        logger.error(LogCategory.ENVIRONMENT, `Failed to create texture ${textureName} despite no errors`);
+                    }
+                } catch (error) {
+                    logger.error(LogCategory.ENVIRONMENT, `Failed to create fallback texture for ${textureName}:`, error);
+                }
+            } else {
+                logger.info(LogCategory.ENVIRONMENT, `Texture ${textureName} already exists`);
+            }
+        }
     }
 } 

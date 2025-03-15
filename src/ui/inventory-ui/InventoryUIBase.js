@@ -37,7 +37,9 @@ export class InventoryUI {
             onItemClick: options.onItemClick || null,
             onItemRightClick: options.onItemRightClick || null,
             onClose: options.onClose || null,
-            searchEnabled: options.searchEnabled !== undefined ? options.searchEnabled : true
+            searchEnabled: options.searchEnabled !== undefined ? options.searchEnabled : true,
+            equipToSlot: options.equipToSlot || null,
+            keepEquipmentOpen: options.keepEquipmentOpen || false
         };
         
         // Make UI responsive based on screen size
@@ -180,9 +182,35 @@ export class InventoryUI {
     
     /**
      * Show the inventory UI
+     * @param {Object} options - Optional parameters for showing the inventory
      */
-    show() {
+    show(options = {}) {
         console.log("Showing inventory UI");
+        
+        // Update options with any passed parameters
+        if (options.equipToSlot) {
+            this.options.equipToSlot = options.equipToSlot;
+        }
+        
+        if (options.filterType && this.search) {
+            this.search.setActiveFilter(options.filterType);
+        }
+        
+        if (options.keepEquipmentOpen !== undefined) {
+            this.options.keepEquipmentOpen = options.keepEquipmentOpen;
+        }
+        
+        // Update title if we're in equipment selection mode
+        if (this.options.equipToSlot && this.panel) {
+            const slotName = this.formatSlotName(this.options.equipToSlot);
+            this.panel.setTitle(`Select ${slotName}`);
+        }
+        
+        // Ensure the panel is centered on the screen
+        if (this.panel && typeof this.panel.centerPanel === 'function') {
+            this.panel.centerPanel();
+        }
+        
         this.panel.setVisible(true);
         this.isVisible = true;
         
@@ -192,6 +220,24 @@ export class InventoryUI {
         console.log("Refreshing inventory");
         this.refreshInventory();
         console.log("Inventory refreshed");
+    }
+    
+    /**
+     * Format a slot name for display
+     * @param {string} slotId - The slot ID
+     * @returns {string} - The formatted slot name
+     */
+    formatSlotName(slotId) {
+        // Map slot IDs to display names
+        const slotNames = {
+            'weapon': 'Weapon',
+            'armor': 'Armor',
+            'shield': 'Shield',
+            'ringLeft': 'Left Ring',
+            'ringRight': 'Right Ring'
+        };
+        
+        return slotNames[slotId] || slotId;
     }
     
     /**
@@ -218,6 +264,18 @@ export class InventoryUI {
         if (this.tooltip) {
             this.tooltip.hideTooltip();
         }
+        
+        // Reset equipment selection mode
+        const wasInEquipMode = !!this.options.equipToSlot;
+        this.options.equipToSlot = null;
+        
+        // Reset panel title if it was changed
+        if (wasInEquipMode && this.panel) {
+            this.panel.setTitle(this.options.title || 'Inventory');
+        }
+        
+        // Emit inventory closed event
+        this.scene.events.emit('inventoryClosed', { wasInEquipMode });
         
         if (this.options.onClose) {
             this.options.onClose();
@@ -273,5 +331,59 @@ export class InventoryUI {
                 e.stopPropagation();
             });
         });
+    }
+    
+    /**
+     * Add an equipment button to the inventory UI
+     * @param {Function} onClick - Function to call when the button is clicked
+     */
+    addEquipmentButton(onClick) {
+        // Create a button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'inventory-equipment-button-container';
+        buttonContainer.style.position = 'absolute';
+        buttonContainer.style.bottom = '20px';
+        buttonContainer.style.right = '20px';
+        buttonContainer.style.zIndex = '1000';
+        
+        // Create the equipment button
+        const equipmentButton = document.createElement('button');
+        equipmentButton.className = 'inventory-equipment-button';
+        equipmentButton.innerHTML = '⚔️ Equipment';
+        equipmentButton.style.padding = '10px 15px';
+        equipmentButton.style.backgroundColor = '#8b5a2b';
+        equipmentButton.style.border = '2px solid #e8d4b9';
+        equipmentButton.style.borderRadius = '4px';
+        equipmentButton.style.color = '#e8d4b9';
+        equipmentButton.style.fontFamily = "'Cinzel', serif";
+        equipmentButton.style.fontSize = '16px';
+        equipmentButton.style.cursor = 'pointer';
+        equipmentButton.style.transition = 'all 0.2s ease';
+        
+        // Add hover effect
+        equipmentButton.addEventListener('mouseover', () => {
+            equipmentButton.style.backgroundColor = '#a06c3b';
+        });
+        
+        equipmentButton.addEventListener('mouseout', () => {
+            equipmentButton.style.backgroundColor = '#8b5a2b';
+        });
+        
+        // Add click handler
+        equipmentButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (onClick) onClick();
+        });
+        
+        // Prevent event propagation
+        this.preventEventPropagation(equipmentButton);
+        
+        // Add button to container
+        buttonContainer.appendChild(equipmentButton);
+        
+        // Add container to panel
+        this.panel.content.appendChild(buttonContainer);
+        
+        return equipmentButton;
     }
 } 

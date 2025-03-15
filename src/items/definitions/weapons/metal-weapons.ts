@@ -1,4 +1,4 @@
-import { ItemType, WeaponType, ItemRarity } from '../../item';
+import { ItemType, WeaponType, ItemRarity } from '../../item-types';
 import { WeaponDefinition } from '../item-registry';
 
 // Define metal weapons with special attributes based on the Metal_Attributes_Table.csv

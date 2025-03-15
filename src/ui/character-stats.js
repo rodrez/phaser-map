@@ -342,7 +342,7 @@ export class CharacterStatsUI {
         combatSection.appendChild(this.createStatRow('Dodge Chance', `${stats.dodgeChance || 0}%`));
         
         // Add weapon bonuses if any exist
-        if (stats.weaponAttackBonuses.size > 0) {
+        if (stats.weaponAttackBonuses && stats.weaponAttackBonuses.size > 0) {
             const weaponBonusesTitle = this.uiHelper.createElement('div', 'subsection-title');
             weaponBonusesTitle.textContent = 'Weapon Attack Bonuses';
             weaponBonusesTitle.style.fontWeight = 'bold';
@@ -359,8 +359,40 @@ export class CharacterStatsUI {
         
         this.statsContent.appendChild(combatSection);
         
-        // Create abilities section if any are unlocked
-        if (stats.unlockedAbilities.size > 0) {
+        // Create equipment section
+        const equipmentSection = this.createStatSection('Equipment');
+        
+        // Add equipment stats
+        equipmentSection.appendChild(this.createStatRow('Equipment Attack', `+${stats.equipmentAttack || 0}`));
+        equipmentSection.appendChild(this.createStatRow('Equipment Defense', `+${stats.equipmentDefense || 0}`));
+        
+        // Add equipped items
+        const equippedItemsTitle = this.uiHelper.createElement('div', 'subsection-title');
+        equippedItemsTitle.textContent = 'Equipped Items';
+        equippedItemsTitle.style.fontWeight = 'bold';
+        equippedItemsTitle.style.marginTop = '10px';
+        equipmentSection.appendChild(equippedItemsTitle);
+        
+        // Add each equipped item with simplified slots
+        const equipSlots = ['weapon', 'armor', 'ringLeft', 'ringRight'];
+        const slotNames = {
+            'weapon': 'Weapon',
+            'armor': 'Armor',
+            'ringLeft': 'Left Ring',
+            'ringRight': 'Right Ring'
+        };
+        
+        for (const slot of equipSlots) {
+            // Convert slot name to match the property in stats
+            const statsProp = `equipped${slot.charAt(0).toUpperCase() + slot.slice(1)}`;
+            const itemName = stats[statsProp] ? stats[statsProp] : 'None';
+            equipmentSection.appendChild(this.createStatRow(slotNames[slot], itemName));
+        }
+        
+        this.statsContent.appendChild(equipmentSection);
+        
+        // Check if unlockedAbilities exists before accessing its size
+        if (stats.unlockedAbilities && stats.unlockedAbilities.size > 0) {
             const abilitiesSection = this.createStatSection('Unlocked Abilities');
             
             stats.unlockedAbilities.forEach(ability => {
@@ -373,33 +405,30 @@ export class CharacterStatsUI {
             this.statsContent.appendChild(abilitiesSection);
         }
         
-        // Create crafting section
-        const craftingSection = this.createStatSection('Crafting');
-        craftingSection.appendChild(this.createStatRow('Crafting Time Reduction', `${stats.craftingTimeReduction}%`));
-        
-        // Add craftable items if any exist
-        if (stats.craftableItems.size > 0) {
-            const craftableItemsTitle = this.uiHelper.createElement('div', 'subsection-title');
-            craftableItemsTitle.textContent = 'Craftable Items';
-            craftableItemsTitle.style.fontWeight = 'bold';
-            craftableItemsTitle.style.marginTop = '10px';
-            craftingSection.appendChild(craftableItemsTitle);
+        // Check if craftingTimeReduction exists before creating crafting section
+        if (stats.craftingTimeReduction !== undefined) {
+            // Create crafting section
+            const craftingSection = this.createStatSection('Crafting');
+            craftingSection.appendChild(this.createStatRow('Crafting Time Reduction', `${stats.craftingTimeReduction}%`));
             
-            const itemsList = this.uiHelper.createElement('div', 'items-list');
-            itemsList.style.display = 'flex';
-            itemsList.style.flexWrap = 'wrap';
-            itemsList.style.gap = '5px';
+            // Add craftable items if any exist
+            if (stats.craftableItems && stats.craftableItems.size > 0) {
+                const craftableItemsTitle = this.uiHelper.createElement('div', 'subsection-title');
+                craftableItemsTitle.textContent = 'Craftable Items';
+                craftableItemsTitle.style.fontWeight = 'bold';
+                craftableItemsTitle.style.marginTop = '10px';
+                craftingSection.appendChild(craftableItemsTitle);
+                
+                stats.craftableItems.forEach(item => {
+                    const itemRow = this.uiHelper.createElement('div', 'craftable-item-row');
+                    itemRow.textContent = item;
+                    itemRow.style.padding = '5px 0';
+                    craftingSection.appendChild(itemRow);
+                });
+            }
             
-            stats.craftableItems.forEach(item => {
-                const itemBadge = this.uiHelper.createElement('div', 'item-badge');
-                itemBadge.textContent = item;
-                itemsList.appendChild(itemBadge);
-            });
-            
-            craftingSection.appendChild(itemsList);
+            this.statsContent.appendChild(craftingSection);
         }
-        
-        this.statsContent.appendChild(craftingSection);
     }
     
     /**

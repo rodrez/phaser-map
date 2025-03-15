@@ -3,7 +3,9 @@
  * needed for the asset management system.
  */
 
+import { logger, LogCategory } from '../utils/Logger';
 import { ItemSystem, BaseItem } from './item';
+import { ItemType } from './item-types';
 
 /**
  * Simple implementation of ItemAssetManager for JavaScript compatibility

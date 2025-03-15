@@ -1,4 +1,4 @@
-import { ItemType, ItemRarity } from '../../item';
+import { ItemType, ItemRarity } from '../../item-types';
 import { ResourceDefinition } from '../item-registry';
 
 // Define all resources

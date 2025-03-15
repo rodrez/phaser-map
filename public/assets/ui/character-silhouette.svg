@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200" width="100" height="200">
+  <!-- Character silhouette -->
+  <g fill="#8c7853" opacity="0.7">
+    <!-- Head -->
+    <circle cx="50" cy="30" r="20" />
+    
+    <!-- Body -->
+    <rect x="35" y="50" width="30" height="70" rx="10" />
+    
+    <!-- Arms -->
+    <rect x="15" y="55" width="20" height="50" rx="8" />
+    <rect x="65" y="55" width="20" height="50" rx="8" />
+    
+    <!-- Legs -->
+    <rect x="35" y="120" width="12" height="60" rx="6" />
+    <rect x="53" y="120" width="12" height="60" rx="6" />
+  </g>
+</svg> 

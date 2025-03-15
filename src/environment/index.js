@@ -1,5 +1,6 @@
 import { TreeSystem } from './tree';
 import { FruitSystem } from './fruit';
+import { logger, LogCategory } from '../utils/Logger';
 
 /**
  * Main environment system that coordinates all environment-related subsystems
@@ -11,21 +12,57 @@ export class Environment {
     fruitSystem;
     popupSystem;
     mapManager;
+    coordinateCache;
     
     constructor(scene) {
         this.scene = scene;
         this.environmentGroup = this.scene.add.group();
         this.mapManager = scene.mapManager;
         
-        // Initialize subsystems
-        this.treeSystem = new TreeSystem(scene, this.environmentGroup);
-        this.fruitSystem = new FruitSystem(scene, this.environmentGroup);
+        // Get coordinate cache from map manager
+        if (this.mapManager) {
+            this.coordinateCache = this.mapManager.getCoordinateCache();
+        }
+        
+        // Initialize subsystems after environment is set up
+        this.initializeSubsystems();
         
         // Setup interactions between systems
         this.setupSystemInteractions();
+    }
+    
+    /**
+     * Initialize subsystems after environment is set up
+     */
+    initializeSubsystems() {
+        logger.info(LogCategory.ENVIRONMENT, "Initializing environment subsystems");
         
-        // Setup map drag handlers to update environment positions
-        this.setupMapDragHandlers();
+        try {
+            // Initialize tree system
+            this.treeSystem = new TreeSystem(this.scene, this.environmentGroup);
+            logger.info(LogCategory.ENVIRONMENT, "Tree system initialized");
+            
+            // Initialize fruit system
+            this.fruitSystem = new FruitSystem(this.scene, this.environmentGroup);
+            logger.info(LogCategory.ENVIRONMENT, "Fruit system initialized");
+            
+            // Set environment reference in subsystems
+            if (this.treeSystem) {
+                this.treeSystem.setEnvironment(this);
+                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in tree system");
+            }
+            
+            if (this.fruitSystem) {
+                this.fruitSystem.setEnvironment(this);
+                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in fruit system");
+            }
+            
+            // Log successful initialization
+            console.log("Environment subsystems initialized successfully");
+        } catch (error) {
+            logger.error(LogCategory.ENVIRONMENT, "Error initializing environment subsystems:", error);
+            console.error("Failed to initialize environment subsystems:", error);
+        }
     }
     
     /**
@@ -35,46 +72,143 @@ export class Environment {
         this.popupSystem = popupSystem;
         
         // Pass popup system to subsystems
-        this.treeSystem.setPopupSystem(popupSystem);
-        this.fruitSystem.setPopupSystem(popupSystem);
+        if (this.treeSystem) {
+            this.treeSystem.setPopupSystem(popupSystem);
+            logger.info(LogCategory.ENVIRONMENT, "Popup system set in tree system");
+        }
+        
+        if (this.fruitSystem) {
+            this.fruitSystem.setPopupSystem(popupSystem);
+            logger.info(LogCategory.ENVIRONMENT, "Popup system set in fruit system");
+        }
+        
+        console.log("Popup system set in environment and subsystems");
     }
     
     /**
      * Setup interactions between different environment systems
      */
     setupSystemInteractions() {
+        console.log("Setting up environment system interactions");
+        
         // Listen for tree destruction to handle attached fruits
         this.scene.events.on('tree-destroyed', (tree) => {
-            this.fruitSystem.handleTreeDestruction(tree);
+            console.log("Tree destroyed event received");
+            if (this.fruitSystem) {
+                this.fruitSystem.handleTreeDestruction(tree);
+            }
         });
+        
+        // Listen for tree interaction events
+        this.scene.events.on('tree-interact', (tree) => {
+            console.log("Tree interact event received");
+            if (this.treeSystem) {
+                this.treeSystem.showTreeInteractionPopup(tree);
+            }
+        });
+        
+        // Listen for fruit collection events
+        this.scene.events.on('fruit-collect', (fruit) => {
+            console.log("Fruit collect event received");
+            if (this.fruitSystem) {
+                this.fruitSystem.createFruitCollectAnimation(fruit);
+                // Remove the fruit after collection
+                this.scene.time.delayedCall(100, () => {
+                    fruit.destroy();
+                });
+            }
+        });
+        
+        console.log("Environment system interactions set up successfully");
     }
     
     /**
-     * Setup map drag handlers to update environment positions
+     * Register an environment object with the coordinate cache
+     * @param {Phaser.GameObjects.GameObject} obj - The game object to register
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @returns {string} The object's ID in the cache
      */
-    setupMapDragHandlers() {
-        if (this.mapManager?.getMap()) {
-            // Update environment positions when map is dragged
-            this.mapManager.getMap().on('drag', () => {
-                this.updateEnvironmentPositions();
-            });
-            
-            // Update environment positions when map drag ends
-            this.mapManager.getMap().on('dragend', () => {
-                this.updateEnvironmentPositions();
-            });
-            
-            // Update environment positions when map is zoomed
-            this.mapManager.getMap().on('zoom', () => {
-                this.updateEnvironmentPositions();
-            });
+    registerEnvironmentObject(obj, lat, lng) {
+        // Store lat/lng on the object for reference
+        obj.setData('lat', lat);
+        obj.setData('lng', lng);
+        
+        // Register with coordinate cache if available
+        if (this.coordinateCache) {
+            const cacheId = this.coordinateCache.register(obj, lat, lng);
+            obj.setData('cacheId', cacheId);
+            return cacheId;
         }
+        
+        // Fall back to direct positioning if cache not available
+        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+        obj.x = pixelPos.x;
+        obj.y = pixelPos.y;
+        
+        return null;
+    }
+    
+    /**
+     * Update an environment object's lat/lng
+     * @param {Phaser.GameObjects.GameObject} obj - The game object to update
+     * @param {number} lat - New latitude
+     * @param {number} lng - New longitude
+     */
+    updateEnvironmentObjectPosition(obj, lat, lng) {
+        // Update stored lat/lng
+        obj.setData('lat', lat);
+        obj.setData('lng', lng);
+        
+        // Update in coordinate cache if available
+        const cacheId = obj.getData('cacheId');
+        if (this.coordinateCache && cacheId) {
+            this.coordinateCache.updateLatLng(cacheId, lat, lng);
+            return;
+        }
+        
+        // Fall back to direct positioning if cache not available
+        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+        obj.x = pixelPos.x;
+        obj.y = pixelPos.y;
+    }
+    
+    /**
+     * Unregister an environment object from the coordinate cache
+     * @param {string} cacheId - The cache ID of the object to unregister
+     * @returns {boolean} Whether the unregistration was successful
+     */
+    unregisterEnvironmentObject(cacheId) {
+        if (!cacheId) {
+            logger.warn(LogCategory.ENVIRONMENT, "Cannot unregister object: no cache ID provided");
+            return false;
+        }
+        
+        if (this.coordinateCache) {
+            this.coordinateCache.unregister(cacheId);
+            logger.info(LogCategory.ENVIRONMENT, `Unregistered object with cache ID: ${cacheId}`);
+            return true;
+        }
+        
+        logger.warn(LogCategory.ENVIRONMENT, "Cannot unregister object: coordinate cache not available");
+        return false;
     }
     
     /**
      * Update positions of all environment elements based on their stored lat/lng
+     * This is now a fallback method as the coordinate cache handles updates automatically
      */
     updateEnvironmentPositions() {
+        // If coordinate cache is available, we don't need to do anything
+        if (this.coordinateCache) {
+            // Even with coordinate cache, we need to ensure fruits are updated
+            this.updateAllFruitPositions();
+            return;
+        }
+        
+        // Legacy fallback for when coordinate cache is not available
+        logger.warn(LogCategory.ENVIRONMENT, "Using legacy environment position update method");
+        
         // Get all environment objects
         const environmentObjects = this.environmentGroup.getChildren();
         
@@ -99,62 +233,70 @@ export class Environment {
             // Apply sway offset for fruits
             if (obj.getData('fruitType') !== undefined && obj.getData('swayData') !== undefined) {
                 const swayData = obj.getData('swayData');
-                if (swayData && typeof swayData.value === 'number') {
-                    obj.x += swayData.value;
-                }
-            }
-            
-            // Update any attached objects (like fruits on trees)
-            if (obj.getData('attachedObjects')) {
-                const attachedObjects = obj.getData('attachedObjects');
-                const offsetsX = obj.getData('attachedObjectsOffsetX') || [];
-                const offsetsY = obj.getData('attachedObjectsOffsetY') || [];
-                
-                for (let i = 0; i < attachedObjects.length; i++) {
-                    const attachedObj = attachedObjects[i];
-                    const offsetX = offsetsX[i] || 0;
-                    const offsetY = offsetsY[i] || 0;
-                    
-                    attachedObj.x = pixelPos.x + offsetX;
-                    attachedObj.y = pixelPos.y + offsetY;
-                    
-                    // Apply sway offset for attached fruits
-                    if (attachedObj.getData('fruitType') !== undefined && attachedObj.getData('swayData') !== undefined) {
-                        const swayData = attachedObj.getData('swayData');
-                        if (swayData && typeof swayData.value === 'number') {
-                            attachedObj.x += swayData.value;
-                        }
-                    }
-                }
+                obj.x += swayData.offsetX;
+                obj.y += swayData.offsetY;
             }
         }
     }
     
     /**
-     * Generate environment elements within a circular area
-     * @param centerX Center X of circle
-     * @param centerY Center Y of circle
-     * @param radius Radius of circle
+     * Update all fruit positions
+     * This ensures fruits stay with their trees when the map is moved
      */
-    generateEnvironment(centerX, centerY, radius) {
-        // Clear any existing environment objects
-        this.clearEnvironment();
+    updateAllFruitPositions() {
+        if (!this.fruitSystem) {
+            return;
+        }
         
-        // Get lat/lng for the center position
-        const centerLatLng = this.mapManager.pixelToLatLng(centerX, centerY);
-        
-        // Add trees within the navigation circle
-        this.treeSystem.addTreesInCircle(12, centerX, centerY, radius * 0.8, centerLatLng);
-        
-        // Add fruits to healing spruce trees
-        const trees = this.environmentGroup.getChildren().filter(obj => 
-            (obj instanceof Phaser.GameObjects.Sprite || obj instanceof Phaser.GameObjects.Image) && 
-            obj.getData('isHealingSpruce') === true
+        // Get all fruits from the environment group
+        const fruits = this.environmentGroup.getChildren().filter(obj => 
+            obj instanceof Phaser.GameObjects.Sprite && obj.getData('isFruit') === true
         );
         
-        // Add fruits to each healing spruce tree
-        for (const tree of trees) {
-            this.fruitSystem.addFruitsToTree(tree);
+        // Update each fruit's position
+        for (const fruit of fruits) {
+            this.fruitSystem.updateFruitPosition(fruit);
+        }
+    }
+    
+    /**
+     * Generate environment elements around a center point
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     * @param {number} radius - Radius to generate within
+     */
+    generateEnvironment(centerX, centerY, radius) {
+        logger.info(LogCategory.ENVIRONMENT, `Starting environment generation at (${centerX}, ${centerY}) with radius ${radius}`);
+        
+        try {
+            // Convert center pixel coordinates to lat/lng
+            const centerLatLng = this.mapManager.pixelToLatLng(centerX, centerY);
+            logger.info(LogCategory.ENVIRONMENT, `Center coordinates: ${centerLatLng.lat.toFixed(6)}, ${centerLatLng.lng.toFixed(6)}`);
+            
+            // Check if tree system is initialized
+            if (!this.treeSystem) {
+                logger.error(LogCategory.ENVIRONMENT, "Tree system not initialized, cannot generate trees");
+            } else {
+                // Generate trees
+                logger.info(LogCategory.ENVIRONMENT, "Generating trees...");
+                this.treeSystem.generateTrees(centerLatLng.lat, centerLatLng.lng, radius);
+            }
+            
+            // Check if fruit system is initialized
+            if (!this.fruitSystem) {
+                logger.error(LogCategory.ENVIRONMENT, "Fruit system not initialized, cannot generate fruits");
+            } else {
+                // Generate fruits
+                logger.info(LogCategory.ENVIRONMENT, "Generating fruits...");
+                this.fruitSystem.generateFruits(centerLatLng.lat, centerLatLng.lng, radius);
+            }
+            
+            // Log generation
+            logger.info(LogCategory.ENVIRONMENT, 
+                `Environment generation complete at ${centerLatLng.lat.toFixed(6)}, ${centerLatLng.lng.toFixed(6)} with radius ${radius}`
+            );
+        } catch (error) {
+            logger.error(LogCategory.ENVIRONMENT, `Error generating environment: ${error}`);
         }
     }
     
@@ -180,20 +322,31 @@ export class Environment {
     }
     
     /**
-     * Clean up resources
+     * Clean up resources when the environment is destroyed
      */
     destroy() {
-        // Remove map event listeners
-        if (this.mapManager?.getMap()) {
-            this.mapManager.getMap().off('drag');
-            this.mapManager.getMap().off('dragend');
-            this.mapManager.getMap().off('zoom');
+        // Clean up subsystems
+        if (this.treeSystem) {
+            this.treeSystem.destroy();
         }
         
+        if (this.fruitSystem) {
+            this.fruitSystem.destroy();
+        }
+        
+        // Clean up environment group
+        if (this.environmentGroup) {
+            this.environmentGroup.destroy(true);
+        }
+        
+        // Remove event listeners
         this.scene.events.off('tree-destroyed');
-        this.clearEnvironment();
-        this.treeSystem.destroy();
-        this.fruitSystem.destroy();
+        
+        // Clear references
+        this.scene = null;
+        this.mapManager = null;
+        this.popupSystem = null;
+        this.coordinateCache = null;
     }
     
     /**

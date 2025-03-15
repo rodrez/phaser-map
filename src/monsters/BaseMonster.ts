@@ -1,5 +1,6 @@
 import { type Scene, Physics, GameObjects, Math as PhaserMath } from 'phaser';
 import { ItemSystem } from '../items/item';
+import { ItemType } from '../items/item-types';
 import { MonsterType, MonsterBehavior, MonsterAttributes, MonsterLoot, MonsterState, MonsterData } from './MonsterTypes';
 import { logger, LogCategory } from '../utils/Logger';
 
@@ -14,6 +15,7 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public goldReward: number;
     public xpReward: number;
     public isBoss: boolean = false; // Flag to identify boss monsters
+    public useCoordinateCache: boolean = false; // Flag to indicate if this monster is using the coordinate cache
 
     protected spawnPoint: PhaserMath.Vector2;
     protected wanderTarget: PhaserMath.Vector2 | null = null;
@@ -66,6 +68,44 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         // Set up health bar
         this.healthBar = scene.add.graphics();
         this.updateHealthBar();
+    }
+
+    /**
+     * Update the monster's position based on its lat/lng coordinates
+     * This is called by the coordinate cache system
+     */
+    public updatePositionFromLatLng(): void {
+        // Update health bar position
+        this.updateHealthBar();
+        
+        // Update attack indicator position if it exists
+        if (this.attackIndicator) {
+            this.updateAttackIndicator();
+        }
+    }
+
+    /**
+     * Get the monster's current pixel position
+     * @returns The monster's current pixel position
+     */
+    public getPixelPosition(): { x: number, y: number } {
+        return { x: this.x, y: this.y };
+    }
+
+    /**
+     * Set the monster's pixel position
+     * @param x X coordinate
+     * @param y Y coordinate
+     */
+    public setPixelPosition(x: number, y: number): void {
+        this.x = x;
+        this.y = y;
+        
+        // Update health bar and attack indicator
+        this.updateHealthBar();
+        if (this.attackIndicator) {
+            this.updateAttackIndicator();
+        }
     }
 
     protected updateHealthBar(): void {
@@ -514,5 +554,47 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         } catch (error) {
             logger.error(LogCategory.MONSTER, `Error in BaseMonster destroy: ${error}`);
         }
+    }
+
+    /**
+     * Override setVelocity to handle coordinate cache integration
+     * @param x X velocity
+     * @param y Y velocity
+     */
+    public setVelocity(x: number, y: number): this {
+        // If using coordinate cache, we need to update lat/lng instead of using physics
+        if (this.useCoordinateCache) {
+            // Calculate new position based on velocity and delta time (assuming 16ms frame time)
+            const deltaTime = 16 / 1000; // 16ms in seconds
+            const newX = this.x + x * deltaTime;
+            const newY = this.y + y * deltaTime;
+            
+            // Store the intended direction for animation purposes
+            if (this.body) {
+                this.body.velocity.x = x;
+                this.body.velocity.y = y;
+            }
+            
+            // Update lat/lng based on new position
+            if (this.scene && (this.scene as any).mapManager) {
+                const mapManager = (this.scene as any).mapManager;
+                const latLng = mapManager.pixelToLatLng(newX, newY);
+                
+                // Update data
+                this.setData('lat', latLng.lat);
+                this.setData('lng', latLng.lng);
+                
+                // If we have a position manager, update through it
+                if ((this.scene as any).monsterSystem && (this.scene as any).monsterSystem.positionManager) {
+                    const positionManager = (this.scene as any).monsterSystem.positionManager;
+                    positionManager.updateMonsterPosition(this, latLng.lat, latLng.lng);
+                }
+            }
+            
+            return this;
+        }
+        
+        // Otherwise use normal physics
+        return super.setVelocity(x, y);
     }
 } 

@@ -1,4 +1,4 @@
-import { ItemType } from '../../items/item';
+import { ItemType } from '../../items/item-types';
 
 /**
  * Handles search and filtering functionality for the inventory UI

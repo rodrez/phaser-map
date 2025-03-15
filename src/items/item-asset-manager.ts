@@ -1,6 +1,6 @@
 import type { Scene } from 'phaser';
 import { logger, LogCategory } from '../utils/Logger';
-import { ItemType, FruitType } from './item';
+import { ItemType, FruitType } from './item-types';
 
 /**
  * Interface for item asset mapping

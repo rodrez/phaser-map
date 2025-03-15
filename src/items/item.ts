@@ -1,81 +1,15 @@
 import type { Scene } from 'phaser';
 import { ItemAssetManager } from './item-asset-manager';
 import { logger, LogCategory } from '../utils/Logger';
-
-
-// Enum for item types
-export enum ItemType {
-    WEAPON = 'weapon',
-    ARMOR = 'armor',
-    CONSUMABLE = 'consumable',
-    RESOURCE = 'resource',
-    QUEST = 'quest',
-    TOOL = 'tool',
-    MISC = 'misc'
-}
-
-// Enum for item rarities
-export enum ItemRarity {
-    COMMON = 'common',
-    UNCOMMON = 'uncommon',
-    RARE = 'rare',
-    EPIC = 'epic',
-    LEGENDARY = 'legendary',
-    MYTHIC = 'mythic'
-}
-
-// Enum for fruit types
-export enum FruitType {
-    APPLE = 'apple',
-    ORANGE = 'orange',
-    CHERRY = 'cherry',
-    BANANA = 'banana',
-    PEAR = 'pear'
-}
-
-// Enum for weapon types
-export enum WeaponType {
-    SWORD = 'sword',
-    AXE = 'axe',
-    BOW = 'bow',
-    STAFF = 'staff',
-    DAGGER = 'dagger',
-    SPEAR = 'spear',
-    SHURIKEN = 'shuriken',
-    CROSSBOW = 'crossbow',
-    
-}
-
-// Enum for armor types
-export enum ArmorType {
-    HELMET = 'helmet',
-    CHEST = 'chest',
-    BOOTS = 'boots',
-    SHIELD = 'shield'
-}
-
-// Interface for item attributes
-export interface ItemAttributes {
-    // Combat attributes
-    damage?: number;
-    defense?: number;
-    attackSpeed?: number;
-    
-    // Elemental attributes
-    poison?: boolean;
-    normal?: boolean;
-    fire?: boolean;
-    ice?: boolean;
-    electric?: boolean;
-    holy?: boolean;
-    demonic?: boolean;
-}
-
-// Interface for crafting requirements
-export interface CraftingRequirement {
-    itemId: string;
-    quantity: number;
-}
+import { 
+    ItemType, 
+    ItemRarity, 
+    FruitType, 
+    WeaponType, 
+    ArmorType, 
+    ItemAttributes, 
+    CraftingRequirement 
+} from './item-types';
 
 // Base item interface
 export interface IItem {
@@ -313,6 +247,26 @@ export class ArmorItem extends BaseItem {
             return Math.floor(this.attributes.defense * conditionFactor);
         }
         
+        return this.attributes.defense;
+    }
+}
+
+// Specialized class for Ring items
+export class RingItem extends BaseItem {
+    constructor(itemData: IItem) {
+        super(itemData);
+        this.type = ItemType.RING;
+    }
+    
+    // Get the attack bonus provided by the ring
+    getAttackBonus(): number {
+        if (!this.attributes || this.attributes.damage === undefined) return 0;
+        return this.attributes.damage;
+    }
+    
+    // Get the defense bonus provided by the ring
+    getDefenseBonus(): number {
+        if (!this.attributes || this.attributes.defense === undefined) return 0;
         return this.attributes.defense;
     }
 }
