@@ -35,6 +35,9 @@ export class PlayerManager {
         this.interactionManager = new PlayerInteractionManager(scene, mapManager);
         this.statsManager = new PlayerStatsManager(scene, mapManager);
         
+        // Default player name and class
+        this.playerName = 'Adventurer';
+        
         // Register this manager in the scene for other systems to access
         this.scene.playerManager = this;
         
@@ -47,6 +50,36 @@ export class PlayerManager {
         });
         
         logger.info(LogCategory.PLAYER, "PlayerManager initialized");
+    }
+
+    /**
+     * Set the player's name
+     * @param {string} name - The player's name
+     */
+    setPlayerName(name) {
+        if (name && typeof name === 'string') {
+            this.playerName = name;
+            
+            // Update the player's name in the stats service
+            if (this.statsService) {
+                this.statsService.setPlayerName(name);
+            }
+            
+            // Update any UI elements that display the player's name
+            if (this.scene.events) {
+                this.scene.events.emit('player-name-changed', name);
+            }
+            
+            logger.info(LogCategory.PLAYER, `Player name set to: ${name}`);
+        }
+    }
+    
+    /**
+     * Get the player's name
+     * @returns {string} The player's name
+     */
+    getPlayerName() {
+        return this.playerName;
     }
 
     /**

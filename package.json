@@ -19,7 +19,13 @@
         "build": "node log.js build & vite build --config vite/config.prod.mjs",
         "dev-nolog": "vite --config vite/config.dev.mjs",
         "build-nolog": "vite build --config vite/config.prod.mjs",
-        "test-skills": "node --loader ts-node/esm src/test-skills.ts"
+        "test-skills": "node --loader ts-node/esm src/test-skills.ts",
+        "server": "node server/start.js",
+        "db:reset": "node server/scripts/db-manager.js reset",
+        "db:seed": "node server/scripts/db-manager.js seed",
+        "db:backup": "node server/scripts/db-manager.js backup",
+        "db:restore": "node server/scripts/db-manager.js restore",
+        "db:stats": "node server/scripts/db-manager.js stats"
     },
     "devDependencies": {
         "@types/node": "^20.11.24",
@@ -29,7 +35,14 @@
         "vite": "^5.3.1"
     },
     "dependencies": {
+        "better-sqlite3": "^11.9.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
         "leaflet": "^1.9.4",
-        "phaser": "^3.88.2"
+        "phaser": "^3.88.2",
+        "socket.io": "^4.8.1",
+        "socket.io-client": "^4.8.1",
+        "sqlite3": "^5.1.7"
     }
 }

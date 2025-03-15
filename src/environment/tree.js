@@ -45,7 +45,7 @@ export class TreeSystem {
         this.setupTreeInteractions();
         
         // Debug log to confirm initialization
-        console.log("TreeSystem initialized, tree interactions set up");
+        logger.info(LogCategory.ENVIRONMENT, "TreeSystem initialized, tree interactions set up");
     }
 
     /**
@@ -101,18 +101,18 @@ export class TreeSystem {
      */
     showTreeInteractionPopup(tree) {
         if (!this.popupSystem) {
-            console.error("Cannot show tree interaction popup: popupSystem is not set");
+            logger.error(LogCategory.ENVIRONMENT, "Cannot show tree interaction popup: popupSystem is not set");
             return;
         }
 
-        console.log("Showing tree interaction popup for tree:", tree);
+        logger.info(LogCategory.ENVIRONMENT, "Showing tree interaction popup for tree:", tree);
 
         const treeName = tree.getData('treeName') || 'Tree';
         const isHealingSpruce = tree.getData('isHealingSpruce') || false;
 
         // Check if the tree has fruits
         const hasFruits = this.checkTreeHasFruits(tree);
-        console.log("Tree has fruits:", hasFruits);
+        logger.info(LogCategory.ENVIRONMENT, "Tree has fruits:", hasFruits);
 
         // Create tree icon SVG based on tree type
         const treeIcon = isHealingSpruce 
@@ -187,7 +187,7 @@ export class TreeSystem {
             width: 400
         });
         
-        console.log("Tree popup created");
+        logger.info(LogCategory.ENVIRONMENT, "Tree popup created");
     }
 
     /**
@@ -195,11 +195,11 @@ export class TreeSystem {
      */
     checkTreeHasFruits(tree) {
         if (!tree) {
-            console.error("Cannot check fruits: tree is null");
+            logger.error(LogCategory.ENVIRONMENT, "Cannot check fruits: tree is null");
             return false;
         }
         
-        console.log("Checking for fruits on tree at position:", tree.x, tree.y);
+        logger.info(LogCategory.ENVIRONMENT, "Checking for fruits on tree at position:", tree.x, tree.y);
         
         // Get all sprites at the tree's position
         const sprites = this.scene.children.list.filter(obj => {
@@ -212,13 +212,13 @@ export class TreeSystem {
             const isNearTree = distance < tree.displayWidth * 0.6;
             
             if (isFruit && isNearTree) {
-                console.log("Found fruit near tree:", obj.getData('fruitType'));
+                logger.info(LogCategory.ENVIRONMENT, "Found fruit near tree:", obj.getData('fruitType'));
             }
             
             return isFruit && isNearTree;
         });
 
-        console.log(`Found ${sprites.length} fruits near tree`);
+        logger.info(LogCategory.ENVIRONMENT, `Found ${sprites.length} fruits near tree`);
         return sprites.length > 0;
     }
 
@@ -652,7 +652,7 @@ export class TreeSystem {
                         repeat: 3,
                         ease: 'Sine.easeInOut',
                         onComplete: () => {
-                            console.log("Emitting tree-interact event");
+                            logger.info(LogCategory.ENVIRONMENT, "Emitting tree-interact event");
                             this.scene.events.emit('tree-interact', tree);
                             this.createLeafParticles(tree.x, tree.y - tree.height * 0.6);
                         }
@@ -666,7 +666,7 @@ export class TreeSystem {
             const isHealingSpruce = tree.getData('isHealingSpruce') || false;
             const treeName = isHealingSpruce ? 'Healing Spruce' : 'Oak Tree';
             tree.setData('treeName', treeName);
-            console.log(`Set tree name to: ${treeName}`);
+            logger.info(LogCategory.ENVIRONMENT, `Set tree name to: ${treeName}`);
         }
     }
 

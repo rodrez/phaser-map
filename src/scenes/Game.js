@@ -20,6 +20,8 @@ import { StatusEffectsUI } from "../ui/StatusEffectsUI";
 import { StatusEffectType } from "../utils/StatusEffectSystem";
 import { EquipmentManager } from "../items/equipment-manager";
 import { MedievalEquipmentUI } from "../ui/equipment-ui/index";
+import { ChatExample } from "../ui/chat-ui";
+import { chatService } from "../utils/ChatService";
 
 export class Game extends Scene {
   constructor() {
@@ -29,6 +31,10 @@ export class Game extends Scene {
   create() {
     // Set the scene to be transparent so we can see the map underneath
     this.cameras.main.setBackgroundColor("rgba(0,0,0,0.1)");
+
+    // Get the player's username from the registry (set in LoginScene)
+    const username = this.registry.get('username') || 'Adventurer';
+    logger.info(LogCategory.PLAYER, `Player logged in as: ${username}`);
 
     // Initialize map manager with default location (London)
     this.mapManager = new MapManager({
@@ -45,8 +51,11 @@ export class Game extends Scene {
     // Enable debug mode for more verbose logging
     this.mapManager.setDebug(true);
 
-    // Initialize player manager
+    // Initialize player manager with the username
     this.playerManager = new PlayerManager(this, this.mapManager);
+    
+    // Set the player's name from the login
+    this.playerManager.setPlayerName(username);
     
     // Register the player in the scene registry for other systems to access
     this.registry.set('player', this.playerManager.getPlayer());
@@ -224,6 +233,12 @@ export class Game extends Scene {
     this.events.on('openEquipment', () => {
       logger.info(LogCategory.UI, 'Opening equipment UI');
       this.equipmentUI.show();
+    });
+    
+    // Listen for openChat event
+    this.events.on('openChat', () => {
+      logger.info(LogCategory.UI, 'Opening chat UI');
+      this.toggleChat();
     });
   }
 
@@ -681,6 +696,12 @@ export class Game extends Scene {
       this.statusEffectsUI.destroy();
     }
 
+    // Destroy chat if it exists
+    if (this.chatExample) {
+      this.chatExample.destroy();
+      this.chatExample = null;
+    }
+
     logger.info(LogCategory.GAME, "Game scene shutdown");
   }
 
@@ -723,5 +744,35 @@ export class Game extends Scene {
     if (this.uiManager) {
       this.uiManager.showMedievalMessage("Test status effects applied!", "info", 3000);
     }
+  }
+
+  /**
+   * Toggle the chat UI
+   */
+  toggleChat() {
+    if (this.chatExample) {
+      this.chatExample.toggle();
+    } else {
+      this.initializeChat();
+    }
+  }
+
+  /**
+   * Initialize the chat UI
+   */
+  initializeChat() {
+    // Create chat example
+    this.chatExample = new ChatExample(this);
+    
+    // Get the player's name from the registry (set during login)
+    const username = this.registry.get('username') || this.playerManager.getPlayerName() || 'Adventurer';
+    
+    // Set the username in the chat service
+    chatService.setUsername(username);
+    
+    logger.info(LogCategory.CHAT, `Chat initialized with player name: ${username}`);
+    
+    // Show the chat UI
+    this.chatExample.show();
   }
 }

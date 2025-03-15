@@ -235,7 +235,7 @@ export class MedievalMenu {
         this.menuItemConfigs = [
             { id: 'inventory', label: 'Inventory', icon: '🎒' },
             { id: 'equipment', label: 'Equipment', icon: '🛡️' },
-            { id: 'communication', label: 'Communication', icon: '💬' },
+            { id: 'chat', label: 'Chat', icon: '💬' },
             { id: 'craft', label: 'Craft', icon: '⚒️' },
             { id: 'map', label: 'Map', icon: '🗺️' },
             { id: 'character', label: 'Character', icon: '👤' },
@@ -608,6 +608,14 @@ export class MedievalMenu {
             // Emit the openEquipment event to show the equipment UI
             this.scene.events.emit('openEquipment');
             this.hide(); // Hide the menu when opening equipment
+        });
+        
+        // Set click handler for chat menu item
+        this.setClickHandler('chat', () => {
+            logger.info(LogCategory.MENU, '[MedievalMenu] Chat menu item clicked');
+            // Emit the openChat event to show the chat UI
+            this.scene.events.emit('openChat');
+            this.hide(); // Hide the menu when opening chat
         });
         
         // Set up keyboard shortcuts

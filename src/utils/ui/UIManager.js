@@ -41,6 +41,9 @@ export class UIManager {
         
         // Set up flag counter
         this.createFlagCounter();
+        
+        // Set up menu item handlers
+        this.setupMenuHandlers();
     }
 
     /**
@@ -302,7 +305,28 @@ export class UIManager {
      * @param {Object} config - The menu item configuration
      */
     addMenuItem(config) {
-        logger.warn(LogCategory.UI, 'addMenuItem not implemented in simplified menu');
+        if (this.menu) {
+            // Convert the config to the format expected by MedievalMenu
+            const menuItemConfig = {
+                id: config.id,
+                label: config.text || config.label,
+                icon: config.icon,
+                onClick: config.handler || config.onClick,
+                badge: config.badge
+            };
+            
+            // Create the menu item
+            this.menu.createMenuItem(menuItemConfig);
+            
+            // Set the click handler
+            if (menuItemConfig.onClick) {
+                this.menu.setClickHandler(menuItemConfig.id, menuItemConfig.onClick);
+            }
+            
+            logger.info(LogCategory.UI, `Added menu item: ${menuItemConfig.id}`);
+        } else {
+            logger.warn(LogCategory.UI, 'Cannot add menu item: menu not initialized');
+        }
     }
 
     /**
@@ -310,7 +334,20 @@ export class UIManager {
      * @param {string} id - The ID of the menu item to remove
      */
     removeMenuItem(id) {
-        logger.warn(LogCategory.UI, 'removeMenuItem not implemented in simplified menu');
+        if (this.menu && this.menu.menuItems && this.menu.menuItems.has(id)) {
+            // Remove the menu item
+            const menuItem = this.menu.menuItems.get(id);
+            if (menuItem && menuItem.parentNode) {
+                menuItem.parentNode.removeChild(menuItem);
+            }
+            
+            // Remove from the map
+            this.menu.menuItems.delete(id);
+            
+            logger.info(LogCategory.UI, `Removed menu item: ${id}`);
+        } else {
+            logger.warn(LogCategory.UI, `Cannot remove menu item: ${id} not found or menu not initialized`);
+        }
     }
 
     /**
@@ -347,6 +384,34 @@ export class UIManager {
         if (this.menu) {
             this.menu.destroy();
             this.menu = null;
+        }
+    }
+
+    /**
+     * Set up menu item handlers
+     */
+    setupMenuHandlers() {
+        // Make sure the menu is initialized
+        if (!this.menu || !this.menu.menuItems) return;
+        
+        // Set up inventory handler if not already set
+        const inventoryItem = this.menu.menuItems.get('inventory');
+        if (inventoryItem) {
+            this.menu.setClickHandler('inventory', () => {
+                logger.info(LogCategory.UI, 'Inventory menu item clicked');
+                this.scene.events.emit('openInventory');
+                this.menu.hide();
+            });
+        }
+        
+        // Set up chat handler if not already set
+        const chatItem = this.menu.menuItems.get('chat');
+        if (chatItem) {
+            this.menu.setClickHandler('chat', () => {
+                logger.info(LogCategory.UI, 'Chat menu item clicked');
+                this.scene.events.emit('openChat');
+                this.menu.hide();
+            });
         }
     }
 } 

@@ -3,6 +3,8 @@ import { Game } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
+import { ChatScene } from './scenes/ChatScene'; // Import the ChatScene
+import { LoginScene } from './scenes/LoginScene'; // Import the LoginScene
 import { loggerPanel } from './ui/logger-panel'; // Import the logger panel
 import { getSkillInitializer } from './skills'; // Import the skill initializer
 
@@ -40,11 +42,13 @@ const config = {
         }
     },
     scene: [
+        LoginScene, // Add LoginScene as the first scene
         Boot,
         Preloader,
         MainMenu,
         Game,
         GameOver,
+        ChatScene,
     ]
 };
 

@@ -58,10 +58,10 @@ export class Environment {
             }
             
             // Log successful initialization
-            console.log("Environment subsystems initialized successfully");
+            logger.info(LogCategory.ENVIRONMENT, "Environment subsystems initialized successfully");
         } catch (error) {
             logger.error(LogCategory.ENVIRONMENT, "Error initializing environment subsystems:", error);
-            console.error("Failed to initialize environment subsystems:", error);
+            logger.error(LogCategory.ENVIRONMENT, "Failed to initialize environment subsystems:", error);
         }
     }
     
@@ -82,18 +82,18 @@ export class Environment {
             logger.info(LogCategory.ENVIRONMENT, "Popup system set in fruit system");
         }
         
-        console.log("Popup system set in environment and subsystems");
+        logger.info(LogCategory.ENVIRONMENT, "Popup system set in environment and subsystems");
     }
     
     /**
      * Setup interactions between different environment systems
      */
     setupSystemInteractions() {
-        console.log("Setting up environment system interactions");
+        logger.info(LogCategory.ENVIRONMENT, "Setting up environment system interactions");
         
         // Listen for tree destruction to handle attached fruits
         this.scene.events.on('tree-destroyed', (tree) => {
-            console.log("Tree destroyed event received");
+            logger.info(LogCategory.ENVIRONMENT, "Tree destroyed event received");
             if (this.fruitSystem) {
                 this.fruitSystem.handleTreeDestruction(tree);
             }
@@ -101,7 +101,7 @@ export class Environment {
         
         // Listen for tree interaction events
         this.scene.events.on('tree-interact', (tree) => {
-            console.log("Tree interact event received");
+            logger.info(LogCategory.ENVIRONMENT, "Tree interact event received");
             if (this.treeSystem) {
                 this.treeSystem.showTreeInteractionPopup(tree);
             }
@@ -109,7 +109,7 @@ export class Environment {
         
         // Listen for fruit collection events
         this.scene.events.on('fruit-collect', (fruit) => {
-            console.log("Fruit collect event received");
+            logger.info(LogCategory.ENVIRONMENT, "Fruit collect event received");
             if (this.fruitSystem) {
                 this.fruitSystem.createFruitCollectAnimation(fruit);
                 // Remove the fruit after collection
@@ -119,7 +119,7 @@ export class Environment {
             }
         });
         
-        console.log("Environment system interactions set up successfully");
+        logger.info(LogCategory.ENVIRONMENT, "Environment system interactions set up successfully");
     }
     
     /**

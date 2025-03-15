@@ -15,6 +15,7 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         // Initialize base stats
         this.stats = {
             // Character info
+            playerName: 'Adventurer', // Default player name
             level: 1,
             xp: 0,
             xpToNextLevel: 100,
@@ -86,6 +87,26 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
         this.updateDerivedStats();
         
         logger.info(LogCategory.PLAYER, 'PlayerStatsService initialized with simplified equipment');
+    }
+    
+    /**
+     * Set the player's name
+     * @param {string} name - The player's name
+     */
+    setPlayerName(name) {
+        if (name && typeof name === 'string') {
+            this.stats.playerName = name;
+            this.emit('player-name-changed', name);
+            logger.info(LogCategory.PLAYER, `Player name set to: ${name}`);
+        }
+    }
+    
+    /**
+     * Get the player's name
+     * @returns {string} The player's name
+     */
+    getPlayerName() {
+        return this.stats.playerName;
     }
     
     /**

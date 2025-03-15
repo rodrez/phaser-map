@@ -39,6 +39,8 @@ export const LogCategory = {
     MENU: 'MENU',
     CHAT: 'CHAT',
     HEALTH: 'HEALTH',
+    AUTH: 'AUTH',     // Authentication and login-related logs
+    ASSETS: 'ASSETS', // Asset loading logs
 
     // Add more categories as needed
 };

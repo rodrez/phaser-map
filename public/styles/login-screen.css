@@ -1,0 +1,396 @@
+/* Login Screen Styles for Alternate Earth - Medieval Theme */
+
+/* Login Screen Overlay */
+.login-screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    overflow: auto;
+}
+
+/* Login Screen Container */
+.login-screen-container {
+    position: relative;
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Background */
+.login-screen-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, #3a2a1a, #1a0a00);
+    z-index: -2;
+}
+
+.login-screen-background:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.1 0" in="noise" result="noiseOutput"/></filter><rect width="200" height="200" filter="url(%23noise)" opacity="0.05"/></svg>');
+    background-repeat: repeat;
+    opacity: 0.1;
+    z-index: -1;
+}
+
+/* Decorative Light Elements */
+.login-light {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    z-index: -1;
+}
+
+.login-light-1 {
+    top: 20%;
+    left: -10%;
+    width: 40%;
+    height: 40%;
+    background: radial-gradient(circle, rgba(200, 161, 101, 0.2) 0%, rgba(200, 161, 101, 0) 70%);
+}
+
+.login-light-2 {
+    bottom: 10%;
+    right: -10%;
+    width: 50%;
+    height: 50%;
+    background: radial-gradient(circle, rgba(139, 90, 43, 0.2) 0%, rgba(139, 90, 43, 0) 70%);
+}
+
+/* Login Content */
+.login-content {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    z-index: 1;
+}
+
+/* Title Styles */
+.login-title-container {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.login-title {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 48px;
+    font-weight: bold;
+    color: #e8d4b9;
+    text-shadow: 0 0 10px rgba(200, 161, 101, 0.5), 0 0 20px rgba(0, 0, 0, 0.5);
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+}
+
+.login-title-decoration {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.login-title-line {
+    height: 2px;
+    width: 80px;
+    background: linear-gradient(to right, transparent, #c8a165, transparent);
+}
+
+.login-title-icon {
+    font-size: 24px;
+    color: #c8a165;
+}
+
+/* Login Card */
+.login-card {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 30px;
+    padding: 30px;
+    box-sizing: border-box;
+}
+
+.login-card-content {
+    position: relative;
+    z-index: 1;
+}
+
+.login-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.login-card-icon {
+    font-size: 20px;
+}
+
+.login-card-title {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 24px;
+    font-weight: bold;
+    color: #eda21f;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    letter-spacing: 1px;
+}
+
+/* Form Styles */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.login-label {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 16px;
+    font-weight: bold;
+    color: #c8a165;
+}
+
+.login-input {
+    padding: 12px 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #8b5a2b;
+    border-radius: 4px;
+    color: #e8d4b9;
+    font-family: 'Times New Roman', serif;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #c8a165;
+    box-shadow: 0 0 10px rgba(200, 161, 101, 0.3);
+}
+
+.login-input::placeholder {
+    color: rgba(232, 212, 185, 0.4);
+}
+
+/* Form Options */
+.login-form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.login-remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.login-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #8b5a2b;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.login-checkbox:checked {
+    background-color: #8b5a2b;
+    border-color: #c8a165;
+}
+
+.login-checkbox:checked::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #e8d4b9;
+    font-size: 12px;
+}
+
+.login-checkbox-label {
+    font-size: 14px;
+    color: #e8d4b9;
+    cursor: pointer;
+}
+
+.login-link {
+    color: #c8a165;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.login-link:hover {
+    color: #eda21f;
+    text-decoration: underline;
+}
+
+/* Login Button */
+.login-button {
+    width: 100%;
+    padding: 12px;
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: linear-gradient(to bottom, #8b5a2b, #6d4520);
+    border: 1px solid #c8a165;
+    color: #e8d4b9;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-button:hover {
+    background: linear-gradient(to bottom, #a06c33, #8b5a2b);
+    box-shadow: 0 0 15px rgba(200, 161, 101, 0.5);
+}
+
+.login-button:active {
+    transform: translateY(2px);
+}
+
+.login-button::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.login-button:hover::before {
+    transform: translateY(300%);
+}
+
+/* Sign Up Text */
+.login-signup {
+    text-align: center;
+    font-size: 14px;
+    color: #e8d4b9;
+    margin-top: 10px;
+}
+
+.login-signup-link {
+    font-weight: bold;
+    color: #eda21f;
+}
+
+.login-signup-link:hover {
+    color: #f0c070;
+}
+
+/* Footer */
+.login-footer {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 14px;
+    color: rgba(232, 212, 185, 0.6);
+}
+
+.login-version {
+    margin-top: 5px;
+    font-size: 12px;
+    color: rgba(232, 212, 185, 0.4);
+}
+
+/* Registration Screen Styles */
+.register-card {
+    max-width: 600px;
+}
+
+.register-error {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.register-button-group {
+    display: flex;
+    gap: 15px;
+}
+
+.register-cancel-button {
+    flex: 1;
+    background: linear-gradient(to bottom, #555, #333);
+    border-color: #777;
+}
+
+.register-cancel-button:hover {
+    background: linear-gradient(to bottom, #666, #444);
+    box-shadow: 0 0 10px rgba(119, 119, 119, 0.5);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .login-title {
+        font-size: 36px;
+    }
+    
+    .login-card {
+        padding: 20px;
+    }
+    
+    .login-form-options {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .register-button-group {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-title {
+        font-size: 28px;
+    }
+    
+    .login-title-line {
+        width: 50px;
+    }
+    
+    .login-card-title {
+        font-size: 20px;
+    }
+} 
