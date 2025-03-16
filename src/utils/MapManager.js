@@ -246,12 +246,12 @@ export class MapManager {
   }
 
   /**
-   * Set target position for player movement
+   * Check if a position is valid (within boundaries)
    * @param {number} lat - Target latitude
    * @param {number} lng - Target longitude
-   * @returns {boolean} - Whether the target was set
+   * @returns {boolean} - Whether the position is valid
    */
-  setTargetPosition(lat, lng) {
+  isPositionValid(lat, lng) {
     if (!this.map) {
       logger.warn(LogCategory.MAP, "Map not initialized");
       return false;
@@ -263,36 +263,50 @@ export class MapManager {
         [lat, lng],
         [this.config.lat, this.config.lng],
       );
-      if (distance > this.config.boundaryRadius) {
-        if (this.debug) {
-          logger.info(LogCategory.MAP,
-            "Target outside boundary:",
-            distance,
-            ">",
-            this.config.boundaryRadius,
-          );
-        }
-        return false;
+      
+      const isValid = distance <= this.config.boundaryRadius;
+      
+      if (!isValid && this.debug) {
+        logger.info(LogCategory.MAP,
+          "Position outside boundary:",
+          distance,
+          ">",
+          this.config.boundaryRadius,
+        );
       }
-
-      // Set target position
-      this.targetPosition = { lat, lng };
-
-      // Call the target position callback if it exists
-      if (this.setTargetPositionCallback) {
-        this.setTargetPositionCallback(this.targetPosition);
-      }
-
-      if (this.debug) {
-        logger.info(LogCategory.MAP, "Target position set:", this.targetPosition);
-        logger.info(LogCategory.MAP, "Distance from boundary center:", distance);
-      }
-
-      return true;
+      
+      return isValid;
     } catch (error) {
-      logger.error(LogCategory.MAP, "Error setting target position:", error);
+      logger.error(LogCategory.MAP, "Error checking position validity:", error);
       return false;
     }
+  }
+
+  /**
+   * Set the target position for player movement
+   * @param {number} lat - Target latitude
+   * @param {number} lng - Target longitude
+   * @returns {boolean} - Whether the target was set
+   */
+  setTargetPosition(lat, lng) {
+    // Check if the position is valid
+    if (!this.isPositionValid(lat, lng)) {
+      return false;
+    }
+
+    // Set target position
+    this.targetPosition = { lat, lng };
+
+    // Call the target position callback if it exists
+    if (this.setTargetPositionCallback) {
+      this.setTargetPositionCallback(this.targetPosition);
+    }
+
+    if (this.debug) {
+      logger.info(LogCategory.MAP, "Target position set:", this.targetPosition);
+    }
+
+    return true;
   }
 
   /**

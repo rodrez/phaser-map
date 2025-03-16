@@ -28,11 +28,14 @@ export class Preloader extends Scene {
 
 	preload() {
 		// Load the assets for the game
-		this.load.setPath("assets");
+		this.load.setPath("public/assets");
 
 		// Load any additional assets here
 		this.load.image("logo", "logo.png");
-		this.load.svg("player", "/svg/player.svg");
+		this.load.spritesheet("player", "/characters/player.png", {
+			frameWidth: 32,
+			frameHeight: 32
+		});
 
 		// Load environment assets
 		this.load.image("particle", "/particles/particle.png");
@@ -59,6 +62,9 @@ export class Preloader extends Scene {
 
 		// Dungeon Bosses
 		this.load.image('lizardfolk-king', '/dungeons/lost-swamp/lizardfolk-king-128.png');
+		
+		// Portal
+		this.load.image('portal', '/dungeons/portal-256.png');
 		
 		// Load individual item images
 		this.load.image('item-apple', '/items/apple.png');

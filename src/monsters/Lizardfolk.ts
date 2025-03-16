@@ -15,17 +15,83 @@ export class Lizardfolk extends BaseMonster {
     private poisonChance: number = 0.3; // 30% chance to poison on attack
     private poisonDamage: number = 2;
     private poisonDuration: number = 5000; // 5 seconds
+    private isKing: boolean = false;
+    private isOnThrone: boolean = false;
 
     constructor(scene: Scene, x: number, y: number, monsterData: MonsterData, playerSprite: Physics.Arcade.Sprite, itemSystem: ItemSystem) {
         super(scene, x, y, monsterData, playerSprite, itemSystem);
         
-        // Determine if this lizardfolk is poisonous (50% chance)
-        this.isPoisonous = Math.random() < 0.5;
-        
-        // If poisonous, tint the sprite slightly green
-        if (this.isPoisonous) {
-            this.setTint(0xAAFFAA);
+        // Check if this is the Lizardfolk King
+        if (monsterData.isBoss || monsterData.type === MonsterType.LIZARDFOLK_KING) {
+            this.setupAsKing();
+        } else {
+            // Regular lizardfolk setup
+            // Determine if this lizardfolk is poisonous (50% chance)
+            this.isPoisonous = Math.random() < 0.5;
+            
+            // If poisonous, tint the sprite slightly green
+            if (this.isPoisonous) {
+                this.setTint(0xAAFFAA);
+            }
         }
+    }
+    
+    /**
+     * Setup this lizardfolk as the king
+     */
+    private setupAsKing(): void {
+        logger.info(LogCategory.MONSTER, 'Setting up Lizardfolk as King');
+        
+        // Kings are always poisonous
+        this.isPoisonous = true;
+        this.poisonChance = 0.5; // 50% chance to poison
+        this.poisonDamage = 5;   // More poison damage
+        
+        // Kings have special ambush abilities
+        this.ambushMode = false;
+        this.hasAmbushed = false;
+        
+        // Set a flag to identify as king
+        this.isKing = true;
+        
+        // Add a property to track if the king is on the throne
+        this.isOnThrone = true;
+        
+        // Override the update method to handle throne behavior
+        const originalUpdate = this.update;
+        this.update = (time: number, delta: number) => {
+            // If the king is on the throne and the player gets too close
+            if (this.isOnThrone && this.playerSprite) {
+                const distanceToPlayer = PhaserMath.Distance.Between(
+                    this.x, this.y, this.playerSprite.x, this.playerSprite.y
+                );
+                
+                if (distanceToPlayer < 150) {
+                    // King gets off throne
+                    this.isOnThrone = false;
+                    
+                    // Show a message if the scene has a UI manager
+                    // @ts-ignore - We know the scene might have a uiManager
+                    if (this.scene.uiManager) {
+                        // @ts-ignore - Access the uiManager's showMedievalMessage method
+                        this.scene.uiManager.showMedievalMessage(
+                            "How dare you approach my throne, mortal!",
+                            'error',
+                            3000
+                        );
+                    }
+                } else {
+                    // While on throne, king doesn't move
+                    this.setVelocity(0, 0);
+                    return;
+                }
+            }
+            
+            // Call the original update method if not on throne or player is close
+            if (!this.isOnThrone) {
+                originalUpdate.call(this, time, delta);
+            }
+        };
     }
     
     public takeDamage(amount: number): void {

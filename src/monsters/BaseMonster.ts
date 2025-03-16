@@ -16,6 +16,7 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public xpReward: number;
     public isBoss: boolean = false; // Flag to identify boss monsters
     public useCoordinateCache: boolean = false; // Flag to indicate if this monster is using the coordinate cache
+    public isDead: boolean = false;
 
     protected spawnPoint: PhaserMath.Vector2;
     protected wanderTarget: PhaserMath.Vector2 | null = null;
@@ -297,6 +298,9 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         // Set state to dead
         this.currentState = MonsterState.DEAD;
         
+        // Set isDead flag explicitly
+        this.isDead = true;
+        
         // Clear auto-attacking flag and hide indicator
         this.isAutoAttacking = false;
         this.hideAttackIndicator();
@@ -311,6 +315,9 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         
         // Reward player with gold and XP
         this.rewardPlayer();
+        
+        // Emit the monsterDefeated event so the DungeonScene can handle it
+        this.scene.events.emit('monsterDefeated', this);
         
         // Play death animation or effect
         this.scene.tweens.add({
@@ -417,7 +424,10 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     }
 
     public update(time: number, delta: number): void {
-        if (this.currentState === MonsterState.DEAD) return;
+        // Skip update if monster is destroyed or inactive
+        if (!this.active || !this.scene) {
+            return;
+        }
         
         // Update health bar position
         this.updateHealthBar();
@@ -428,6 +438,13 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
             this.updateAttackIndicator();
         } else {
             this.hideAttackIndicator();
+        }
+        
+        // Check if playerSprite is null before calculating distance
+        if (!this.playerSprite) {
+            // Player sprite is null, skip update or handle appropriately
+            logger.warn(LogCategory.MONSTER, `Monster ${this.monsterName} update skipped: playerSprite is null`);
+            return;
         }
         
         // Calculate distance to player

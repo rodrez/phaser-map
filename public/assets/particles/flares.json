@@ -1,0 +1,47 @@
+{
+  "frames": {
+    "blue": {
+      "frame": { "x": 2, "y": 2, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "green": {
+      "frame": { "x": 132, "y": 2, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "red": {
+      "frame": { "x": 262, "y": 2, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "white": {
+      "frame": { "x": 392, "y": 2, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    },
+    "yellow": {
+      "frame": { "x": 522, "y": 2, "w": 128, "h": 128 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "sourceSize": { "w": 128, "h": 128 }
+    }
+  },
+  "meta": {
+    "app": "Phaser 3 Atlas Generator",
+    "version": "1.0",
+    "image": "flares.png",
+    "format": "RGBA8888",
+    "size": { "w": 652, "h": 132 },
+    "scale": "1"
+  }
+} 

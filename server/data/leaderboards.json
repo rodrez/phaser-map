@@ -1,0 +1,357 @@
+{
+  "categories": {
+    "monstersKilled": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 200,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 180,
+        "updatedAt": "2025-03-16T00:31:04.751Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 150,
+        "updatedAt": "2025-03-16T00:31:04.751Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 120,
+        "updatedAt": "2025-03-16T00:31:04.751Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 90,
+        "updatedAt": "2025-03-16T00:31:04.751Z"
+      }
+    ],
+    "damageDone": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 7000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 6000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 5000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 4500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 3500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      }
+    ],
+    "healingDone": [
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 5000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 4000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 3500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 3000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 2500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      }
+    ],
+    "goldCollected": [
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 1500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 1200,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 1000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 900,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 800,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      }
+    ],
+    "experiencePoints": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 5500,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 5200,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 5000,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 4800,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 4600,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      }
+    ],
+    "dungeonsCompleted": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 15,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 12,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 10,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 8,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 7,
+        "updatedAt": "2025-03-16T00:31:04.752Z"
+      }
+    ],
+    "buoysAttacked": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 35,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 30,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 25,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 20,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 15,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      }
+    ],
+    "flagsAttacked": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 20,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 18,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 15,
+        "updatedAt": "2025-03-16T00:31:04.753Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 12,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 10,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      }
+    ],
+    "playersKilled": [
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 40,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 35,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 30,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 25,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      },
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 20,
+        "updatedAt": "2025-03-16T00:31:04.754Z"
+      }
+    ],
+    "goldSpent": [
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 1200,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 1000,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 800,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 750,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 700,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      }
+    ],
+    "mostGold": [
+      {
+        "playerId": "player4",
+        "playerName": "Dave",
+        "score": 300,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player2",
+        "playerName": "Bob",
+        "score": 250,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player1",
+        "playerName": "Alice",
+        "score": 200,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      },
+      {
+        "playerId": "player5",
+        "playerName": "Eve",
+        "score": 180,
+        "updatedAt": "2025-03-16T00:31:04.756Z"
+      },
+      {
+        "playerId": "player3",
+        "playerName": "Charlie",
+        "score": 150,
+        "updatedAt": "2025-03-16T00:31:04.755Z"
+      }
+    ]
+  },
+  "lastUpdated": "2025-03-16T00:31:04.756Z"
+}

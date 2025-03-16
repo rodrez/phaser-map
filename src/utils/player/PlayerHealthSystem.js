@@ -276,6 +276,62 @@ export class PlayerHealthSystem {
      * @returns {boolean} - Whether god mode is enabled
      */
     isGodModeEnabled() {
-        return this.statsService.getStat('godMode');
+        return this.statsService.getStat('godMode') || false;
+    }
+    
+    /**
+     * Show a healing effect on the player
+     * @param {number} amount - The amount healed
+     */
+    showHealEffect(amount) {
+        if (!this.scene || !this.scene.playerManager || !this.scene.playerManager.getPlayer()) {
+            return;
+        }
+        
+        const player = this.scene.playerManager.getPlayer();
+        
+        // Create a healing particle effect
+        const particles = this.scene.add.particles('flares');
+        const emitter = particles.createEmitter({
+            frame: 'green',
+            x: player.x,
+            y: player.y,
+            speed: { min: 20, max: 50 },
+            scale: { start: 0.2, end: 0 },
+            lifespan: 800,
+            blendMode: 'ADD',
+            quantity: Math.min(10, Math.max(3, Math.floor(amount / 5)))
+        });
+        
+        // Stop the emitter after a short time
+        this.scene.time.delayedCall(500, () => {
+            emitter.stop();
+            // Destroy the particles after they've had time to fade out
+            this.scene.time.delayedCall(1000, () => {
+                particles.destroy();
+            });
+        });
+        
+        // Show healing amount as floating text
+        if (amount > 0) {
+            const healText = this.scene.add.text(
+                player.x,
+                player.y - 40,
+                `+${amount}`,
+                { fontFamily: 'Arial', fontSize: 16, color: '#00ff00' }
+            );
+            healText.setOrigin(0.5);
+            
+            // Animate the text floating upward
+            this.scene.tweens.add({
+                targets: healText,
+                y: healText.y - 30,
+                alpha: 0,
+                duration: 1500,
+                onComplete: () => {
+                    healText.destroy();
+                }
+            });
+        }
     }
 } 

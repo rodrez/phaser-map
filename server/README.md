@@ -10,6 +10,7 @@ This is a real-time communication server for the Phaser game, providing chat and
 - REST API for messages and rooms
 - WebSocket-based real-time updates
 - SQLite database for persistent storage
+- **Player leaderboards** for tracking achievements and competition
 
 ## Getting Started
 
@@ -35,6 +36,58 @@ pnpm server
 ```
 
 The server will start on port 3000 by default (or the port specified in your .env file).
+
+## Leaderboard System
+
+The server includes a comprehensive leaderboard system that tracks player achievements across multiple categories:
+
+- Most monsters killed
+- Most damage done
+- Most healing done
+- Most gold collected
+- Most experience points
+- Most dungeons completed
+- Most buoys attacked
+- Most flags attacked
+- Most players killed
+- Most gold spent
+- Most gold (current)
+
+### Leaderboard API
+
+The leaderboard system provides both REST API endpoints and Socket.io events for real-time updates.
+
+#### REST API Endpoints
+
+- `GET /api/leaderboards`: Get all leaderboards
+- `GET /api/leaderboards/:category`: Get a specific leaderboard
+- `GET /api/leaderboards/:category/player/:playerId`: Get a player's rank in a leaderboard
+- `POST /api/leaderboards/:category/update`: Update a player's score in a leaderboard
+- `DELETE /api/leaderboards/:category/reset`: Reset a leaderboard (admin only)
+
+#### Socket.io Events
+
+**Client to Server:**
+- `update-leaderboard`: Update a player's score in a leaderboard
+- `get-leaderboard`: Get a specific leaderboard
+
+**Server to Client:**
+- `leaderboard-updated`: Emitted when a leaderboard is updated
+- `player-rank-updated`: Emitted when a player's rank is updated
+- `leaderboard-error`: Emitted when an error occurs
+- `leaderboard-data`: Emitted in response to a `get-leaderboard` event
+
+### Testing the Leaderboard System
+
+To test the leaderboard system, run:
+
+```bash
+node scripts/run-leaderboard-test.js
+```
+
+This will populate the leaderboards with test data and display the results.
+
+For more detailed information about the leaderboard system, see [LEADERBOARD.md](LEADERBOARD.md).
 
 ## Database Management
 

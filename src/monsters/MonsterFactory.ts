@@ -20,6 +20,13 @@ export class MonsterFactory {
         playerSprite: Physics.Arcade.Sprite, 
         itemSystem: ItemSystem
     ): BaseMonster {
+        console.log('DEBUG: MonsterFactory.createMonster called', {
+            type: monsterData.type,
+            name: monsterData.name,
+            isBoss: monsterData.isBoss,
+            position: { x, y }
+        });
+        
         switch (monsterData.type) {
             case MonsterType.STAG:
                 return new Stag(scene, x, y, monsterData, playerSprite, itemSystem);
@@ -41,15 +48,28 @@ export class MonsterFactory {
             case MonsterType.LIZARDFOLK_KING:
                 // For now, use Lizardfolk with enhanced stats for the king
                 logger.info(LogCategory.MONSTER, 'Creating Lizardfolk King (boss monster)');
+                console.log('Creating Lizardfolk King with position:', { x, y }, 'and data:', monsterData);
+                
                 // Enhance the monster data for the boss
                 const bossData = { ...monsterData };
                 bossData.scale = 2.0; // Make the boss larger
                 bossData.attributes = bossData.attributes || {};
-                bossData.attributes.health = bossData.attributes?.health || 200;
-                bossData.attributes.maxHealth = bossData.attributes?.maxHealth || 200;
-                bossData.attributes.damage = bossData.attributes?.damage || 20;
-                bossData.attributes.defense = bossData.attributes?.defense || 10;
-                return new Lizardfolk(scene, x, y, bossData, playerSprite, itemSystem);
+                bossData.attributes.health = bossData.attributes?.health || 500;
+                bossData.attributes.maxHealth = bossData.attributes?.maxHealth || 500;
+                bossData.attributes.damage = bossData.attributes?.damage || 30;
+                bossData.attributes.defense = bossData.attributes?.defense || 15;
+                bossData.isBoss = true; // Ensure it's marked as a boss
+                
+                // Create a Lizardfolk instance with the enhanced boss data
+                const king = new Lizardfolk(scene, x, y, bossData, playerSprite, itemSystem);
+                
+                // Add special properties to make it look like a king
+                king.setScale(bossData.scale || 1.5);
+                king.setTint(0xffdd00); // Gold tint
+                
+                console.log('Lizardfolk King created successfully');
+                
+                return king;
                 
             case MonsterType.DRAGON:
                 return new Dragon(scene, x, y, monsterData, playerSprite, itemSystem);

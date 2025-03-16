@@ -1,6 +1,6 @@
 import { Scene } from "phaser";
 import { MapManager } from "../utils/MapManager";
-import { PlayerManager } from "../utils/player/PlayerManager";
+import { GeoPlayerManager } from "../utils/player/GeoPlayerManager";
 import { UIManager } from "../utils/ui/UIManager";
 import { FlagManager } from "../utils/FlagManager";
 import { Environment } from "../environment";
@@ -10,7 +10,6 @@ import { MonsterSystem, MonsterPopupSystem } from "../monsters";
 import { ItemSystem } from "../items/item";
 // Import the ItemSystem extension
 import { BaseItem } from "../items/item-system-extension";
-import { Inventory } from "../items/inventory";
 import { InventoryManager } from "../items/inventory-manager";
 import { InventoryUI } from "../ui/inventory-ui/index";
 import { CombatSystem } from "../utils/CombatSystem";
@@ -22,11 +21,16 @@ import { EquipmentManager } from "../items/equipment-manager";
 import { MedievalEquipmentUI } from "../ui/equipment-ui/index";
 import { ChatExample } from "../ui/chat-ui";
 import { chatService } from "../utils/ChatService";
-import { DungeonManager } from "../utils/DungeonManager";
+import { dungeonConfigRegistry } from "../dungeons/core/DungeonConfig";
 
 export class Game extends Scene {
   constructor() {
     super("Game");
+  }
+
+  preload() {
+    // Load particle effects
+    this.load.atlas('flares', '/assets/particles/flares.png', '/assets/particles/flares.json');
   }
 
   create() {
@@ -53,10 +57,13 @@ export class Game extends Scene {
     this.mapManager.setDebug(true);
 
     // Initialize player manager with the username
-    this.playerManager = new PlayerManager(this, this.mapManager);
+    this.playerManager = new GeoPlayerManager(this, this.mapManager);
     
     // Set the player's name from the login
     this.playerManager.setPlayerName(username);
+    
+    // Initialize the player sprite
+    this.playerManager.setupPlayer();
     
     // Register the player in the scene registry for other systems to access
     this.registry.set('player', this.playerManager.getPlayer());
@@ -145,11 +152,8 @@ export class Game extends Scene {
     // Connect monster system with environment
     this.monsterSystem.setEnvironment(this.environment);
 
-    // Initialize dungeon manager
-    this.dungeonManager = new DungeonManager(this);
-    
-    // Initialize dungeons
-    this.dungeonManager.initDungeons();
+    // Initialize dungeon registry instead of using DungeonManager
+    this.dungeonRegistry = dungeonConfigRegistry;
 
     // Initialize UI manager
     this.uiManager = new UIManager(this, this.mapManager);
@@ -329,22 +333,18 @@ export class Game extends Scene {
     // Get the target position in lat/lng
     const targetLatLng = this.mapManager.pixelToLatLng(data.x, data.y);
     
-    // Set the target position for player movement
-    const success = this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+    // Check if the position is valid (within boundaries)
+    const success = this.mapManager.isPositionValid(targetLatLng.lat, targetLatLng.lng);
     
     if (success) {
-      // Play movement animation
-      const player = this.playerManager.getPlayer();
-      if (player) {
-        player.play("player-move");
-        
-        // Determine direction for flipping the sprite
-        if (data.x > player.x) {
-          player.setFlipX(false);
-        } else {
-          player.setFlipX(true);
-        }
-      }
+      // Set the target position for player movement
+      this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+      
+      // Get pixel coordinates for the target position
+      const pixelPos = this.mapManager.latLngToPixel(targetLatLng.lat, targetLatLng.lng);
+      
+      // Use the playerManager to move the player
+      this.playerManager.movePlayerToPosition(pixelPos.x, pixelPos.y, 500);
       
       logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
     } else {
@@ -577,11 +577,6 @@ export class Game extends Scene {
         this.uiManager.showMedievalMessage("God Mode: Thou art fully healed!", "success", 1500);
       }
       
-      // Show healing effect if we have a player manager
-      if (this.playerManager?.statsManager) {
-        this.playerManager.statsManager.showGodModeHealEffect(this.playerStats.maxHealth - oldHealth);
-      }
-      
       logger.info(LogCategory.GAME, `God Mode healing applied. Health: ${oldHealth} -> ${this.playerStats.health}/${this.playerStats.maxHealth}`);
     }
     
@@ -788,15 +783,21 @@ export class Game extends Scene {
 
   // After the create method, add a new method to handle scene initialization
   init() {
-    // Check if we need to update dungeon status
     const updateDungeonStatus = this.registry.get('updateDungeonStatus');
     if (updateDungeonStatus) {
-      // Update the dungeon status
-      if (this.dungeonManager) {
-        this.dungeonManager.updateDungeonStatus(
-          updateDungeonStatus.id,
-          updateDungeonStatus.completed
-        );
+      // Update dungeon status using the registry directly
+      if (updateDungeonStatus && updateDungeonStatus.id) {
+        // Store completion status in local storage or game state
+        const dungeonKey = `dungeon_${updateDungeonStatus.id}_completed`;
+        localStorage.setItem(dungeonKey, updateDungeonStatus.completed ? 'true' : 'false');
+        
+        // Emit an event that can be listened to by other systems
+        this.events.emit('dungeonStatusUpdated', {
+          id: updateDungeonStatus.id,
+          completed: updateDungeonStatus.completed
+        });
+        
+        logger.info(LogCategory.DUNGEON, `Updated dungeon status: ${updateDungeonStatus.id} - Completed: ${updateDungeonStatus.completed}`);
       }
       
       // Clear the registry value

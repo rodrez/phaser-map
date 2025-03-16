@@ -10,16 +10,20 @@ export class CorePlayerManager {
      * Constructor for the CorePlayerManager
      * @param {Scene} scene - The Phaser scene this manager belongs to
      * @param {Object} mapManager - The MapManager instance
+     * @param {boolean} createPlayerSprite - Whether to create a player sprite (default: true)
      */
-    constructor(scene, mapManager) {
+    constructor(scene, mapManager, createPlayerSprite = true) {
         this.scene = scene;
         this.mapManager = mapManager;
         this.player = null;
         
-        // Create player sprite
-        this.createPlayer();
+        // Only create player sprite if flag is true
+        if (createPlayerSprite) {
+            // Create player sprite
+            this.createPlayer();
+        }
         
-        // Create player animations
+        // Create player animations (even if we don't create a sprite)
         this.createPlayerAnimations();
     }
 

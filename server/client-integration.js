@@ -152,3 +152,153 @@ class ChatService {
 //   // Update UI with the message
 // });
 */ 
+
+// Leaderboard Integration
+// These functions can be used by the client to interact with the leaderboard system
+
+/**
+ * Get all leaderboards
+ * @returns {Promise} Promise that resolves to leaderboard data
+ */
+export const getAllLeaderboards = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/leaderboards`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch leaderboards');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching leaderboards:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a specific leaderboard by category
+ * @param {string} category - The leaderboard category
+ * @returns {Promise} Promise that resolves to leaderboard data
+ */
+export const getLeaderboard = async (category) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/leaderboards/${category}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${category} leaderboard`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching ${category} leaderboard:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get a player's rank in a specific leaderboard
+ * @param {string} category - The leaderboard category
+ * @param {string} playerId - The player's ID
+ * @returns {Promise} Promise that resolves to player rank data
+ */
+export const getPlayerRank = async (category, playerId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/leaderboards/${category}/player/${playerId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch player rank for ${category}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching player rank for ${category}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Update a player's score in a leaderboard
+ * @param {string} category - The leaderboard category
+ * @param {string} playerId - The player's ID
+ * @param {string} playerName - The player's name
+ * @param {number} score - The player's score
+ * @returns {Promise} Promise that resolves to update result
+ */
+export const updateLeaderboardScore = async (category, playerId, playerName, score) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/leaderboards/${category}/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        playerId,
+        playerName,
+        score
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update ${category} leaderboard`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error updating ${category} leaderboard:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Socket.io event handlers for leaderboards
+ * @param {Object} socket - The socket.io client instance
+ * @param {Function} onLeaderboardUpdated - Callback when leaderboard is updated
+ * @param {Function} onPlayerRankUpdated - Callback when player rank is updated
+ * @param {Function} onLeaderboardError - Callback when leaderboard error occurs
+ */
+export const setupLeaderboardSocketHandlers = (socket, {
+  onLeaderboardUpdated,
+  onPlayerRankUpdated,
+  onLeaderboardError
+}) => {
+  // Listen for leaderboard updates
+  socket.on('leaderboard-updated', (data) => {
+    if (onLeaderboardUpdated) {
+      onLeaderboardUpdated(data);
+    }
+  });
+  
+  // Listen for player rank updates
+  socket.on('player-rank-updated', (data) => {
+    if (onPlayerRankUpdated) {
+      onPlayerRankUpdated(data);
+    }
+  });
+  
+  // Listen for leaderboard errors
+  socket.on('leaderboard-error', (data) => {
+    if (onLeaderboardError) {
+      onLeaderboardError(data);
+    }
+  });
+};
+
+/**
+ * Request leaderboard data via socket.io
+ * @param {Object} socket - The socket.io client instance
+ * @param {string} category - The leaderboard category
+ */
+export const requestLeaderboardData = (socket, category) => {
+  socket.emit('get-leaderboard', category);
+};
+
+/**
+ * Update a player's score in a leaderboard via socket.io
+ * @param {Object} socket - The socket.io client instance
+ * @param {string} playerId - The player's ID
+ * @param {string} playerName - The player's name
+ * @param {string} category - The leaderboard category
+ * @param {number} score - The player's score
+ */
+export const updateLeaderboardViaSocket = (socket, playerId, playerName, category, score) => {
+  socket.emit('update-leaderboard', {
+    playerId,
+    playerName,
+    category,
+    score
+  });
+}; 

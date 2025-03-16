@@ -1,6 +1,7 @@
 import { TreeSystem } from './tree';
 import { FruitSystem } from './fruit';
 import { logger, LogCategory } from '../utils/Logger';
+import { DungeonPortalSystem } from './portal';
 
 /**
  * Main environment system that coordinates all environment-related subsystems
@@ -10,6 +11,7 @@ export class Environment {
     environmentGroup;
     treeSystem;
     fruitSystem;
+    portalSystem;
     popupSystem;
     mapManager;
     coordinateCache;
@@ -32,7 +34,7 @@ export class Environment {
     }
     
     /**
-     * Initialize subsystems after environment is set up
+     * Initialize environment subsystems
      */
     initializeSubsystems() {
         logger.info(LogCategory.ENVIRONMENT, "Initializing environment subsystems");
@@ -46,6 +48,10 @@ export class Environment {
             this.fruitSystem = new FruitSystem(this.scene, this.environmentGroup);
             logger.info(LogCategory.ENVIRONMENT, "Fruit system initialized");
             
+            // Initialize dungeon portal system
+            this.portalSystem = new DungeonPortalSystem(this.scene, this.environmentGroup);
+            logger.info(LogCategory.ENVIRONMENT, "Portal system initialized");
+            
             // Set environment reference in subsystems
             if (this.treeSystem) {
                 this.treeSystem.setEnvironment(this);
@@ -55,6 +61,25 @@ export class Environment {
             if (this.fruitSystem) {
                 this.fruitSystem.setEnvironment(this);
                 logger.info(LogCategory.ENVIRONMENT, "Environment reference set in fruit system");
+            }
+            
+            if (this.portalSystem) {
+                this.portalSystem.setEnvironment(this);
+                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in portal system");
+            }
+            
+            // Pass map manager to subsystems
+            if (this.mapManager) {
+                this.treeSystem.setMapManager(this.mapManager);
+                this.fruitSystem.setMapManager(this.mapManager);
+                this.portalSystem.setMapManager(this.mapManager);
+            }
+            
+            // Pass coordinate cache to subsystems
+            if (this.coordinateCache) {
+                this.treeSystem.setCoordinateCache(this.coordinateCache);
+                this.fruitSystem.setCoordinateCache(this.coordinateCache);
+                this.portalSystem.setCoordinateCache(this.coordinateCache);
             }
             
             // Log successful initialization
@@ -80,6 +105,11 @@ export class Environment {
         if (this.fruitSystem) {
             this.fruitSystem.setPopupSystem(popupSystem);
             logger.info(LogCategory.ENVIRONMENT, "Popup system set in fruit system");
+        }
+        
+        if (this.portalSystem) {
+            this.portalSystem.setPopupSystem(popupSystem);
+            logger.info(LogCategory.ENVIRONMENT, "Popup system set in portal system");
         }
         
         logger.info(LogCategory.ENVIRONMENT, "Popup system set in environment and subsystems");
@@ -195,47 +225,24 @@ export class Environment {
     }
     
     /**
-     * Update positions of all environment elements based on their stored lat/lng
-     * This is now a fallback method as the coordinate cache handles updates automatically
+     * Update environment object positions based on map changes
      */
     updateEnvironmentPositions() {
-        // If coordinate cache is available, we don't need to do anything
+        // If coordinate cache is available, we don't need to do manual updates for most objects
         if (this.coordinateCache) {
-            // Even with coordinate cache, we need to ensure fruits are updated
-            this.updateAllFruitPositions();
-            return;
+            logger.debug(LogCategory.ENVIRONMENT, "Using coordinate cache for position updates");
+        } else {
+            logger.warn(LogCategory.ENVIRONMENT, "Coordinate cache not available, using manual position updates");
         }
         
-        // Legacy fallback for when coordinate cache is not available
-        logger.warn(LogCategory.ENVIRONMENT, "Using legacy environment position update method");
+        // Update fruit positions (fruits need special handling for sway animation)
+        if (this.fruitSystem) {
+            this.fruitSystem.updateFruitPositions();
+        }
         
-        // Get all environment objects
-        const environmentObjects = this.environmentGroup.getChildren();
-        
-        // Update each object's position
-        for (const obj of environmentObjects) {
-            // Skip objects that don't have lat/lng data
-            if (!obj.getData('lat') || !obj.getData('lng')) {
-                continue;
-            }
-            
-            // Get the object's lat/lng
-            const lat = obj.getData('lat');
-            const lng = obj.getData('lng');
-            
-            // Convert to pixel coordinates
-            const pixelPos = this.mapManager.latLngToPixel(lat, lng);
-            
-            // Update position
-            obj.x = pixelPos.x;
-            obj.y = pixelPos.y;
-            
-            // Apply sway offset for fruits
-            if (obj.getData('fruitType') !== undefined && obj.getData('swayData') !== undefined) {
-                const swayData = obj.getData('swayData');
-                obj.x += swayData.offsetX;
-                obj.y += swayData.offsetY;
-            }
+        // Update portal positions
+        if (this.portalSystem) {
+            this.portalSystem.updatePortalPositions();
         }
     }
     
@@ -291,6 +298,15 @@ export class Environment {
                 this.fruitSystem.generateFruits(centerLatLng.lat, centerLatLng.lng, radius);
             }
             
+            // Check if portal system is initialized
+            if (!this.portalSystem) {
+                logger.error(LogCategory.ENVIRONMENT, "Portal system not initialized, cannot generate dungeon portals");
+            } else {
+                // Generate dungeon portals
+                logger.info(LogCategory.ENVIRONMENT, "Generating dungeon portals...");
+                this.portalSystem.generatePortals(centerLatLng.lat, centerLatLng.lng, radius);
+            }
+            
             // Log generation
             logger.info(LogCategory.ENVIRONMENT, 
                 `Environment generation complete at ${centerLatLng.lat.toFixed(6)}, ${centerLatLng.lng.toFixed(6)} with radius ${radius}`
@@ -332,6 +348,10 @@ export class Environment {
         
         if (this.fruitSystem) {
             this.fruitSystem.destroy();
+        }
+        
+        if (this.portalSystem) {
+            this.portalSystem.destroy();
         }
         
         // Clean up environment group

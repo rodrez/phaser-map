@@ -118,6 +118,14 @@ export class Logger {
 
         // Try to load configuration from localStorage
         this.#loadConfig();
+        
+        // Debug output to verify logger configuration
+        console.log('DEBUG: Logger initialized with config', {
+            enabled: this.#config.enabled,
+            level: this.#config.level,
+            monsterCategoryEnabled: this.#config.categories[LogCategory.MONSTER],
+            dungeonCategoryEnabled: this.#config.categories[LogCategory.DUNGEON]
+        });
     }
 
     /**

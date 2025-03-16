@@ -24,12 +24,12 @@ export class PlayerStatsService extends Phaser.Events.EventEmitter {
             // Basic stats
             health: 100,
             maxHealth: 100,
-            attack: 15,
+            attack: 50,
             defense: 10,
             speed: 8,
             
             // Base stats (without skill effects)
-            baseAttack: 15,
+            baseAttack: 50,
             baseDefense: 10,
             baseSpeed: 8,
             baseMaxHealth: 100,

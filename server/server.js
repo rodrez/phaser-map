@@ -9,10 +9,12 @@ import { fileURLToPath } from 'url';
 // Import routes
 import messageRoutes from './routes/messageRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
+import leaderboardRoutes from './routes/leaderboardRoutes.js';
 
 // Import controllers
 import messageController from './controllers/messageController.js';
 import roomController from './controllers/roomController.js';
+import leaderboardController from './controllers/leaderboardController.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +45,7 @@ app.use(express.urlencoded({ extended: true }));
 // API Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/leaderboards', leaderboardRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {
@@ -127,6 +130,45 @@ io.on('connection', (socket) => {
       position,
       direction
     });
+  });
+  
+  // Handle leaderboard updates
+  socket.on('update-leaderboard', (data) => {
+    const { playerId, playerName, category, score } = data;
+    
+    // Update the leaderboard
+    const result = leaderboardController.updatePlayerScore(
+      playerId,
+      playerName,
+      category,
+      score
+    );
+    
+    if (result.success) {
+      // Get the updated leaderboard
+      const updatedLeaderboard = leaderboardController.getLeaderboard(category);
+      
+      // Broadcast the updated leaderboard to all connected clients
+      io.emit('leaderboard-updated', updatedLeaderboard);
+      
+      // Send player's rank information back to them
+      const playerRank = leaderboardController.getPlayerRank(playerId, category);
+      socket.emit('player-rank-updated', playerRank);
+    } else {
+      // Send error back to the client
+      socket.emit('leaderboard-error', { message: result.message });
+    }
+  });
+  
+  // Get leaderboard data
+  socket.on('get-leaderboard', (category) => {
+    const leaderboard = leaderboardController.getLeaderboard(category);
+    
+    if (leaderboard.error) {
+      socket.emit('leaderboard-error', { message: leaderboard.error });
+    } else {
+      socket.emit('leaderboard-data', leaderboard);
+    }
   });
   
   // Leave room

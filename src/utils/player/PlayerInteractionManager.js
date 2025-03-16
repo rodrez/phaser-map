@@ -10,9 +10,11 @@ export class PlayerInteractionManager extends CorePlayerManager {
      * Constructor for the PlayerInteractionManager
      * @param {Phaser.Scene} scene - The Phaser scene this manager belongs to
      * @param {Object} mapManager - The MapManager instance
+     * @param {boolean} createPlayerSprite - Whether to create a player sprite (default: true)
      */
-    constructor(scene, mapManager) {
-        super(scene, mapManager);
+    constructor(scene, mapManager, createPlayerSprite = true) {
+        // Pass the createPlayerSprite flag to the parent constructor
+        super(scene, mapManager, createPlayerSprite);
         
         this.playerHitarea = null;
         
@@ -42,7 +44,13 @@ export class PlayerInteractionManager extends CorePlayerManager {
         // hitarea.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
 
         // Add the hitarea to the game container
-        document.getElementById("game-container").appendChild(hitarea);
+        const gameContainer = document.getElementById("game-container");
+        if (gameContainer) {
+            gameContainer.appendChild(hitarea);
+        } else {
+            logger.warn(LogCategory.PLAYER, "Game container not found for player hitarea");
+            return;
+        }
 
         // Store a reference to the hitarea
         this.playerHitarea = hitarea;
@@ -55,9 +63,11 @@ export class PlayerInteractionManager extends CorePlayerManager {
         });
 
         // Initial positioning
-        const pixelPos = this.mapManager.getPlayerPixelPosition();
-        hitarea.style.left = `${pixelPos.x}px`;
-        hitarea.style.top = `${pixelPos.y}px`;
+        if (this.mapManager && this.mapManager.getPlayerPixelPosition) {
+            const pixelPos = this.mapManager.getPlayerPixelPosition();
+            hitarea.style.left = `${pixelPos.x}px`;
+            hitarea.style.top = `${pixelPos.y}px`;
+        }
 
         // Update hitarea position in the update loop
         this.scene.events.on("update", () => {
@@ -74,91 +84,103 @@ export class PlayerInteractionManager extends CorePlayerManager {
      * Set up callbacks for player interaction with the map
      */
     setupPlayerCallbacks() {
+        // Check if mapManager exists and has the necessary methods
+        if (!this.mapManager) {
+            logger.warn(LogCategory.PLAYER, "Map manager not available for player callbacks");
+            return;
+        }
+        
         // Set callback for player movement
-        this.mapManager.setPlayerMoveCallback((position) => {
-            // Update player sprite position
-            const pixelPos = this.mapManager.latLngToPixel(
-                position.lat,
-                position.lng,
-            );
-            logger.info(LogCategory.PLAYER, "Player moved to pixel position:", pixelPos);
+        if (this.mapManager.setPlayerMoveCallback) {
+            this.mapManager.setPlayerMoveCallback((position) => {
+                // Update player sprite position
+                const pixelPos = this.mapManager.latLngToPixel(
+                    position.lat,
+                    position.lng,
+                );
+                logger.info(LogCategory.PLAYER, "Player moved to pixel position:", pixelPos);
 
-            if (this.player) {
-                // Update player position immediately
-                this.player.x = pixelPos.x;
-                this.player.y = pixelPos.y;
+                if (this.player) {
+                    // Update player position immediately
+                    this.player.x = pixelPos.x;
+                    this.player.y = pixelPos.y;
 
-                // Update shadow position if it exists
-                if (this.player.shadow) {
-                    this.player.shadow.x = pixelPos.x;
-                    this.player.shadow.y = pixelPos.y + 2;
+                    // Update shadow position if it exists
+                    if (this.player.shadow) {
+                        this.player.shadow.x = pixelPos.x;
+                        this.player.shadow.y = pixelPos.y + 2;
+                    }
                 }
-            }
 
-            // Update DOM hitarea position immediately
-            if (this.playerHitarea) {
-                this.playerHitarea.style.left = `${pixelPos.x}px`;
-                this.playerHitarea.style.top = `${pixelPos.y}px`;
-            }
-        });
+                // Update DOM hitarea position immediately
+                if (this.playerHitarea) {
+                    this.playerHitarea.style.left = `${pixelPos.x}px`;
+                    this.playerHitarea.style.top = `${pixelPos.y}px`;
+                }
+            });
+        }
 
         // Set callback for when player reaches target
-        this.mapManager.setPlayerReachTargetCallback((position) => {
-            // Player has reached the target position
-            logger.info(LogCategory.PLAYER, "Player reached target:", position);
+        if (this.mapManager.setPlayerReachTargetCallback) {
+            this.mapManager.setPlayerReachTargetCallback((position) => {
+                // Player has reached the target position
+                logger.info(LogCategory.PLAYER, "Player reached target:", position);
 
-            // Force an update of the player position
-            const pixelPos = this.mapManager.latLngToPixel(
-                position.lat,
-                position.lng,
-            );
-            if (this.player) {
-                this.player.x = pixelPos.x;
-                this.player.y = pixelPos.y;
+                // Force an update of the player position
+                const pixelPos = this.mapManager.latLngToPixel(
+                    position.lat,
+                    position.lng,
+                );
+                if (this.player) {
+                    this.player.x = pixelPos.x;
+                    this.player.y = pixelPos.y;
 
-                if (this.player.shadow) {
-                    this.player.shadow.x = pixelPos.x;
-                    this.player.shadow.y = pixelPos.y + 2;
+                    if (this.player.shadow) {
+                        this.player.shadow.x = pixelPos.x;
+                        this.player.shadow.y = pixelPos.y + 2;
+                    }
+                    
+                    // Play the idle animation when player stops moving
+                    this.player.play("player-idle");
                 }
-                
-                // Play the idle animation when player stops moving
-                this.player.play("player-idle");
-            }
 
-            if (this.playerHitarea) {
-                this.playerHitarea.style.left = `${pixelPos.x}px`;
-                this.playerHitarea.style.top = `${pixelPos.y}px`;
-            }
-        });
+                if (this.playerHitarea) {
+                    this.playerHitarea.style.left = `${pixelPos.x}px`;
+                    this.playerHitarea.style.top = `${pixelPos.y}px`;
+                }
+            });
+        }
         
         // Add callback for when target position is set (after double-click)
-        this.mapManager.setTargetPositionCallback = (targetPosition) => {
-            if (this.player) {
-                // Play the movement animation when player starts moving
-                this.player.play("player-move");
-                
-                // Add a visual pulse effect to show the player is responding to the double-click
-                const pulse = this.scene.add.circle(
-                    this.player.x,
-                    this.player.y,
-                    20,
-                    0x4a90e2,
-                    0.7
-                );
-                pulse.setDepth(1999); // Just below player depth
-                
-                // Animate the pulse
-                this.scene.tweens.add({
-                    targets: pulse,
-                    radius: 40,
-                    alpha: 0,
-                    duration: 600,
-                    onComplete: () => {
-                        pulse.destroy();
-                    }
-                });
-            }
-        };
+        if (this.mapManager.setTargetPositionCallback !== undefined) {
+            this.mapManager.setTargetPositionCallback = (targetPosition) => {
+                if (this.player) {
+                    // Play the movement animation when player starts moving
+                    this.player.play("player-move");
+                    
+                    // Add a visual pulse effect to show the player is responding to the double-click
+                    const pulse = this.scene.add.circle(
+                        this.player.x,
+                        this.player.y,
+                        20,
+                        0x4a90e2,
+                        0.7
+                    );
+                    pulse.setDepth(1999); // Just below player depth
+                    
+                    // Animate the pulse
+                    this.scene.tweens.add({
+                        targets: pulse,
+                        radius: 40,
+                        alpha: 0,
+                        duration: 600,
+                        onComplete: () => {
+                            pulse.destroy();
+                        }
+                    });
+                }
+            };
+        }
     }
 
     /**
