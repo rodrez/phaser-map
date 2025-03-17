@@ -130,7 +130,7 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
     const isSpecialLevel = this.specialLevelConfig[level] !== undefined;
     
     // Adjust monster types based on level
-    let availableTypes = [...this.monsterConfig.types];
+    const availableTypes = [...this.monsterConfig.types];
     
     // Add more dangerous monsters at higher levels
     if (level >= 3) {
@@ -138,11 +138,9 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
     }
     
     // Special handling for level 4 (boss level)
-    let bossList = [...this.monsterConfig.bossTypes];
-    if (isSpecialLevel && level === 4) {
-      // Level 4 always has the Lizardfolk King as the boss
-      bossList = [MonsterType.LIZARDFOLK_KING];
-    }
+    const bossList = isSpecialLevel && level === 4 
+      ? [MonsterType.LIZARDFOLK_KING] 
+      : [...this.monsterConfig.bossTypes];
     
     return {
       ...baseConfig,
@@ -202,4 +200,7 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
 
 // Create and register the lost swamp dungeon configuration
 export const lostSwampDungeonConfig = new LostSwampDungeonConfig();
-dungeonConfigRegistry.register(lostSwampDungeonConfig); 
+
+// Register the lost swamp dungeon configuration
+dungeonConfigRegistry.register(lostSwampDungeonConfig);
+logger.info(LogCategory.DUNGEON, `Registered Lost Swamp dungeon: ${lostSwampDungeonConfig.name} (${lostSwampDungeonConfig.id})`); 

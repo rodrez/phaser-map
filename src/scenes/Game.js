@@ -31,6 +31,13 @@ export class Game extends Scene {
   preload() {
     // Load particle effects
     this.load.atlas('flares', '/assets/particles/flares.png', '/assets/particles/flares.json');
+    
+    // Load Lost Swamp dungeon entrance only
+    this.load.image('lost-swamp-entrance', '/assets/dungeons/lost-swamp/entrance-256.png');
+    
+    // Comment out other dungeon entrances since we're only testing Lost Swamp
+    // this.load.image('cave-dungeon-entrance', '/assets/dungeons/cave/entrance-256.png');
+    // this.load.image('forest-dungeon-entrance', '/assets/dungeons/forest/entrance-256.png');
   }
 
   create() {
@@ -786,7 +793,7 @@ export class Game extends Scene {
     const updateDungeonStatus = this.registry.get('updateDungeonStatus');
     if (updateDungeonStatus) {
       // Update dungeon status using the registry directly
-      if (updateDungeonStatus && updateDungeonStatus.id) {
+      if (updateDungeonStatus?.id) {
         // Store completion status in local storage or game state
         const dungeonKey = `dungeon_${updateDungeonStatus.id}_completed`;
         localStorage.setItem(dungeonKey, updateDungeonStatus.completed ? 'true' : 'false');

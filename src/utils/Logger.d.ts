@@ -10,6 +10,7 @@ export enum LogCategory {
     EQUIPMENT = 'EQUIPMENT',
     MONSTER = 'MONSTER',
     ENVIRONMENT = 'ENVIRONMENT',
+    DUNGEON = 'DUNGEON',
     UI = 'UI',
     MAP = 'MAP',
     FLAG = 'FLAG',

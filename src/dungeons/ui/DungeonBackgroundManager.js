@@ -72,9 +72,29 @@ export class DungeonBackgroundManager {
     // Get the image key for this level
     const imageKey = `${this.currentDungeon.id}-level-${levelToDisplay}`;
     
+    logger.info(LogCategory.DUNGEON, `Attempting to display level image with key: ${imageKey}`);
+    
     // Check if the image is loaded
     if (!this.scene.textures.exists(imageKey)) {
       logger.error(LogCategory.DUNGEON, `Level image not found: ${imageKey}`);
+      
+      // List all available texture keys for debugging
+      const textureKeys = this.scene.textures.getTextureKeys();
+      logger.info(LogCategory.DUNGEON, `Available texture keys: ${textureKeys.join(', ')}`);
+      
+      // Try to use a fallback image
+      if (this.scene.textures.exists('portal')) {
+        logger.info(LogCategory.DUNGEON, 'Using portal image as fallback');
+        this.levelImage = this.scene.add.image(
+          this.scene.cameras.main.width / 2, 
+          this.scene.cameras.main.height / 2, 
+          'portal'
+        );
+        this.levelImage.setDepth(0);
+        this.levelImage.setScrollFactor(0);
+        return this.levelImage;
+      }
+      
       return null;
     }
     

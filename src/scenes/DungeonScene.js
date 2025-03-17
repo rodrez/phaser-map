@@ -31,7 +31,7 @@ export class DungeonScene extends Scene {
     logger.info(LogCategory.DUNGEON, 'DungeonScene.init called with data:', data);
     
     // Check if we have a dungeonId passed directly from the portal system
-    if (data && data.dungeonId) {
+    if (data?.dungeonId) {
       logger.info(LogCategory.DUNGEON, `Initializing dungeon scene with dungeonId: ${data.dungeonId}`);
       
       // Get the dungeon config from the registry
@@ -95,31 +95,57 @@ export class DungeonScene extends Scene {
    */
   preload() {
     // Fix paths to use public directory
-    this.load.setPath('public/');
+    this.load.setPath('assets');
+    
+    // Ensure currentDungeon exists and has required properties
+    if (!this.currentDungeon) {
+      logger.error(LogCategory.DUNGEON, 'No dungeon data available in preload method');
+      this.scene.start('Game');
+      return;
+    }
+    
+    // Set default values if properties are missing
+    if (!this.currentDungeon.levels) {
+      logger.warn(LogCategory.DUNGEON, 'Dungeon missing levels property, setting default value');
+      this.currentDungeon.levels = 4;
+    }
+    
+    if (!this.currentDungeon.id) {
+      logger.error(LogCategory.DUNGEON, 'Dungeon missing id property');
+      this.scene.start('Game');
+      return;
+    }
     
     // Load dungeon level images
-    for (let i = 1; i <= this.currentDungeon.levels; i++) {
-      this.load.image(
-        `${this.currentDungeon.id}-level-${i}`,
-        `assets/dungeons/${this.currentDungeon.id}/level${i}.jpeg`
-      );
+    try {
+      for (let i = 1; i <= this.currentDungeon.levels; i++) {
+        this.load.image(
+          `${this.currentDungeon.id}-level-${i}`,
+          `dungeons/${this.currentDungeon.id}/level${i}.jpeg`
+        );
+        
+        // Log the image path for debugging
+        logger.info(LogCategory.DUNGEON, `Loading level image: dungeons/${this.currentDungeon.id}/level${i}.jpeg`);
+      }
+    } catch (error) {
+      logger.error(LogCategory.DUNGEON, `Error loading dungeon level images: ${error}`);
     }
     
     // Load monster sprites specific to this dungeon
-    this.load.spritesheet('lizardfolk', 'assets/monsters/lizardfolk-64.png', { 
+    this.load.spritesheet('lizardfolk', '/monsters/lizardfolk-64.png', { 
       frameWidth: 32, 
       frameHeight: 32 
     });
     
-    this.load.image('lizardfolk-king', 'assets/dungeons/lost-swamp/lizard-king-128.png');
+    this.load.image('lizardfolk-king', '/dungeons/lost-swamp/lizard-king-128.png');
     
     // Load dungeon UI elements
-    this.load.image('dungeon-exit', 'assets/ui/dungeon/dungeon-exit.svg');
-    this.load.image('level-portal', 'assets/ui/dungeon/level-portal.svg');
-    this.load.image('portal', 'assets/ui/dungeon/portal-128.png');
+    this.load.image('dungeon-exit', '/ui/dungeon/dungeon-exit.svg');
+    this.load.image('level-portal', '/ui/dungeon/level-portal.svg');
+    this.load.image('portal', '/dungeons/portal-128.png');
     
     // Load particle texture for item drops
-    this.load.image('particle', 'assets/particles/particle.png');
+    this.load.image('particle', '/particles/particle.png');
   }
 
   /**
@@ -150,6 +176,19 @@ export class DungeonScene extends Scene {
     
     // Initialize subsystems
     this.initializeSubsystems();
+    
+    // Create the initial dungeon level
+    if (this.dungeonLevelManager) {
+      this.dungeonLevelManager.createLevel(this.currentLevel);
+      
+      // Setup player collision with walls
+      if (this.dungeonLevelManager.walls && this.player) {
+        this.physics.add.collider(
+          this.player,
+          this.dungeonLevelManager.walls
+        );
+      }
+    }
     
     // Show welcome message
     this.uiManager.showMedievalMessage(
@@ -266,23 +305,6 @@ export class DungeonScene extends Scene {
         return itemRarities[itemId] || 'common';
       }
     };
-    
-    // Create the dungeon level after player is set up
-    this.dungeonLevelManager.createLevel(this.currentLevel);
-    
-    // Setup player collision with walls
-    if (this.dungeonLevelManager.walls) {
-      this.wallsCollider = this.physics.add.collider(
-        this.player,
-        this.dungeonLevelManager.walls
-      );
-      
-      // Disable collisions if debug flag is set
-      if (this.debugDisableCollisions) {
-        this.wallsCollider.active = false;
-        logger.info(LogCategory.DUNGEON, 'Wall collisions disabled for debugging');
-      }
-    }
     
     // Create combat system
     this.combatSystem = new CombatSystem(this);
@@ -432,7 +454,7 @@ export class DungeonScene extends Scene {
         this.rewardSystem.giveRewards(monster.rewards);
       } else if (monster.lootTable && monster.lootTable.length > 0) {
         // Process loot table if rewards aren't directly specified
-        monster.lootTable.forEach(loot => {
+        for (const loot of monster.lootTable) {
           if (Math.random() <= (loot.chance || loot.dropChance || 0.5)) {
             if (this.itemSystem) {
               this.itemSystem.createItem(
@@ -449,7 +471,7 @@ export class DungeonScene extends Scene {
               );
             }
           }
-        });
+        }
       }
     }
     
@@ -654,7 +676,7 @@ export class DungeonScene extends Scene {
         // Give special rewards
         if (king.lootTable && king.lootTable.length > 0) {
           // Process each item in the loot table
-          king.lootTable.forEach(loot => {
+          for (const loot of king.lootTable) {
             // Check if the item should drop based on chance
             if (Math.random() <= loot.chance) {
               // Add the item to the player's inventory with proper name and rarity
@@ -668,12 +690,12 @@ export class DungeonScene extends Scene {
                     id: loot.itemId,
                     name: loot.name || this.itemSystem.getItemName(loot.itemId),
                     rarity: loot.rarity || this.itemSystem.getItemRarity(loot.itemId),
-                    description: `A rare item dropped by the Lizardfolk King.`
+                    description: 'A rare item dropped by the Lizardfolk King.'
                   }
                 );
               }
             }
-          });
+          }
         } else {
           // Fallback if no loot table is defined
           if (this.itemSystem) {
@@ -1033,6 +1055,15 @@ export class DungeonScene extends Scene {
    * @param {number} delta - The time since the last update
    */
   update(time, delta) {
+    // Add a debug message every 5 seconds
+    if (time % 5000 < 100) {
+      logger.debug(LogCategory.DUNGEON, 'DungeonScene update called', {
+        hasDungeonSystem: !!this.dungeonSystem,
+        currentLevel: this.currentLevel,
+        dungeonId: this.currentDungeon?.id
+      });
+    }
+    
     // Update the dungeon system, which will update all subsystems
     if (this.dungeonSystem) {
       this.dungeonSystem.update(time, delta);

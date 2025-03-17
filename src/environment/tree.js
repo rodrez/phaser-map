@@ -9,6 +9,7 @@ export class TreeSystem {
     popupSystem;
     mapManager;
     environment;
+    coordinateCache;
 
     constructor(scene, environmentGroup) {
         this.scene = scene;
@@ -269,6 +270,22 @@ export class TreeSystem {
      */
     setEnvironment(environment) {
         this.environment = environment;
+    }
+    
+    /**
+     * Set the map manager reference
+     * @param {MapManager} mapManager - The map manager instance
+     */
+    setMapManager(mapManager) {
+        this.mapManager = mapManager;
+    }
+    
+    /**
+     * Set the coordinate cache reference
+     * @param {Object} coordinateCache - The coordinate cache
+     */
+    setCoordinateCache(coordinateCache) {
+        this.coordinateCache = coordinateCache;
     }
     
     /**
@@ -1385,6 +1402,23 @@ export class TreeSystem {
             } else {
                 logger.info(LogCategory.ENVIRONMENT, `Texture ${textureName} already exists`);
             }
+        }
+    }
+
+    /**
+     * Update all tree positions based on map changes
+     */
+    updateTreePositions() {
+        if (!this.mapManager) return;
+        
+        // Get all trees from the environment group
+        const trees = this.environmentGroup?.getChildren().filter(obj => 
+            obj instanceof Phaser.GameObjects.Sprite && obj.getData('isTree') === true
+        );
+        
+        // Update each tree's position
+        for (const tree of trees) {
+            this.updateTreePosition(tree);
         }
     }
 } 

@@ -8,6 +8,7 @@ export class FruitSystem {
     environmentGroup;
     mapManager;
     environment;
+    coordinateCache;
     
     constructor(scene, environmentGroup) {
         this.scene = scene;
@@ -24,6 +25,22 @@ export class FruitSystem {
     }
     
     /**
+     * Set the map manager reference
+     * @param {MapManager} mapManager - The map manager instance
+     */
+    setMapManager(mapManager) {
+        this.mapManager = mapManager;
+    }
+    
+    /**
+     * Set the coordinate cache reference
+     * @param {Object} coordinateCache - The coordinate cache
+     */
+    setCoordinateCache(coordinateCache) {
+        this.coordinateCache = coordinateCache;
+    }
+    
+    /**
      * Empty method to maintain compatibility with existing code
      * @param {Object} popupSystem - The popup system (not used in simplified version)
      */
@@ -31,6 +48,56 @@ export class FruitSystem {
         // This method is intentionally empty
         // It exists only for compatibility with code that expects it
         logger.info("setPopupSystem called but ignored in simplified FruitSystem", LogCategory.Environment);
+    }
+    
+    /**
+     * Generate fruits around a center point using lat/lng coordinates
+     * @param {number} centerLat - Center latitude
+     * @param {number} centerLng - Center longitude
+     * @param {number} radiusMeters - Radius in meters
+     * @param {number} count - Number of fruits to generate (default: 8)
+     */
+    generateFruits(centerLat, centerLng, radiusMeters, count = 8) {
+        // Log generation attempt
+        logger.info(LogCategory.ENVIRONMENT, `Generating ${count} fruits around ${centerLat.toFixed(6)}, ${centerLng.toFixed(6)} with radius ${radiusMeters}m`);
+        
+        if (!this.mapManager) {
+            logger.error(LogCategory.ENVIRONMENT, "Cannot generate fruits: mapManager is not available");
+            return;
+        }
+        
+        // Track successful fruit creations
+        let fruitsCreated = 0;
+        
+        // Generate random positions within the circle
+        for (let i = 0; i < count; i++) {
+            try {
+                // Generate random angle and distance
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * radiusMeters * 0.8; // 80% of radius to keep away from edges
+                
+                // Calculate position using MapManager's destinationPoint function
+                const position = this.mapManager?.destinationPoint(
+                    { lat: centerLat, lng: centerLng }, 
+                    angle, 
+                    distance
+                );
+                
+                // Select a random frame (0-2) for different fruit types
+                const frameNumber = Math.floor(Math.random() * 3);
+                
+                // Create fruit at this position
+                const fruit = this.createFruit(position.lat, position.lng, frameNumber);
+                
+                if (fruit) {
+                    fruitsCreated++;
+                }
+            } catch (error) {
+                logger.error(LogCategory.ENVIRONMENT, `Error generating fruit ${i}: ${error}`);
+            }
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, `Successfully created ${fruitsCreated}/${count} fruits`);
     }
     
     /**
@@ -56,8 +123,8 @@ export class FruitSystem {
         // Only generate fruits on spruce trees
         // Check both the treeType data and texture name for "spruce"
         const isSpruce = 
-            (treeType && treeType.toLowerCase().includes('spruce')) || 
-            (treeTexture && treeTexture.toLowerCase().includes('spruce'));
+            (treeType && treeType.toLowerCase?.().includes('spruce')) || 
+            (treeTexture && treeTexture.toLowerCase?.().includes('spruce'));
             
         if (!isSpruce) {
             logger.info(`Skipping fruit generation: tree is not a spruce (type: ${treeType}, texture: ${treeTexture})`, LogCategory.Environment);
@@ -65,11 +132,9 @@ export class FruitSystem {
         }
         
         // If count is not specified, generate a random number between 1 and 3
-        if (count === null) {
-            count = Math.floor(Math.random() * 3) + 1; // Random number: 1, 2, or 3
-        }
+        const fruitCount = count === null ? Math.floor(Math.random() * 3) + 1 : count; // Random number: 1, 2, or 3
         
-        logger.info(`Generating ${count} fruits on spruce tree at position: (${tree.x}, ${tree.y})`, LogCategory.Environment);
+        logger.info(`Generating ${fruitCount} fruits on spruce tree at position: (${tree.x}, ${tree.y})`, LogCategory.Environment);
         
         // Get tree position
         const treeX = tree.x;
@@ -87,7 +152,7 @@ export class FruitSystem {
         }
         
         // Generate fruits in the tree canopy
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < fruitCount; i++) {
             try {
                 // Calculate position within the tree canopy in pixels
                 const offsetX = (Math.random() - 0.5) * treeWidth * 0.6;
@@ -167,7 +232,7 @@ export class FruitSystem {
             }
             
             // Register with environment's coordinate cache if available
-            if (this.environment && this.environment.registerEnvironmentObject) {
+            if (this.environment?.registerEnvironmentObject) {
                 this.environment.registerEnvironmentObject(fruit, lat, lng);
             }
             
@@ -242,6 +307,23 @@ export class FruitSystem {
             if (fruit instanceof Phaser.GameObjects.Sprite && fruit.getData('isFruit')) {
                 fruit.destroy();
             }
+        }
+    }
+    
+    /**
+     * Update all fruit positions based on map changes
+     */
+    updateFruitPositions() {
+        if (!this.mapManager) return;
+        
+        // Get all fruits from the environment group
+        const fruits = this.environmentGroup?.getChildren().filter(obj => 
+            obj instanceof Phaser.GameObjects.Sprite && obj.getData('isFruit') === true
+        );
+        
+        // Update each fruit's position
+        for (const fruit of fruits) {
+            this.updateFruitPosition(fruit);
         }
     }
 } 

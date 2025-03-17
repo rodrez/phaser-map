@@ -1,7 +1,8 @@
-import { Scene, Physics } from 'phaser';
-import { ItemSystem } from '../items/item';
-import { BaseMonster } from './BaseMonster';
-import { MonsterData, MonsterType } from './MonsterTypes';
+import type { Scene, Physics } from 'phaser';
+import type { ItemSystem } from '../items/item';
+import type { BaseMonster } from './BaseMonster';
+import { MonsterType } from './MonsterTypes';
+import type { MonsterData } from './MonsterTypes';
 import { Stag } from './Stag';
 import { Wolf } from './Wolf';
 import { Boar } from './Boar';
@@ -10,9 +11,10 @@ import { Dragon } from './Dragon';
 import { Ogre } from './Ogre';
 import { logger, LogCategory } from '../utils/Logger';
 
-export class MonsterFactory {
+// Convert class with static methods to a simple object with functions
+export const MonsterFactory = {
     // Create a monster instance based on the monster type
-    public static createMonster(
+    createMonster(
         scene: Scene, 
         x: number, 
         y: number, 
@@ -20,7 +22,7 @@ export class MonsterFactory {
         playerSprite: Physics.Arcade.Sprite, 
         itemSystem: ItemSystem
     ): BaseMonster {
-        console.log('DEBUG: MonsterFactory.createMonster called', {
+        logger.info(LogCategory.MONSTER, 'DEBUG: MonsterFactory.createMonster called', {
             type: monsterData.type,
             name: monsterData.name,
             isBoss: monsterData.isBoss,
@@ -45,10 +47,10 @@ export class MonsterFactory {
             case MonsterType.LIZARDFOLK:
                 return new Lizardfolk(scene, x, y, monsterData, playerSprite, itemSystem);
                 
-            case MonsterType.LIZARDFOLK_KING:
+            case MonsterType.LIZARDFOLK_KING: {
                 // For now, use Lizardfolk with enhanced stats for the king
                 logger.info(LogCategory.MONSTER, 'Creating Lizardfolk King (boss monster)');
-                console.log('Creating Lizardfolk King with position:', { x, y }, 'and data:', monsterData);
+                logger.info(LogCategory.MONSTER, 'Creating Lizardfolk King with position:', { x, y }, 'and data:', monsterData);
                 
                 // Enhance the monster data for the boss
                 const bossData = { ...monsterData };
@@ -67,9 +69,10 @@ export class MonsterFactory {
                 king.setScale(bossData.scale || 1.5);
                 king.setTint(0xffdd00); // Gold tint
                 
-                console.log('Lizardfolk King created successfully');
+                logger.info(LogCategory.MONSTER, 'Lizardfolk King created successfully');
                 
                 return king;
+            }
                 
             case MonsterType.DRAGON:
                 return new Dragon(scene, x, y, monsterData, playerSprite, itemSystem);

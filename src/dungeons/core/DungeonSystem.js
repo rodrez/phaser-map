@@ -27,17 +27,17 @@ export class DungeonSystem {
       logger.info(LogCategory.DUNGEON, `Using existing dungeon: ${this.currentDungeon.name} (Level ${this.currentLevel})`);
     } else {
       // Create the dungeon instance using the factory
-      dungeonId = dungeonId || (scene.currentDungeon ? scene.currentDungeon.id : null);
-      level = level || 1;
+      const effectiveDungeonId = dungeonId || (scene.currentDungeon ? scene.currentDungeon.id : null);
+      const effectiveLevel = level || 1;
       
-      if (!dungeonId) {
+      if (!effectiveDungeonId) {
         logger.error(LogCategory.DUNGEON, 'No dungeonId provided and no currentDungeon in scene');
         return;
       }
       
-      logger.info(LogCategory.DUNGEON, `Creating new dungeon with id: ${dungeonId}, level: ${level}`);
-      this.currentDungeon = DungeonFactory.createDungeon(scene, dungeonId, level, options);
-      this.currentLevel = level;
+      logger.info(LogCategory.DUNGEON, `Creating new dungeon with id: ${effectiveDungeonId}, level: ${effectiveLevel}`);
+      this.currentDungeon = DungeonFactory.createDungeon(scene, effectiveDungeonId, effectiveLevel, options);
+      this.currentLevel = effectiveLevel;
       logger.info(LogCategory.DUNGEON, `Created new dungeon: ${this.currentDungeon.name} (Level ${this.currentLevel})`);
     }
     
@@ -87,7 +87,7 @@ export class DungeonSystem {
     logger.info(LogCategory.DUNGEON, `Initializing special mechanics: ${specialMechanics.join(', ')}`);
     
     // Initialize each special mechanic
-    specialMechanics.forEach(mechanic => {
+    for (const mechanic of specialMechanics) {
       switch (mechanic) {
         case 'natural-healing':
           this.initializeNaturalHealing();
@@ -110,7 +110,7 @@ export class DungeonSystem {
         default:
           logger.warn(LogCategory.DUNGEON, `Unknown special mechanic: ${mechanic}`);
       }
-    });
+    }
   }
   
   /**
@@ -199,10 +199,7 @@ export class DungeonSystem {
       delay: 30000, // Check for cave-ins every 30 seconds
       callback: () => {
         // Only trigger cave-ins if the current room has the cave-in hazard
-        if (this.currentRoom && 
-            this.currentRoom.hazards && 
-            this.currentRoom.hazards.some(h => h.type === 'falling-rocks')) {
-          
+        if (this.currentRoom?.hazards?.some(h => h.type === 'falling-rocks')) {
           this.triggerCaveIn();
         }
       },
@@ -404,9 +401,9 @@ export class DungeonSystem {
     
     // Create hazards if the room has them
     if (room.hazards && room.hazards.length > 0) {
-      room.hazards.forEach(hazard => {
+      for (const hazard of room.hazards) {
         this.createHazard(hazard.type, hazard.config);
-      });
+      }
     }
     
     // Create crystals if the room has them
@@ -522,7 +519,7 @@ export class DungeonSystem {
     
     // Apply the crystal effect
     switch (crystalType) {
-      case 'healing':
+      case 'healing': {
         // Heal the player
         const healAmount = effects.healthRestored || 20;
         this.playerManager.heal(healAmount);
@@ -536,8 +533,9 @@ export class DungeonSystem {
           );
         }
         break;
+      }
         
-      case 'strength':
+      case 'strength': {
         // Increase player damage
         const damageBonus = effects.damageBonus || 5;
         const strengthDuration = effects.duration || 30000;
@@ -553,8 +551,9 @@ export class DungeonSystem {
           );
         }
         break;
+      }
         
-      case 'defense':
+      case 'defense': {
         // Increase player defense
         const defenseBonus = effects.armorBonus || 10;
         const defenseDuration = effects.duration || 45000;
@@ -570,8 +569,9 @@ export class DungeonSystem {
           );
         }
         break;
+      }
         
-      case 'speed':
+      case 'speed': {
         // Increase player speed
         const speedBonus = effects.speedBonus || 50;
         const speedDuration = effects.duration || 20000;
@@ -587,6 +587,7 @@ export class DungeonSystem {
           );
         }
         break;
+      }
     }
     
     // Play a sound effect
@@ -706,11 +707,11 @@ export class DungeonSystem {
     }
     
     // Destroy all monsters
-    this.monsters.forEach(monster => {
+    for (const monster of this.monsters.values()) {
       if (monster.destroy) {
         monster.destroy();
       }
-    });
+    }
     this.monsters.clear();
     
     // Clear room tracking

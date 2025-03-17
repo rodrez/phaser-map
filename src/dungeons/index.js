@@ -3,6 +3,9 @@
  * Exports all dungeon-related modules
  */
 
+// Import logger
+import { logger, LogCategory } from '../utils/Logger';
+
 // Core dungeon system
 export { DungeonSystem } from './core/DungeonSystem';
 export { DungeonFactory } from './core/DungeonFactory';
@@ -25,6 +28,14 @@ import { dungeonConfigRegistry } from './core/DungeonConfig';
 
 // This ensures all dungeon types are registered
 const registerAllDungeonTypes = () => {
+  // For testing, only register the Lost Swamp dungeon
+  if (!dungeonConfigRegistry.get(lostSwampDungeonConfig.id)) {
+    dungeonConfigRegistry.register(lostSwampDungeonConfig);
+    logger.info(LogCategory.DUNGEON, 'Registered Lost Swamp dungeon for testing');
+  }
+  
+  // Comment out other dungeons for now
+  /*
   // Forest dungeon
   if (!dungeonConfigRegistry.get(forestDungeonConfig.id)) {
     dungeonConfigRegistry.register(forestDungeonConfig);
@@ -34,11 +45,7 @@ const registerAllDungeonTypes = () => {
   if (!dungeonConfigRegistry.get(caveDungeonConfig.id)) {
     dungeonConfigRegistry.register(caveDungeonConfig);
   }
-  
-  // Lost Swamp dungeon
-  if (!dungeonConfigRegistry.get(lostSwampDungeonConfig.id)) {
-    dungeonConfigRegistry.register(lostSwampDungeonConfig);
-  }
+  */
   
   // Add more dungeon types here as they are created
 };

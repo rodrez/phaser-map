@@ -2,6 +2,7 @@ import { TreeSystem } from './tree';
 import { FruitSystem } from './fruit';
 import { logger, LogCategory } from '../utils/Logger';
 import { DungeonPortalSystem } from './portal';
+import { DungeonSystem } from './DungeonSystem';
 
 /**
  * Main environment system that coordinates all environment-related subsystems
@@ -12,6 +13,7 @@ export class Environment {
     treeSystem;
     fruitSystem;
     portalSystem;
+    dungeonSystem;
     popupSystem;
     mapManager;
     coordinateCache;
@@ -52,6 +54,10 @@ export class Environment {
             this.portalSystem = new DungeonPortalSystem(this.scene, this.environmentGroup);
             logger.info(LogCategory.ENVIRONMENT, "Portal system initialized");
             
+            // Initialize dungeon system
+            this.dungeonSystem = new DungeonSystem(this.scene, this.environmentGroup);
+            logger.info(LogCategory.ENVIRONMENT, "Dungeon system initialized");
+            
             // Set environment reference in subsystems
             if (this.treeSystem) {
                 this.treeSystem.setEnvironment(this);
@@ -68,11 +74,17 @@ export class Environment {
                 logger.info(LogCategory.ENVIRONMENT, "Environment reference set in portal system");
             }
             
+            if (this.dungeonSystem) {
+                this.dungeonSystem.setEnvironment(this);
+                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in dungeon system");
+            }
+            
             // Pass map manager to subsystems
             if (this.mapManager) {
-                this.treeSystem.setMapManager(this.mapManager);
-                this.fruitSystem.setMapManager(this.mapManager);
-                this.portalSystem.setMapManager(this.mapManager);
+                this.treeSystem?.setMapManager(this.mapManager);
+                this.fruitSystem?.setMapManager(this.mapManager);
+                this.portalSystem?.setMapManager(this.mapManager);
+                this.dungeonSystem?.setMapManager(this.mapManager);
             }
             
             // Pass coordinate cache to subsystems
@@ -80,6 +92,7 @@ export class Environment {
                 this.treeSystem.setCoordinateCache(this.coordinateCache);
                 this.fruitSystem.setCoordinateCache(this.coordinateCache);
                 this.portalSystem.setCoordinateCache(this.coordinateCache);
+                this.dungeonSystem.setCoordinateCache(this.coordinateCache);
             }
             
             // Log successful initialization
@@ -110,6 +123,11 @@ export class Environment {
         if (this.portalSystem) {
             this.portalSystem.setPopupSystem(popupSystem);
             logger.info(LogCategory.ENVIRONMENT, "Popup system set in portal system");
+        }
+        
+        if (this.dungeonSystem) {
+            this.dungeonSystem.setPopupSystem(popupSystem);
+            logger.info(LogCategory.ENVIRONMENT, "Popup system set in dungeon system");
         }
         
         logger.info(LogCategory.ENVIRONMENT, "Popup system set in environment and subsystems");
@@ -153,30 +171,29 @@ export class Environment {
     }
     
     /**
-     * Register an environment object with the coordinate cache
-     * @param {Phaser.GameObjects.GameObject} obj - The game object to register
+     * Register an environment object with its lat/lng coordinates
+     * @param {Object} object - The environment object to register
      * @param {number} lat - Latitude
      * @param {number} lng - Longitude
-     * @returns {string} The object's ID in the cache
      */
-    registerEnvironmentObject(obj, lat, lng) {
-        // Store lat/lng on the object for reference
-        obj.setData('lat', lat);
-        obj.setData('lng', lng);
+    registerEnvironmentObject(object, lat, lng) {
+        if (!object) return;
         
-        // Register with coordinate cache if available
-        if (this.coordinateCache) {
-            const cacheId = this.coordinateCache.register(obj, lat, lng);
-            obj.setData('cacheId', cacheId);
-            return cacheId;
+        // Check the object type and register with the appropriate subsystem
+        const objectType = object.getData ? object.getData('type') : null;
+        
+        if (objectType === 'tree') {
+            this.treeSystem?.registerTree(object, lat, lng);
+        } else if (objectType === 'fruit') {
+            this.fruitSystem?.registerFruit(object, lat, lng);
+        } else if (objectType === 'dungeon-entrance') {
+            this.dungeonSystem?.registerDungeonEntrance(object, lat, lng);
+        } else {
+            // Generic registration
+            if (this.mapManager?.registerMapObject) {
+                this.mapManager.registerMapObject(object, lat, lng);
+            }
         }
-        
-        // Fall back to direct positioning if cache not available
-        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
-        obj.x = pixelPos.x;
-        obj.y = pixelPos.y;
-        
-        return null;
     }
     
     /**
@@ -225,44 +242,22 @@ export class Environment {
     }
     
     /**
-     * Update environment object positions based on map changes
+     * Update environment positions based on map changes
      */
     updateEnvironmentPositions() {
-        // If coordinate cache is available, we don't need to do manual updates for most objects
-        if (this.coordinateCache) {
-            logger.debug(LogCategory.ENVIRONMENT, "Using coordinate cache for position updates");
-        } else {
-            logger.warn(LogCategory.ENVIRONMENT, "Coordinate cache not available, using manual position updates");
+        // Update tree positions
+        if (this.treeSystem) {
+            this.treeSystem.updateTreePositions();
         }
         
-        // Update fruit positions (fruits need special handling for sway animation)
+        // Update fruit positions
         if (this.fruitSystem) {
             this.fruitSystem.updateFruitPositions();
         }
         
-        // Update portal positions
-        if (this.portalSystem) {
-            this.portalSystem.updatePortalPositions();
-        }
-    }
-    
-    /**
-     * Update all fruit positions
-     * This ensures fruits stay with their trees when the map is moved
-     */
-    updateAllFruitPositions() {
-        if (!this.fruitSystem) {
-            return;
-        }
-        
-        // Get all fruits from the environment group
-        const fruits = this.environmentGroup.getChildren().filter(obj => 
-            obj instanceof Phaser.GameObjects.Sprite && obj.getData('isFruit') === true
-        );
-        
-        // Update each fruit's position
-        for (const fruit of fruits) {
-            this.fruitSystem.updateFruitPosition(fruit);
+        // Update dungeon entrance positions
+        if (this.dungeonSystem) {
+            this.dungeonSystem.updateDungeonEntrancePositions();
         }
     }
     
@@ -298,19 +293,16 @@ export class Environment {
                 this.fruitSystem.generateFruits(centerLatLng.lat, centerLatLng.lng, radius);
             }
             
-            // Check if portal system is initialized
-            if (!this.portalSystem) {
-                logger.error(LogCategory.ENVIRONMENT, "Portal system not initialized, cannot generate dungeon portals");
+            // Check if dungeon system is initialized
+            if (!this.dungeonSystem) {
+                logger.error(LogCategory.ENVIRONMENT, "Dungeon system not initialized, cannot generate dungeon entrances");
             } else {
-                // Generate dungeon portals
-                logger.info(LogCategory.ENVIRONMENT, "Generating dungeon portals...");
-                this.portalSystem.generatePortals(centerLatLng.lat, centerLatLng.lng, radius);
+                // Generate dungeon entrances
+                logger.info(LogCategory.ENVIRONMENT, "Generating dungeon entrances...");
+                this.dungeonSystem.generateDungeonEntrances(centerLatLng.lat, centerLatLng.lng, radius);
             }
             
-            // Log generation
-            logger.info(LogCategory.ENVIRONMENT, 
-                `Environment generation complete at ${centerLatLng.lat.toFixed(6)}, ${centerLatLng.lng.toFixed(6)} with radius ${radius}`
-            );
+            logger.info(LogCategory.ENVIRONMENT, "Environment generation complete");
         } catch (error) {
             logger.error(LogCategory.ENVIRONMENT, `Error generating environment: ${error}`);
         }
@@ -352,6 +344,10 @@ export class Environment {
         
         if (this.portalSystem) {
             this.portalSystem.destroy();
+        }
+        
+        if (this.dungeonSystem) {
+            this.dungeonSystem.destroy();
         }
         
         // Clean up environment group
