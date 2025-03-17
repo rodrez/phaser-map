@@ -708,13 +708,6 @@ export class DungeonUIManager {
     if (monsterCounter) {
       monsterCounter.setText(`Monsters Remaining: ${this.monsterCount}`);
       
-      // Highlight the text briefly to draw attention
-      this.scene.tweens.add({
-        targets: monsterCounter,
-        scale: { from: 1.2, to: 1.0 },
-        duration: 300,
-        ease: 'Bounce.Out'
-      });
     } else if (this.monsterCount > 0) {
       // Create the counter if it doesn't exist but should
       this.createMonsterCounterDisplay(this.monsterCount);
@@ -808,23 +801,6 @@ export class DungeonUIManager {
       if (this.scene && typeof this.scene.activatePortalAfterDelay === 'function') {
         this.scene.activatePortalAfterDelay(500);
       }
-    }
-    
-    // Remove the monster counter with animation
-    if (this.uiElements.has('monsterCounter')) {
-      const counter = this.uiElements.get('monsterCounter');
-      
-      // Animate the counter before removing
-      this.scene.tweens.add({
-        targets: counter,
-        alpha: 0,
-        y: counter.y - 20,
-        duration: 500,
-        onComplete: () => {
-          counter.destroy();
-          this.uiElements.delete('monsterCounter');
-        }
-      });
     }
     
     // Emit a roomCleared event for the scene to handle

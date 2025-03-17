@@ -674,7 +674,7 @@ export class DungeonEntranceSystem {
     }
     
     /**
-     * Clean up resources when the dungeon system is destroyed
+     * Clean up resources when the dungeon entrance system is destroyed
      */
     destroy() {
         // Clean up particle emitters
@@ -696,6 +696,6 @@ export class DungeonEntranceSystem {
         this.coordinateCache = null;
         this.popupSystem = null;
         
-        logger.info(LogCategory.DUNGEON, "Dungeon system destroyed");
+        logger.info(LogCategory.DUNGEON, "Dungeon entrance system destroyed");
     }
 } 

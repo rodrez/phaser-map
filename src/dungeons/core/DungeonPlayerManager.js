@@ -124,7 +124,7 @@ export class DungeonPlayerManager extends PlayerManager {
     // Set up double-click detection using Phaser's built-in system
     this.scene.input.on('pointerdown', (pointer) => {
       // Check if the click is on a UI element
-      if (this.scene.uiManager && this.scene.uiManager.isClickOnUI(pointer)) {
+      if (this.scene.uiManager?.isClickOnUI(pointer)) {
         logger.debug(LogCategory.DUNGEON, "Click detected on UI element, ignoring for movement");
         return;
       }
@@ -137,16 +137,45 @@ export class DungeonPlayerManager extends PlayerManager {
       if (pointer.downTime - pointer.previousDownTime < 350) {
         logger.info(LogCategory.DUNGEON, `Double-click detected at (${worldX}, ${worldY})`);
         
+        // Clear any pending single click timer
+        this.scene.time?.removeEvent(this.singleClickTimer);
+        this.singleClickTimer = null;
+        
+        // Clear the last click position
+        this.lastClickPosition = null;
+        
         if (this.player) {
           // Move player to the clicked location
           this.movePlayerToPosition(worldX, worldY, this.calculateMovementDuration(worldX, worldY));
           
           // Visual feedback for tap location
           this.showTapFeedback(worldX, worldY);
-        } else {
-          logger.warn(LogCategory.DUNGEON, "Double-click detected but player is null");
+          return;
         }
+        
+        logger.warn(LogCategory.DUNGEON, "Double-click detected but player is null");
+        return;
       }
+      
+      // This is a single click - store the position and time
+      this.lastClickPosition = {
+        x: worldX,
+        y: worldY,
+        time: new Date().getTime()
+      };
+      
+      // Clear any existing single click timer
+      this.scene.time?.removeEvent(this.singleClickTimer);
+      
+      // Set a timer to process the single click after a delay
+      // This delay gives time for a potential second click to be detected
+      this.singleClickTimer = this.scene.time.delayedCall(
+        this.doubleTapDelay + 50, // Slightly longer than double tap delay
+        () => {
+          this.processSingleClick();
+          this.singleClickTimer = null;
+        }
+      );
     });
     
     logger.info(LogCategory.DUNGEON, "Click/tap handlers set up");

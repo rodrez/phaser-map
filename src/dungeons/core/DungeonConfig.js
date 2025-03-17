@@ -57,6 +57,9 @@ export class BaseDungeonConfig {
       ...options.treasureConfig
     };
     
+    // Passage configuration for this dungeon type
+    this.passageConfig = options.passageConfig || null;
+    
     // Special mechanics for this dungeon type
     this.specialMechanics = options.specialMechanics || [];
     
@@ -103,20 +106,47 @@ export class BaseDungeonConfig {
   }
   
   /**
-   * Get treasure configuration for a specific level
+   * Get the treasure configuration for the given level
    * @param {number} level - The dungeon level
    * @returns {Object} Treasure configuration
    */
   getTreasureConfig(level) {
-    // Base implementation - can be overridden by specific dungeon types
-    const difficultyFactor = Math.min(level / this.maxLevel, 1);
+    // Adjust treasure based on level
+    const levelFactor = Math.min(level / this.maxLevel, 1);
     
     return {
-      commonDropChance: 0.7 - (difficultyFactor * 0.2), // Less common items at higher levels
-      rareDropChance: 0.25 + (difficultyFactor * 0.1),
-      epicDropChance: 0.04 + (difficultyFactor * 0.08),
-      legendaryDropChance: 0.01 + (difficultyFactor * 0.02),
-      goldMultiplier: 1 + difficultyFactor // More gold at higher levels
+      commonItems: this.treasureConfig?.commonItems || [],
+      rareItems: this.treasureConfig?.rareItems || [],
+      epicItems: this.treasureConfig?.epicItems || [],
+      legendaryItems: this.treasureConfig?.legendaryItems || [],
+      goldMin: this.treasureConfig?.goldRange?.min || 10,
+      goldMax: this.treasureConfig?.goldRange?.max || 100,
+      dropRate: 0.3 + (levelFactor * 0.4) // Higher drop rate on higher levels
+    };
+  }
+  
+  /**
+   * Get the passage configuration for the dungeon
+   * @param {number} level - The dungeon level
+   * @returns {Object} Passage configuration
+   */
+  getPassageConfig(level) {
+    // If dungeon has specific passage config, use it
+    if (this.passageConfig) {
+      return this.passageConfig;
+    }
+    
+    // Otherwise, return default passage configuration
+    return {
+      // Default positions for passages (centered on each wall)
+      positions: [
+        { direction: 'up', positionX: 0.5, width: 80 },
+        { direction: 'down', positionX: 0.5, width: 80 },
+        { direction: 'left', positionY: 0.5, height: 120 },
+        { direction: 'right', positionY: 0.5, height: 120 }
+      ],
+      color: 0x222222, // Dark gray color
+      interactive: true  // Whether passages are clickable
     };
   }
   

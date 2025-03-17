@@ -154,6 +154,10 @@ export class DungeonFactory {
       isBoss: isBoss,
       level: dungeon.level,
       
+      // Set the spriteKey based on the monster type
+      // First check if the dungeon has a spriteKeys mapping in its monsterConfig
+      spriteKey: monsterConfig.spriteKeys?.[monsterType] || monsterType,
+      
       // Apply dungeon-specific monster behaviors
       behaviors: {
         packBehavior: monsterConfig.packBehavior,

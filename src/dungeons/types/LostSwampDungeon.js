@@ -40,15 +40,52 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
         roomSizeMax: { width: 1300, height: 950 }
       },
       
+      // Passage configuration - defines where passages are located in each room
+      passageConfig: {
+        // Passage positions are relative values (0-1) of the room dimensions
+        // For swamp rooms, we offset them from center to represent uneven, natural paths
+        positions: [
+          // North passage - slightly off-center
+          { 
+            direction: 'up',
+            positionX: 0.45, // 45% from the left
+            width: 80
+          },
+          // South passage - wider for main entrance
+          { 
+            direction: 'down',
+            positionX: 0.5, // Center
+            width: 100
+          },
+          // East passage - lower than center
+          { 
+            direction: 'right',
+            positionY: 0.6, // 60% from the top
+            height: 120
+          },
+          // West passage - higher than center
+          { 
+            direction: 'left',
+            positionY: 0.4, // 40% from the top
+            height: 110
+          }
+        ],
+        // Appearance customization
+        color: 0x332211, // Darker muddy color for swamp passages
+        interactive: true
+      },
+      
       // Monster configuration
       monsterConfig: {
         types: [
           MonsterType.LIZARDFOLK,
-          MonsterType.WOLF,
-          MonsterType.BOAR
         ],
         density: 0.7,
-        bossTypes: [MonsterType.LIZARDFOLK_KING]
+        bossTypes: [MonsterType.LIZARDFOLK_KING],
+        spriteKeys: {
+          [MonsterType.LIZARDFOLK]: 'lizardfolk',
+          [MonsterType.LIZARDFOLK_KING]: 'lizardfolk-king'
+        }
       },
       
       // Treasure configuration
@@ -195,6 +232,15 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
    */
   isSpecialLevel(level) {
     return this.specialLevelConfig[level] !== undefined;
+  }
+  
+  /**
+   * Get the passage configuration for lost swamp dungeon
+   * @param {number} level - The dungeon level
+   * @returns {Object} Passage configuration
+   */
+  getPassageConfig(level) {
+    return this.passageConfig;
   }
 }
 

@@ -633,7 +633,7 @@ export class MedievalMenu {
                 // Only trigger if not typing in an input field
                 if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
                     logger.info(LogCategory.MENU, '[MedievalMenu] E key pressed, opening equipment');
-                    this.setActiveMenuItem('equipment');
+                    this.setActiveItem('equipment');
                     this.scene.events.emit('openEquipment');
                 }
             }
@@ -685,7 +685,7 @@ export class MedievalMenu {
                     if (item && item.parentNode) {
                         logger.info(LogCategory.MENU, `[MedievalMenu] Removing event listeners from menu item: ${id}`);
                         const clone = item.cloneNode(true);
-                        item.parentNode.replaceChild(clone, item);
+                        item.parentNode?.replaceChild(clone, item);
                     }
                 });
             }

@@ -120,5 +120,47 @@ export const bossMonsterDefinitions: MonsterData[] = [
         goldReward: 200,
         xpReward: 300,
         isBoss: true
+    },
+    
+    // Lizardfolk King - ruler of the Lost Swamp
+    {
+        type: MonsterType.LIZARDFOLK_KING,
+        name: 'Lizardfolk King',
+        behavior: MonsterBehavior.AGGRESSIVE,
+        attributes: {
+            health: 500,
+            maxHealth: 500,
+            damage: 25,
+            defense: 15,
+            speed: 80,
+            detectionRadius: 220,
+            aggroRadius: 250,
+            returnRadius: 300
+        },
+        lootTable: [
+            {
+                itemId: 'crown-of-the-lizard-king',
+                minQuantity: 1,
+                maxQuantity: 1,
+                dropChance: 1.0
+            },
+            {
+                itemId: 'royal-lizard-scale',
+                minQuantity: 2,
+                maxQuantity: 5,
+                dropChance: 0.9
+            },
+            {
+                itemId: 'swamp-treasure',
+                minQuantity: 1,
+                maxQuantity: 1,
+                dropChance: 0.7
+            }
+        ],
+        spriteKey: 'lizardfolk-king',
+        scale: 2.0,
+        goldReward: 500,
+        xpReward: 1000,
+        isBoss: true
     }
 ]; 

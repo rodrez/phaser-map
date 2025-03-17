@@ -914,4 +914,46 @@ export class MapManager {
       logger.error(LogCategory.MAP, `Error exiting drag state: ${error.message}`);
     }
   }
+
+  /**
+   * Setup map drag
+   */
+  setupMapDrag() {
+    // Allow the map to be dragged
+    this.map.dragging.enable();
+    
+    // Set up a click handler on the map div
+    const mapDiv = document.getElementById("map");
+    if (mapDiv) {
+      mapDiv.addEventListener("mousedown", (e) => {
+        console.log("MAP DEBUG: Map div mousedown detected");
+        // Check if this is a right-click or if target is not the base map
+        // Only consider it a drag if it's the basic map tile, not an object
+        if (e.button === 0 && e.target.classList.contains('leaflet-tile')) {
+          this.isDragging = true;
+          if (this.debug) {
+            logger.debug(LogCategory.MAP, "Map drag started");
+          }
+        }
+      });
+
+      mapDiv.addEventListener("mouseup", () => {
+        console.log("MAP DEBUG: Map div mouseup detected");
+        this.isDragging = false;
+        if (this.debug) {
+          logger.debug(LogCategory.MAP, "Map drag ended");
+        }
+      });
+      
+      // Add a check to see if we're blocking clicks unintentionally
+      mapDiv.addEventListener("click", (e) => {
+        console.log("MAP DEBUG: Map div click detected, target:", e.target);
+        // We should only handle the click if it's on the base map, not on a sprite
+        if (!e.target.classList.contains('leaflet-tile')) {
+          console.log("MAP DEBUG: Click was on an overlay element, not handling");
+          // Don't prevent default or stop propagation here to allow sprites to receive the click
+        }
+      });
+    }
+  }
 }

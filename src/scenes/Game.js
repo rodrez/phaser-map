@@ -46,6 +46,10 @@ export class Game extends Scene {
     // Set the scene to be transparent so we can see the map underneath
     this.cameras.main.setBackgroundColor("rgba(0,0,0,0.1)");
 
+    // Fix: Set up proper input priority to ensure environment interactions work
+    this.input.topOnly = false; // Allow input to pass through to lower objects
+    console.log("INPUT DEBUG: Setting input.topOnly to false to allow clicks on layered objects");
+
     // Get the player's username from the registry (set in LoginScene)
     const username = this.registry.get('username') || 'Adventurer';
     logger.info(LogCategory.PLAYER, `Player logged in as: ${username}`);

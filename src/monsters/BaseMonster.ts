@@ -37,6 +37,13 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
     constructor(scene: Scene, x: number, y: number, monsterData: MonsterData, playerSprite: Physics.Arcade.Sprite, itemSystem: ItemSystem) {
         super(scene, x, y, monsterData.spriteKey);
         
+        // Log the sprite key being used for debugging
+        logger.debug(LogCategory.MONSTER, `Creating monster with spriteKey: ${monsterData.spriteKey}`, {
+            type: monsterData.type,
+            name: monsterData.name,
+            position: { x, y }
+        });
+        
         this.monsterType = monsterData.type;
         this.monsterName = monsterData.name;
         this.behavior = monsterData.behavior;

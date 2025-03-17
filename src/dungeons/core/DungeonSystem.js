@@ -621,9 +621,9 @@ export class DungeonSystem {
   
   /**
    * Create a monster in the dungeon
-   * @param {number} x - The x position
-   * @param {number} y - The y position
-   * @param {string} monsterType - The type of monster to create (optional)
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {string} monsterType - Type of monster to create (optional)
    * @param {boolean} isBoss - Whether this is a boss monster
    * @returns {Object} The created monster
    */
@@ -639,6 +639,16 @@ export class DungeonSystem {
       this.playerManager.sprite,
       this.scene.itemSystem
     );
+    
+    // Ensure monster has the correct depth (50 is below player at 100)
+    if (monster && typeof monster.setDepth === 'function') {
+      monster.setDepth(50);
+    }
+    
+    // Ensure monster is interactive
+    if (monster && typeof monster.setInteractive === 'function') {
+      monster.setInteractive({ useHandCursor: true });
+    }
     
     // Add the monster to our tracking
     this.monsters.set(monster.id, monster);

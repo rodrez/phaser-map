@@ -110,19 +110,18 @@ export class DungeonLevelSystem {
   }
   
   /**
-   * Create walls and obstacles for the level
+   * Create walls for the level
    */
   createWalls() {
-    // Create a static physics group for walls
+    logger.info(LogCategory.DUNGEON, 'Creating walls for level');
+    
+    // Create physics group for walls
     this.walls = this.scene.physics.add.staticGroup();
     
-    // Create a container for wall visuals that we can add to the level container
+    // Create container for walls
     this.wallsContainer = this.scene.add.container(0, 0);
     
-    // Get room generation parameters from the dungeon
-    const roomParams = this.dungeonSystem.currentDungeon.roomParams || {};
-    
-    // Get the level bounds
+    // Get the level size from the scene or config
     const bounds = this.getLevelBounds();
     const width = bounds.width;
     const height = bounds.height;
@@ -151,37 +150,104 @@ export class DungeonLevelSystem {
     this.walls.add(rightWall);
     this.wallsContainer.add(rightWall);
     
-    // Create some internal obstacles based on the level
-    const level = this.currentLevel;
-    const obstacleCount = 3 + level * 2; // More obstacles on higher levels
-    
-    for (let i = 0; i < obstacleCount; i++) {
-      // Random position (avoiding the edges)
-      const x = wallThickness * 2 + Math.random() * (width - wallThickness * 4);
-      const y = wallThickness * 2 + Math.random() * (height - wallThickness * 4);
-      
-      // Random size
-      const obstacleWidth = 30 + Math.random() * 70;
-      const obstacleHeight = 30 + Math.random() * 70;
-      
-      // Create the obstacle
-      const obstacle = this.scene.add.rectangle(x, y, obstacleWidth, obstacleHeight, wallColor);
-      this.walls.add(obstacle);
-      this.wallsContainer.add(obstacle);
-    }
-    
-    // Create a center area for the exit portal
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const centerRadius = 100;
-    
     // Create the exit portal
     this.exitPortal = this.createCenterPortal();
+    
+    // Get passage configuration from dungeon type
+    const dungeonConfig = this.dungeonSystem.currentDungeon;
+    let passageConfig;
+    
+    // Check if the getPassageConfig method exists on the dungeon config
+    if (dungeonConfig && typeof dungeonConfig.getPassageConfig === 'function') {
+      // Use the method if it exists
+      passageConfig = dungeonConfig.getPassageConfig(this.currentLevel);
+      logger.info(LogCategory.DUNGEON, `Using passage configuration from ${dungeonConfig.name}`, {
+        positions: passageConfig.positions?.length || 0,
+        interactive: passageConfig.interactive
+      });
+    } else {
+      // Fallback to default passage configuration if the method doesn't exist
+      logger.info(LogCategory.DUNGEON, 'getPassageConfig method not found on dungeon config, using default passage configuration');
+      passageConfig = {
+        // Default positions for passages (centered on each wall)
+        positions: [
+          { direction: 'up', positionX: 0.5, width: 80 },
+          { direction: 'down', positionX: 0.5, width: 80 },
+          { direction: 'left', positionY: 0.5, height: 120 },
+          { direction: 'right', positionY: 0.5, height: 120 }
+        ],
+        color: 0x222222, // Dark gray color
+        interactive: true  // Whether passages are clickable
+      };
+    }
+    
+    // Create passageways based on configuration
+    this.passageWays = [];
+    
+    // Loop through the passage positions
+    for (const passage of passageConfig.positions) {
+      // Calculate actual position based on relative values
+      let x;
+      let y;
+      let passageWidth;
+      let passageHeight;
+      
+      switch (passage.direction) {
+        case 'up':
+          // Top wall passage
+          x = width * (passage.positionX || 0.5); // Default to center if not specified
+          y = wallThickness / 2;
+          passageWidth = passage.width || 80;
+          passageHeight = wallThickness;
+          break;
+          
+        case 'down':
+          // Bottom wall passage
+          x = width * (passage.positionX || 0.5);
+          y = height - wallThickness / 2;
+          passageWidth = passage.width || 80;
+          passageHeight = wallThickness;
+          break;
+          
+        case 'left':
+          // Left wall passage
+          x = wallThickness / 2;
+          y = height * (passage.positionY || 0.5);
+          passageWidth = wallThickness;
+          passageHeight = passage.height || 120;
+          break;
+          
+        case 'right':
+          // Right wall passage
+          x = width - wallThickness / 2;
+          y = height * (passage.positionY || 0.5);
+          passageWidth = wallThickness;
+          passageHeight = passage.height || 120;
+          break;
+          
+        default:
+          logger.warn(LogCategory.DUNGEON, `Unknown passage direction: ${passage.direction}`);
+          continue;
+      }
+      
+      // Create the passage rectangle
+      const passageWay = this.scene.add.rectangle(x, y, passageWidth, passageHeight, passageConfig.color || 0x222222);
+      passageWay.setData('direction', passage.direction);
+      
+      // Make passage interactive if configured
+      if (passageConfig.interactive) {
+        passageWay.setInteractive({ useHandCursor: true });
+        passageWay.on('pointerdown', () => this.handlePassageWayClick(passageWay));
+      }
+      
+      this.wallsContainer.add(passageWay);
+      this.passageWays.push(passageWay);
+    }
     
     // Add the walls container to the level container
     this.levelContainer?.add(this.wallsContainer);
     
-    logger.info(LogCategory.DUNGEON, `Created walls and obstacles for level ${this.currentLevel}`);
+    logger.info(LogCategory.DUNGEON, `Created walls for level ${this.currentLevel}`);
   }
   
   /**
@@ -259,6 +325,9 @@ export class DungeonLevelSystem {
         if (monster?.sprite) {
           this.levelContainer?.add(monster.sprite);
         }
+        
+        // Emit event that monster was created
+        this.scene.events.emit('monsterCreated', monster);
       } catch (error) {
         logger.error(LogCategory.DUNGEON, `Error creating monster: ${error}`);
       }
@@ -284,6 +353,9 @@ export class DungeonLevelSystem {
         if (boss?.sprite) {
           this.levelContainer?.add(boss.sprite);
         }
+        
+        // Emit event that boss was created
+        this.scene.events.emit('monsterCreated', boss);
         
         logger.info(LogCategory.DUNGEON, `Created boss for level ${this.currentLevel}`);
       } catch (error) {

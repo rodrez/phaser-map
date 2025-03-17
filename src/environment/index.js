@@ -2,7 +2,7 @@ import { TreeSystem } from './tree';
 import { FruitSystem } from './fruit';
 import { logger, LogCategory } from '../utils/Logger';
 import { DungeonPortalSystem } from './portal';
-import { DungeonSystem } from './DungeonSystem';
+import { DungeonEntranceSystem } from './DungeonEntranceSystem';
 
 /**
  * Main environment system that coordinates all environment-related subsystems
@@ -13,7 +13,7 @@ export class Environment {
     treeSystem;
     fruitSystem;
     portalSystem;
-    dungeonSystem;
+    dungeonEntranceSystem;
     popupSystem;
     mapManager;
     coordinateCache;
@@ -33,6 +33,9 @@ export class Environment {
         
         // Setup interactions between systems
         this.setupSystemInteractions();
+        
+        // Add emergency input handler to bypass potential input issues
+        this.setupEmergencyTreeHandler();
     }
     
     /**
@@ -54,9 +57,9 @@ export class Environment {
             this.portalSystem = new DungeonPortalSystem(this.scene, this.environmentGroup);
             logger.info(LogCategory.ENVIRONMENT, "Portal system initialized");
             
-            // Initialize dungeon system
-            this.dungeonSystem = new DungeonSystem(this.scene, this.environmentGroup);
-            logger.info(LogCategory.ENVIRONMENT, "Dungeon system initialized");
+            // Initialize dungeon entrance system
+            this.dungeonEntranceSystem = new DungeonEntranceSystem(this.scene, this.environmentGroup);
+            logger.info(LogCategory.ENVIRONMENT, "Dungeon entrance system initialized");
             
             // Set environment reference in subsystems
             if (this.treeSystem) {
@@ -74,9 +77,9 @@ export class Environment {
                 logger.info(LogCategory.ENVIRONMENT, "Environment reference set in portal system");
             }
             
-            if (this.dungeonSystem) {
-                this.dungeonSystem.setEnvironment(this);
-                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in dungeon system");
+            if (this.dungeonEntranceSystem) {
+                this.dungeonEntranceSystem.setEnvironment(this);
+                logger.info(LogCategory.ENVIRONMENT, "Environment reference set in dungeon entrance system");
             }
             
             // Pass map manager to subsystems
@@ -84,7 +87,7 @@ export class Environment {
                 this.treeSystem?.setMapManager(this.mapManager);
                 this.fruitSystem?.setMapManager(this.mapManager);
                 this.portalSystem?.setMapManager(this.mapManager);
-                this.dungeonSystem?.setMapManager(this.mapManager);
+                this.dungeonEntranceSystem?.setMapManager(this.mapManager);
             }
             
             // Pass coordinate cache to subsystems
@@ -92,7 +95,7 @@ export class Environment {
                 this.treeSystem.setCoordinateCache(this.coordinateCache);
                 this.fruitSystem.setCoordinateCache(this.coordinateCache);
                 this.portalSystem.setCoordinateCache(this.coordinateCache);
-                this.dungeonSystem.setCoordinateCache(this.coordinateCache);
+                this.dungeonEntranceSystem.setCoordinateCache(this.coordinateCache);
             }
             
             // Log successful initialization
@@ -125,9 +128,9 @@ export class Environment {
             logger.info(LogCategory.ENVIRONMENT, "Popup system set in portal system");
         }
         
-        if (this.dungeonSystem) {
-            this.dungeonSystem.setPopupSystem(popupSystem);
-            logger.info(LogCategory.ENVIRONMENT, "Popup system set in dungeon system");
+        if (this.dungeonEntranceSystem) {
+            this.dungeonEntranceSystem.setPopupSystem(popupSystem);
+            logger.info(LogCategory.ENVIRONMENT, "Popup system set in dungeon entrance system");
         }
         
         logger.info(LogCategory.ENVIRONMENT, "Popup system set in environment and subsystems");
@@ -187,7 +190,7 @@ export class Environment {
         } else if (objectType === 'fruit') {
             this.fruitSystem?.registerFruit(object, lat, lng);
         } else if (objectType === 'dungeon-entrance') {
-            this.dungeonSystem?.registerDungeonEntrance(object, lat, lng);
+            this.dungeonEntranceSystem?.registerDungeonEntrance(object, lat, lng);
         } else {
             // Generic registration
             if (this.mapManager?.registerMapObject) {
@@ -256,8 +259,8 @@ export class Environment {
         }
         
         // Update dungeon entrance positions
-        if (this.dungeonSystem) {
-            this.dungeonSystem.updateDungeonEntrancePositions();
+        if (this.dungeonEntranceSystem) {
+            this.dungeonEntranceSystem.updateDungeonEntrancePositions();
         }
     }
     
@@ -293,13 +296,13 @@ export class Environment {
                 this.fruitSystem.generateFruits(centerLatLng.lat, centerLatLng.lng, radius);
             }
             
-            // Check if dungeon system is initialized
-            if (!this.dungeonSystem) {
-                logger.error(LogCategory.ENVIRONMENT, "Dungeon system not initialized, cannot generate dungeon entrances");
+            // Check if dungeon entrance system is initialized
+            if (!this.dungeonEntranceSystem) {
+                logger.error(LogCategory.ENVIRONMENT, "Dungeon entrance system not initialized, cannot generate dungeon entrances");
             } else {
                 // Generate dungeon entrances
                 logger.info(LogCategory.ENVIRONMENT, "Generating dungeon entrances...");
-                this.dungeonSystem.generateDungeonEntrances(centerLatLng.lat, centerLatLng.lng, radius);
+                this.dungeonEntranceSystem.generateDungeonEntrances(centerLatLng.lat, centerLatLng.lng, radius);
             }
             
             logger.info(LogCategory.ENVIRONMENT, "Environment generation complete");
@@ -346,8 +349,8 @@ export class Environment {
             this.portalSystem.destroy();
         }
         
-        if (this.dungeonSystem) {
-            this.dungeonSystem.destroy();
+        if (this.dungeonEntranceSystem) {
+            this.dungeonEntranceSystem.destroy();
         }
         
         // Clean up environment group
@@ -544,5 +547,60 @@ export class Environment {
                 healText.destroy();
             }
         });
+    }
+    
+    /**
+     * Setup emergency tree click handler to bypass input capture issues
+     */
+    setupEmergencyTreeHandler() {
+        console.log("TREE FIX: Setting up emergency tree click handler");
+        
+        // Add a direct input listener to the scene
+        this.scene.input.on('pointerdown', (pointer) => {
+            // Only proceed if left mouse button
+            if (pointer.button !== 0) return;
+            
+            // Skip if on UI (likely above the game area)
+            if (pointer.y < 100) return;
+            
+            console.log(`TREE FIX: Global click at (${pointer.worldX}, ${pointer.worldY})`);
+            
+            // Find trees near the click point
+            const trees = this.findNearbyTrees(pointer.worldX, pointer.worldY, 40);
+            if (trees.length > 0) {
+                console.log(`TREE FIX: Found ${trees.length} trees near click, forcing interaction`);
+                // Emit tree interaction event for the closest tree
+                const tree = trees[0];
+                this.scene.events.emit('tree-interact', tree);
+            }
+        });
+    }
+    
+    /**
+     * Find trees near a given coordinate
+     */
+    findNearbyTrees(x, y, radius = 40) {
+        if (!this.treeSystem) return [];
+        
+        const trees = [];
+        const allEnvironmentObjects = this.environmentGroup.getChildren();
+        
+        for (const obj of allEnvironmentObjects) {
+            if (obj.getData && obj.getData('type') === 'tree') {
+                const dist = Phaser.Math.Distance.Between(x, y, obj.x, obj.y);
+                if (dist <= radius) {
+                    trees.push(obj);
+                }
+            }
+        }
+        
+        // Sort by distance
+        trees.sort((a, b) => {
+            const distA = Phaser.Math.Distance.Between(x, y, a.x, a.y);
+            const distB = Phaser.Math.Distance.Between(x, y, b.x, b.y);
+            return distA - distB;
+        });
+        
+        return trees;
     }
 } 

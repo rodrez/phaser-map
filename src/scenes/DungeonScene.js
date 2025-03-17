@@ -137,7 +137,7 @@ export class DungeonScene extends Scene {
       frameHeight: 32 
     });
     
-    this.load.image('lizardfolk-king', '/dungeons/lost-swamp/lizard-king-128.png');
+    this.load.image('lizardfolk-king', '/dungeons/lost-swamp/lizardfolk-king-128.png');
     
     // Load dungeon UI elements
     this.load.image('dungeon-exit', '/ui/dungeon/dungeon-exit.svg');
@@ -316,6 +316,42 @@ export class DungeonScene extends Scene {
     // Create reward system
     this.rewardSystem = new DungeonRewardSystem(this);
     this.dungeonSystem.rewardSystem = this.rewardSystem;
+    
+    // Initialize the MonsterPopupSystem for monster interactions
+    try {
+      const { MonsterPopupSystem } = require('../monsters/MonsterPopupSystem');
+      this.monsterPopupSystem = new MonsterPopupSystem(this, this.popupSystem);
+      logger.info(LogCategory.MONSTER, 'Monster popup system initialized');
+      
+      // Make the MonsterPopupSystem available to the scene and dungeonSystem
+      this.dungeonSystem.monsterPopupSystem = this.monsterPopupSystem;
+    } catch (error) {
+      logger.error(LogCategory.MONSTER, 'Failed to initialize MonsterPopupSystem: ' + error.message);
+    }
+    
+    // Set up event listener for monster creation to ensure they're interactive
+    this.events.on('monsterCreated', (monster) => {
+      if (monster) {
+        // Ensure monster is interactive
+        monster.setInteractive({ useHandCursor: true });
+        
+        // Set up collision between player and monster for combat
+        if (this.player && this.physics) {
+          this.physics.add.overlap(
+            this.player,
+            monster,
+            (player, monster) => {
+              // Only process if monster is alive and not on cooldown
+              if (monster.currentState !== 'DEAD' && this.combatSystem) {
+                this.combatSystem.monsterAttackPlayer(monster, monster.attributes.damage);
+              }
+            },
+            null,
+            this
+          );
+        }
+      }
+    });
     
     logger.info(LogCategory.DUNGEON, 'All dungeon subsystems initialized');
   }
