@@ -297,9 +297,16 @@ export class MapManager {
     // Set target position
     this.targetPosition = { lat, lng };
 
-    // Call the target position callback if it exists
-    if (this.setTargetPositionCallback) {
-      this.setTargetPositionCallback(this.targetPosition);
+    // Call the target position callback if it exists and is a function
+    if (this.setTargetPositionCallback && typeof this.setTargetPositionCallback === 'function') {
+      try {
+        this.setTargetPositionCallback(this.targetPosition);
+      } catch (error) {
+        // Log the error but don't let it break the movement
+        if (this.debug) {
+          console.error("Error in target position callback:", error);
+        }
+      }
     }
 
     if (this.debug) {

@@ -1,5 +1,6 @@
 import { logger, LogCategory } from '../../utils/Logger';
 import { PlayerManager } from '../../utils/player/PlayerManager';
+import playerReferenceService from '../../utils/player/PlayerReferenceService';
 
 /**
  * DungeonPlayerManager - Handles player-related functionality in dungeons
@@ -13,6 +14,9 @@ export class DungeonPlayerManager extends PlayerManager {
   constructor(scene) {
     // Call the parent constructor
     super(scene);
+    
+    // Initialize the PlayerReferenceService with the scene
+    playerReferenceService.initialize(scene);
     
     // Movement tracking for click/tap
     this.lastClickPosition = null;
@@ -95,6 +99,9 @@ export class DungeonPlayerManager extends PlayerManager {
   setupPlayer(startPosition = { x: 400, y: 300 }) {
     // Call the parent setupPlayer method
     const player = super.setupPlayer(startPosition.x, startPosition.y, 'player');
+    
+    // Register the player sprite with the PlayerReferenceService
+    playerReferenceService.setPlayerSprite(player);
     
     // Setup click/tap handlers (dungeon-specific)
     this.setupClickHandlers();
@@ -420,9 +427,12 @@ export class DungeonPlayerManager extends PlayerManager {
   }
   
   /**
-   * Clean up resources when the manager is destroyed
+   * Override the destroy method to ensure proper cleanup
    */
   destroy() {
+    // Reset the PlayerReferenceService when the player manager is destroyed
+    playerReferenceService.reset();
+    
     // Clear any pending timers
     if (this.singleClickTimer) {
       clearTimeout(this.singleClickTimer);

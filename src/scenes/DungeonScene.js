@@ -196,6 +196,9 @@ export class DungeonScene extends Scene {
       'info',
       3000
     );
+
+    // Set up DOM event listeners for player interaction
+    this.setupDOMEventListeners();
   }
   
   /**
@@ -1050,6 +1053,58 @@ export class DungeonScene extends Scene {
   }
   
   /**
+   * Handle double-click movement to a target position
+   * This method is added for compatibility with the Game scene
+   * @param {Object} data - Data containing target position
+   */
+  handleDoubleClickMove(data) {
+    if (!data || !this.playerManager) return;
+    
+    logger.info(LogCategory.DUNGEON, `DungeonScene.handleDoubleClickMove called with data:`, data);
+    
+    try {
+      // Use the playerManager to move the player
+      this.playerManager.movePlayerToPosition(data.x, data.y);
+    } catch (error) {
+      logger.error(LogCategory.DUNGEON, "Error during player movement:", error);
+      if (this.uiManager) {
+        this.uiManager.showMessage("Movement error occurred!", "error");
+      }
+    }
+  }
+  
+  /**
+   * Set up DOM event listeners for player interaction
+   */
+  setupDOMEventListeners() {
+    // Get the canvas element
+    const canvas = this.sys.game.canvas;
+
+    // Add a double-click event listener to the canvas for movement
+    this.canvasDoubleClickListener = (e) => {
+      // Get the click position
+      const clickX = e.offsetX;
+      const clickY = e.offsetY;
+      
+      logger.info(LogCategory.DUNGEON, "Double-click detected at:", clickX, clickY);
+      
+      // Handle double-click movement
+      this.handleDoubleClickMove({
+        x: clickX,
+        y: clickY
+      });
+      
+      // Prevent default behavior and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    canvas.addEventListener("dblclick", this.canvasDoubleClickListener);
+    
+    logger.info(LogCategory.DUNGEON, "DOM event listeners set up for dungeon scene");
+  }
+  
+  /**
    * Update method called every frame
    * @param {number} time - The current time
    * @param {number} delta - The time since the last update
@@ -1099,6 +1154,12 @@ export class DungeonScene extends Scene {
         if (child && typeof child.destroy === 'function') {
           child.destroy();
         }
+      }
+      
+      // Clean up double-click event listener
+      const canvas = this.sys.game.canvas;
+      if (canvas && this.canvasDoubleClickListener) {
+        canvas.removeEventListener("dblclick", this.canvasDoubleClickListener);
       }
       
       logger.info(LogCategory.DUNGEON, 'DungeonScene shutdown completed successfully');

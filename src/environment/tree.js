@@ -228,9 +228,9 @@ export class TreeSystem {
      * @param {number} centerLat - Center latitude
      * @param {number} centerLng - Center longitude
      * @param {number} radiusMeters - Radius in meters
-     * @param {number} count - Number of trees to generate (default: 12)
+     * @param {number} count - Number of trees to generate (default: 6)
      */
-    generateTrees(centerLat, centerLng, radiusMeters, count = 12) {
+    generateTrees(centerLat, centerLng, radiusMeters, count = 6) {
         // Log generation attempt
         logger.info(LogCategory.ENVIRONMENT, `Generating ${count} trees around ${centerLat.toFixed(6)}, ${centerLng.toFixed(6)} with radius ${radiusMeters}m`);
         
@@ -295,6 +295,15 @@ export class TreeSystem {
      * @returns {Phaser.GameObjects.Sprite} - The created tree sprite
      */
     createTree(lat, lng) {
+        // Convert lat/lng to pixel coordinates
+        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+        
+        // Check if position is too close to existing trees
+        if (this.isPositionTooCloseToExistingTrees(pixelPos.x, pixelPos.y, 60)) {
+            logger.info(LogCategory.ENVIRONMENT, `Tree position too close to existing trees, skipping creation at ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+            return null;
+        }
+        
         // Select a random tree type
         const treeTypeKeys = Object.keys(this.treeTypes);
         const randomTreeType = treeTypeKeys[Math.floor(Math.random() * treeTypeKeys.length)];
@@ -327,9 +336,6 @@ export class TreeSystem {
             }
         }
         
-        // Convert lat/lng to pixel coordinates
-        const pixelPos = this.mapManager.latLngToPixel(lat, lng);
-        
         // Create tree sprite
         let tree;
         try {
@@ -347,6 +353,7 @@ export class TreeSystem {
         // Store tree data
         tree.setData('treeType', randomTreeType);
         tree.setData('isTree', true);
+        tree.setData('type', 'tree'); // Set type for environment registration
         tree.setData('health', treeData.health || 100);
         tree.setData('isHealingSpruce', randomTreeType === 'healingSpruce');
         
@@ -377,6 +384,44 @@ export class TreeSystem {
         return tree;
     }
     
+    /**
+     * Check if a position is too close to existing trees in the scene
+     * @param {number} x - X coordinate to check
+     * @param {number} y - Y coordinate to check
+     * @param {number} minDistance - Minimum distance required between trees
+     * @returns {boolean} - True if position is too close to existing trees
+     */
+    isPositionTooCloseToExistingTrees(x, y, minDistance) {
+        // Get all existing trees in the scene
+        const existingTrees = this.getAllTrees();
+        
+        // Check distance to each existing tree
+        for (const tree of existingTrees) {
+            const dx = tree.x - x;
+            const dy = tree.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < minDistance) {
+                return true; // Too close to an existing tree
+            }
+        }
+        
+        return false; // Not too close to any existing tree
+    }
+    
+    /**
+     * Get all trees in the scene
+     * @returns {Array} - Array of tree sprites
+     */
+    getAllTrees() {
+        if (!this.environmentGroup) {
+            return [];
+        }
+        
+        // Filter environment group to get only trees
+        return this.environmentGroup.getChildren().filter(obj => obj.getData('isTree'));
+    }
+
     /**
      * Update a tree's position based on its lat/lng
      * @param {Phaser.GameObjects.Sprite} tree - The tree sprite to update
@@ -413,12 +458,12 @@ export class TreeSystem {
      * @returns {number} Number of trees placed
      */
     addTreesInCircle(count, centerX, centerY, radius, centerLatLng) {
-        // Determine number of trees to add (between 3 and specified count, maximum 12)
-        const treesToAdd = Phaser.Math.Between(3, Math.min(12, count));
+        // Determine number of trees to add (between 2 and specified count, maximum 6)
+        const treesToAdd = Phaser.Math.Between(2, Math.min(6, count));
 
         // Track positions to avoid overlap
         const treePositions = [];
-        const minDistanceBetweenTrees = 30;
+        const minDistanceBetweenTrees = 60;
 
         let attempts = 0;
         const maxAttempts = 100;

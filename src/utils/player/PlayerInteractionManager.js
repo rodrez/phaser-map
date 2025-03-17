@@ -155,8 +155,11 @@ export class PlayerInteractionManager extends CorePlayerManager {
         if (this.mapManager.setTargetPositionCallback !== undefined) {
             this.mapManager.setTargetPositionCallback = (targetPosition) => {
                 if (this.player) {
-                    // Play the movement animation when player starts moving
-                    this.player.play("player-move");
+                    // Check if the player has animations before trying to play them
+                    if (this.player.anims && typeof this.player.play === 'function') {
+                        // Play the movement animation when player starts moving
+                        this.player.play("player-move");
+                    }
                     
                     // Add a visual pulse effect to show the player is responding to the double-click
                     const pulse = this.scene.add.circle(

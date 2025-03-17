@@ -44,8 +44,8 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
       monsterConfig: {
         types: [
           MonsterType.LIZARDFOLK,
-          'snake',
-          'toad'
+          MonsterType.WOLF,
+          MonsterType.BOAR
         ],
         density: 0.7,
         bossTypes: [MonsterType.LIZARDFOLK_KING]
@@ -134,7 +134,7 @@ export class LostSwampDungeonConfig extends BaseDungeonConfig {
     
     // Add more dangerous monsters at higher levels
     if (level >= 3) {
-      availableTypes.push('poisonous-snake');
+      availableTypes.push(MonsterType.OGRE);
     }
     
     // Special handling for level 4 (boss level)

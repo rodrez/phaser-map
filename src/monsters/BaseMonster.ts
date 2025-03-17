@@ -3,6 +3,7 @@ import { ItemSystem } from '../items/item';
 import { ItemType } from '../items/item-types';
 import { MonsterType, MonsterBehavior, MonsterAttributes, MonsterLoot, MonsterState, MonsterData } from './MonsterTypes';
 import { logger, LogCategory } from '../utils/Logger';
+import playerReferenceService from '../utils/player/PlayerReferenceService';
 
 export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public monsterType: MonsterType;
@@ -47,6 +48,12 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         
         this.playerSprite = playerSprite;
         this.itemSystem = itemSystem;
+        
+        // Subscribe to player sprite changes from the service
+        playerReferenceService.subscribe(this, (newPlayerSprite: Physics.Arcade.Sprite) => {
+            this.playerSprite = newPlayerSprite;
+            logger.debug(LogCategory.MONSTER, `${this.monsterName} updated player sprite reference`);
+        });
         
         // Set up sprite
         scene.add.existing(this);
@@ -440,11 +447,15 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
             this.hideAttackIndicator();
         }
         
-        // Check if playerSprite is null before calculating distance
+        // Try to get the player sprite from the service if it's null
         if (!this.playerSprite) {
-            // Player sprite is null, skip update or handle appropriately
-            logger.warn(LogCategory.MONSTER, `Monster ${this.monsterName} update skipped: playerSprite is null`);
-            return;
+            this.playerSprite = playerReferenceService.getPlayerSprite();
+            
+            // If still null, log warning and skip update
+            if (!this.playerSprite) {
+                logger.warn(LogCategory.MONSTER, `Monster ${this.monsterName} update skipped: playerSprite is null`);
+                return;
+            }
         }
         
         // Calculate distance to player
@@ -533,6 +544,14 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
         // Remove any existing indicator
         this.hideAttackIndicator();
         
+        // Make sure we have a valid player sprite
+        if (!this.playerSprite) {
+            this.playerSprite = playerReferenceService.getPlayerSprite();
+            if (!this.playerSprite) {
+                return; // Can't show indicator without player sprite
+            }
+        }
+        
         // Create a new indicator
         this.attackIndicator = this.scene.add.graphics();
         this.attackIndicator.lineStyle(2, 0xff0000, 1);
@@ -555,6 +574,14 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
      */
     protected updateAttackIndicator(): void {
         if (this.attackIndicator && this.isAutoAttacking) {
+            // Make sure we have a valid player sprite
+            if (!this.playerSprite) {
+                this.playerSprite = playerReferenceService.getPlayerSprite();
+                if (!this.playerSprite) {
+                    return; // Can't update indicator without player sprite
+                }
+            }
+            
             this.attackIndicator.clear();
             this.attackIndicator.lineStyle(2, 0xff0000, 1);
             this.attackIndicator.lineBetween(this.x, this.y, this.playerSprite.x, this.playerSprite.y);
@@ -567,6 +594,9 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
      */
     public destroy(fromScene?: boolean): void {
         try {
+            // Unsubscribe from the player reference service
+            playerReferenceService.unsubscribe(this);
+            
             // Clean up health bar if it exists
             if (this.healthBar) {
                 this.healthBar.destroy();

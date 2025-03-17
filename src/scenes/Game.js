@@ -22,6 +22,8 @@ import { MedievalEquipmentUI } from "../ui/equipment-ui/index";
 import { ChatExample } from "../ui/chat-ui";
 import { chatService } from "../utils/ChatService";
 import { dungeonConfigRegistry } from "../dungeons/core/DungeonConfig";
+// Import the PlayerReferenceService
+import playerReferenceService from "../utils/player/PlayerReferenceService";
 
 export class Game extends Scene {
   constructor() {
@@ -74,6 +76,10 @@ export class Game extends Scene {
     
     // Register the player in the scene registry for other systems to access
     this.registry.set('player', this.playerManager.getPlayer());
+    
+    // Initialize the PlayerReferenceService with the scene and player sprite
+    playerReferenceService.initialize(this);
+    playerReferenceService.setPlayerSprite(this.playerManager.getPlayer());
 
     // Initialize flag manager
     this.flagManager = new FlagManager(this, this.mapManager);
@@ -344,16 +350,21 @@ export class Game extends Scene {
     const success = this.mapManager.isPositionValid(targetLatLng.lat, targetLatLng.lng);
     
     if (success) {
-      // Set the target position for player movement
-      this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
-      
-      // Get pixel coordinates for the target position
-      const pixelPos = this.mapManager.latLngToPixel(targetLatLng.lat, targetLatLng.lng);
-      
-      // Use the playerManager to move the player
-      this.playerManager.movePlayerToPosition(pixelPos.x, pixelPos.y, 500);
-      
-      logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
+      try {
+        // Set the target position for player movement
+        this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
+        
+        // Get pixel coordinates for the target position
+        const pixelPos = this.mapManager.latLngToPixel(targetLatLng.lat, targetLatLng.lng);
+        
+        // Use the playerManager to move the player
+        this.playerManager.movePlayerToPosition(pixelPos.x, pixelPos.y, 500);
+        
+        logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
+      } catch (error) {
+        logger.error(LogCategory.GAME, "Error during player movement:", error);
+        this.uiManager.showMedievalMessage("Movement error occurred!", "error");
+      }
     } else {
       this.uiManager.showMedievalMessage("Cannot move to that location!", "error");
     }
@@ -631,6 +642,9 @@ export class Game extends Scene {
   }
 
   shutdown() {
+    // Reset the PlayerReferenceService when the scene is shut down
+    playerReferenceService.reset();
+    
     // Clean up event listeners
     const canvas = this.sys.game.canvas;
     if (canvas && this.canvasClickListener) {

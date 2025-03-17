@@ -6,6 +6,8 @@
 import { logger, LogCategory } from '../../utils/Logger';
 import { dungeonConfigRegistry } from './DungeonConfig';
 import { MonsterFactory } from '../../monsters/MonsterFactory';
+import { MonsterType } from '../../monsters/MonsterTypes';
+import playerReferenceService from '../../utils/player/PlayerReferenceService';
 
 /**
  * DungeonFactory class
@@ -112,7 +114,37 @@ export class DungeonFactory {
     // If no monster type is specified, pick a random one from the available types
     if (!monsterType) {
       const availableTypes = isBoss ? monsterConfig.bossTypes : monsterConfig.types;
-      monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+      if (availableTypes && availableTypes.length > 0) {
+        monsterType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        logger.info(LogCategory.DUNGEON, `Selected random monster type: ${monsterType}`);
+      } else {
+        // Fallback to a default monster type if no types are available
+        monsterType = isBoss ? MonsterType.LIZARDFOLK_KING : MonsterType.WOLF;
+        logger.warn(LogCategory.DUNGEON, `No monster types available, using default: ${monsterType}`);
+      }
+    }
+    
+    // Validate the monster type
+    if (!this.isValidMonsterType(monsterType)) {
+      logger.warn(LogCategory.DUNGEON, `Invalid monster type: ${monsterType}, using default monster type`);
+      // Use a default monster type from the available types
+      const availableTypes = isBoss ? monsterConfig.bossTypes : monsterConfig.types;
+      if (availableTypes && availableTypes.length > 0) {
+        monsterType = availableTypes[0];
+      } else {
+        // Fallback to a basic monster type
+        monsterType = isBoss ? MonsterType.LIZARDFOLK_KING : MonsterType.WOLF;
+      }
+    }
+    
+    // If playerSprite is null, try to get it from the PlayerReferenceService
+    if (!playerSprite) {
+      playerSprite = playerReferenceService.getPlayerSprite();
+      if (playerSprite) {
+        logger.info(LogCategory.DUNGEON, 'Retrieved player sprite from PlayerReferenceService');
+      } else {
+        logger.warn(LogCategory.DUNGEON, 'Could not find player sprite, monster may not function correctly');
+      }
     }
     
     // Create the monster data
@@ -143,6 +175,16 @@ export class DungeonFactory {
         speed: 100 + (dungeon.level * 5) * (isBoss ? 0.8 : 1) // Bosses are slightly slower
       },
       
+      // Add default loot table to prevent "lootTable is not iterable" error
+      lootTable: [
+        {
+          itemId: 'gold_coin',
+          minQuantity: dungeon.level,
+          maxQuantity: dungeon.level * 3,
+          dropChance: 0.8
+        }
+      ],
+      
       // Apply dungeon-specific monster attributes
       stealthBonus: monsterConfig.stealthBonus || 0,
       poisonDamage: monsterConfig.poisonDamage || 0,
@@ -154,6 +196,28 @@ export class DungeonFactory {
       monsterData.scale = 1.5;
       monsterData.dropRate = 1.0; // Bosses always drop items
       monsterData.goldMultiplier = 2.0; // Bosses drop more gold
+      
+      // Add better loot for boss monsters
+      monsterData.lootTable = [
+        {
+          itemId: 'gold_pouch',
+          minQuantity: 1,
+          maxQuantity: 1,
+          dropChance: 1.0
+        },
+        {
+          itemId: 'healing_potion',
+          minQuantity: 1,
+          maxQuantity: 2,
+          dropChance: 0.8
+        },
+        {
+          itemId: 'rare_gem',
+          minQuantity: 1,
+          maxQuantity: 1,
+          dropChance: 0.5
+        }
+      ];
     }
     
     // Special handling for specific boss monsters
@@ -168,6 +232,28 @@ export class DungeonFactory {
         monsterData.attributes.damage = dungeon.specialLevelConfig.bossDamage;
         monsterData.attributes.defense = dungeon.specialLevelConfig.bossDefense;
         monsterData.scale = 2.0; // Make the Lizardfolk King larger
+        
+        // Add special loot for the Lizardfolk King
+        monsterData.lootTable = [
+          {
+            itemId: 'crown-of-the-lizard-king',
+            minQuantity: 1,
+            maxQuantity: 1,
+            dropChance: 1.0
+          },
+          {
+            itemId: 'royal-lizard-scale',
+            minQuantity: 2,
+            maxQuantity: 5,
+            dropChance: 0.9
+          },
+          {
+            itemId: 'swamp-treasure',
+            minQuantity: 1,
+            maxQuantity: 1,
+            dropChance: 0.7
+          }
+        ];
         
         logger.info(LogCategory.DUNGEON, `Creating special boss: ${monsterData.name}`, {
           health: monsterData.attributes.health,
@@ -186,6 +272,30 @@ export class DungeonFactory {
     
     // Use the MonsterFactory to create the actual monster instance
     return MonsterFactory.createMonster(scene, x, y, monsterData, playerSprite, itemSystem);
+  }
+  
+  /**
+   * Check if a monster type is valid
+   * @param {string|MonsterType} type - The monster type to check
+   * @returns {boolean} - Whether the monster type is valid
+   */
+  static isValidMonsterType(type) {
+    // If it's already a MonsterType enum value, it's valid
+    if (Object.values(MonsterType).includes(type)) {
+      return true;
+    }
+    
+    // If it's a string, check if it matches any MonsterType enum value
+    if (typeof type === 'string') {
+      for (const key in MonsterType) {
+        if (MonsterType[key] === type || MonsterType[key].toLowerCase() === type.toLowerCase()) {
+          return true;
+        }
+      }
+    }
+    
+    // Not a valid monster type
+    return false;
   }
   
   /**

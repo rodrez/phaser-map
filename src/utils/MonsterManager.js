@@ -1,4 +1,6 @@
 import { LogCategory, logger } from '../utils/Logger';
+// Import the MonsterType enum
+import { MonsterType } from '../monsters/MonsterTypes';
 
 /**
  * Class to manage monsters in the dungeon
@@ -68,7 +70,7 @@ class MonsterManager {
     const y = bounds.top + 120; // Near the top wall
     
     // Create the Lizardfolk King with special properties
-    const king = this.createMonster(x, y, 'lizardfolk-king', 4);
+    const king = this.createMonster(x, y, MonsterType.LIZARDFOLK_KING, 4);
     
     // Make the king special
     king.setScale(1.5); // Larger than normal monsters
@@ -203,15 +205,15 @@ class MonsterManager {
    * @returns {Array} - Array of monster types
    */
   getMonsterTypesForDungeon(dungeonId) {
-    // Define monster types for each dungeon
+    // Define monster types for each dungeon using MonsterType enum
     const monstersByDungeon = {
-      'lost-swamp': ['lizardfolk', 'snake', 'toad'],
-      'ancient-ruins': ['skeleton', 'zombie', 'ghost'],
-      'dark-forest': ['wolf', 'bear', 'spider']
+      'lost-swamp': [MonsterType.LIZARDFOLK, MonsterType.WOLF, MonsterType.BOAR],
+      'ancient-ruins': [MonsterType.LIZARDFOLK, MonsterType.WOLF, MonsterType.OGRE],
+      'dark-forest': [MonsterType.WOLF, MonsterType.BOAR, MonsterType.STAG]
     };
     
     // Return monster types for the specified dungeon, or default types
-    return monstersByDungeon[dungeonId] || ['goblin', 'orc', 'troll'];
+    return monstersByDungeon[dungeonId] || [MonsterType.WOLF, MonsterType.BOAR, MonsterType.LIZARDFOLK];
   }
   
   /**
@@ -223,16 +225,19 @@ class MonsterManager {
    * @returns {Phaser.GameObjects.Sprite} - The monster sprite
    */
   createMonster(x, y, type, level) {
-    // Create the monster sprite
-    const monster = this.scene.physics.add.sprite(x, y, 'monsters', `${type}.png`);
+    // Convert string type to MonsterType enum if needed
+    const monsterType = typeof type === 'string' ? this.convertStringToMonsterType(type) : type;
+    
+    // Create the monster sprite - use the monsterType as the key for the sprite frame
+    const monster = this.scene.physics.add.sprite(x, y, 'monsters', `${monsterType}.png`);
     
     // Set up monster properties
-    monster.type = type;
+    monster.type = monsterType;
     monster.level = level;
     monster.health = 100 + (level * 20);
     monster.maxHealth = monster.health;
     monster.damage = 10 + (level * 2);
-    monster.name = this.getMonsterName(type);
+    monster.name = this.getMonsterName(monsterType);
     monster.goldReward = 10 + (level * 5);
     monster.experienceReward = 20 + (level * 10);
     
@@ -248,13 +253,42 @@ class MonsterManager {
   }
   
   /**
+   * Convert string monster type to MonsterType enum
+   * @param {string} typeString - The monster type as a string
+   * @returns {MonsterType} - The monster type enum value
+   */
+  convertStringToMonsterType(typeString) {
+    // Handle special case for lizardfolk-king
+    if (typeString === 'lizardfolk-king') {
+      return MonsterType.LIZARDFOLK_KING;
+    }
+    
+    // Try to find the matching enum value
+    for (const key in MonsterType) {
+      if (MonsterType[key].toLowerCase() === typeString.toLowerCase()) {
+        return MonsterType[key];
+      }
+    }
+    
+    // Default to wolf if not found
+    logger.warn(LogCategory.MONSTER, `Unknown monster type string: ${typeString}, defaulting to wolf`);
+    return MonsterType.WOLF;
+  }
+  
+  /**
    * Get a name for a monster type
-   * @param {string} type - The monster type
+   * @param {string|MonsterType} type - The monster type
    * @returns {string} - The monster name
    */
   getMonsterName(type) {
-    // Capitalize the first letter
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    // If it's already a string, just capitalize it
+    if (typeof type === 'string') {
+      return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+    
+    // If it's a MonsterType enum, convert to readable name
+    const typeName = String(type).replace(/-/g, ' ');
+    return typeName.charAt(0).toUpperCase() + typeName.slice(1);
   }
   
   /**
