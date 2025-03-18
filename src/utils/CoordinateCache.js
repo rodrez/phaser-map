@@ -204,6 +204,28 @@ export class CoordinateCache {
     }
     
     /**
+     * Force an update of all registered objects
+     * Useful when returning from another scene to ensure all objects have the correct positions
+     */
+    refreshAllObjects() {
+        // Log the refresh operation
+        console.log(`Refreshing all objects in coordinate cache (${this.cache.size} objects)`);
+        
+        // Increment transform version to force recalculation
+        this.transformVersion++;
+        
+        // Mark all objects as dirty
+        for (const id of this.cache.keys()) {
+            this.dirtyObjects.add(id);
+        }
+        
+        // Process updates immediately instead of waiting for next frame
+        this.processBatchUpdate();
+        
+        return this.cache.size; // Return number of refreshed objects
+    }
+    
+    /**
      * Clean up resources and remove event listeners
      */
     destroy() {

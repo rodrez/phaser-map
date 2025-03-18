@@ -375,6 +375,53 @@ export class UIManager {
     }
 
     /**
+     * Update positions of all UI elements
+     * Called when returning from the dungeon scene to ensure UI is in the correct position
+     */
+    updateUIPositions() {
+        logger.info(LogCategory.UI, 'Updating UI element positions');
+        
+        // Reposition menu buttons
+        if (this.menu) {
+            this.menu.resizeUI();
+        }
+        
+        // Update vitals display
+        if (this.vitalsManager) {
+            this.vitalsManager.updatePositions();
+        }
+        
+        // Update player-related UI elements if available
+        if (this.scene.playerManager) {
+            const player = this.scene.playerManager.getPlayer();
+            if (player) {
+                // Update any UI elements that follow the player
+                if (this.scene.playerHealthBar) {
+                    const barY = player.y - player.height / 2 - 15;
+                    this.scene.playerHealthBar.x = player.x - 20;
+                    this.scene.playerHealthBar.y = barY;
+                }
+            }
+        }
+        
+        // Invalidate any fixed UI elements
+        if (this.scene.uiElements) {
+            this.scene.uiElements.forEach(element => {
+                if (element && !element.destroyed) {
+                    // If it's a fixed UI element (scroll factor 0), make sure it's in the right position
+                    if (element.scrollFactor && element.scrollFactor.x === 0) {
+                        // Force position update for fixed UI elements
+                        element.x = element.x;
+                        element.y = element.y;
+                    }
+                }
+            });
+        }
+        
+        logger.info(LogCategory.UI, 'UI positions updated');
+    }
+
+    /**
      * Destroy all UI elements and managers
      */
     destroy() {

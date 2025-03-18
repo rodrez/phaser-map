@@ -265,6 +265,67 @@ export class Environment {
     }
     
     /**
+     * Refresh all environment object registrations with the map
+     * Called when returning from the dungeon to ensure objects are properly registered
+     */
+    refreshMapRegistration() {
+        logger.info(LogCategory.ENVIRONMENT, 'Refreshing environment object map registrations');
+        
+        // Get all environment objects
+        const environmentObjects = [];
+        
+        // Add trees
+        if (this.treeSystem && this.treeSystem.environmentGroup) {
+            const trees = this.treeSystem.environmentGroup.getChildren().filter(obj => 
+                obj.getData('isTree') === true
+            );
+            environmentObjects.push(...trees);
+        }
+        
+        // Add fruits
+        if (this.fruitSystem && this.fruitSystem.environmentGroup) {
+            const fruits = this.fruitSystem.environmentGroup.getChildren().filter(obj => 
+                obj.getData('type') === 'fruit'
+            );
+            environmentObjects.push(...fruits);
+        }
+        
+        // Add dungeon entrances
+        if (this.dungeonEntranceSystem && this.dungeonEntranceSystem.dungeonEntrances) {
+            environmentObjects.push(...this.dungeonEntranceSystem.dungeonEntrances);
+        }
+        
+        // Re-register each object with the map
+        environmentObjects.forEach(obj => {
+            const lat = obj.getData('lat');
+            const lng = obj.getData('lng');
+            
+            if (lat && lng) {
+                // First unregister if there's an existing cacheId
+                const existingCacheId = obj.getData('cacheId');
+                if (existingCacheId && this.coordinateCache) {
+                    this.coordinateCache.unregister(existingCacheId);
+                }
+                
+                // Re-register with coordinate cache or map manager
+                if (this.coordinateCache) {
+                    const newCacheId = this.coordinateCache.register(obj, lat, lng);
+                    obj.setData('cacheId', newCacheId);
+                } else if (this.mapManager && this.mapManager.registerMapObject) {
+                    this.mapManager.registerMapObject(obj, lat, lng);
+                }
+            }
+        });
+        
+        // Force an update of the coordinate cache
+        if (this.coordinateCache && typeof this.coordinateCache.scheduleUpdate === 'function') {
+            this.coordinateCache.scheduleUpdate(null); // null means update all
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, `Refreshed registration for ${environmentObjects.length} environment objects`);
+    }
+    
+    /**
      * Generate environment elements around a center point
      * @param {number} centerX - Center X coordinate
      * @param {number} centerY - Center Y coordinate

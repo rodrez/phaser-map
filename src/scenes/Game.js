@@ -804,4 +804,152 @@ export class Game extends Scene {
       this.registry.remove('addItemToInventory');
     }
   }
+
+  /**
+   * Wake method - called when the scene is woken up (e.g., after returning from the dungeon)
+   * This is necessary to reinitialize the map dragging functionality and restore game state
+   */
+  wake() {
+    // Log that the Game scene is waking up
+    logger.info(LogCategory.GAME, "Game scene waking up after dungeon");
+    
+    // Store current map state before manipulating it
+    let currentCenter = null;
+    let currentZoom = null;
+    
+    // Get current map state if available
+    if (this.mapManager && this.mapManager.getMap()) {
+      const map = this.mapManager.getMap();
+      currentCenter = map.getCenter();
+      currentZoom = map.getZoom();
+      logger.info(LogCategory.MAP, `Stored map position: ${JSON.stringify(currentCenter)}, zoom: ${currentZoom}`);
+    }
+    
+    // STEP 1: Reset map drag state - use a more aggressive approach
+    if (this.mapManager) {
+      const map = this.mapManager.getMap();
+      
+      if (map) {
+        // IMPORTANT: First completely disable dragging to ensure clean state
+        try {
+          if (map.dragging) {
+            map.dragging.disable();
+            logger.info(LogCategory.MAP, "Map dragging disabled");
+          }
+          
+          // Reset any internal dragging state in our MapManager
+          this.mapManager.isDragging = false;
+          
+          // Delay re-enabling of map drag to ensure clean state
+          this.time.delayedCall(50, () => {
+            // Re-enable dragging with a clean slate
+            if (map.dragging) {
+              map.dragging.enable();
+              logger.info(LogCategory.MAP, "Map dragging re-enabled");
+            }
+            
+            // Force cancel any ongoing interaction with the map
+            if (map._container) {
+              // Create synthetic mouseup event
+              const mouseUpEvent = new MouseEvent('mouseup', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              });
+              
+              // Dispatch to map container to ensure any ongoing drag is canceled
+              map._container.dispatchEvent(mouseUpEvent);
+              logger.info(LogCategory.MAP, "Synthetic mouseup event dispatched to map container");
+            }
+            
+            // Invalidate size to ensure proper rendering
+            map.invalidateSize(true);
+            
+            // Restore the map position and zoom
+            if (currentCenter && currentZoom) {
+              map.setView(currentCenter, currentZoom, { animate: false });
+              logger.info(LogCategory.MAP, "Restored map position and zoom");
+            }
+            
+            // Re-initialize map drag functionality after a short delay
+            this.time.delayedCall(100, () => {
+              if (this.mapManager) {
+                // Force exit any drag state
+                this.mapManager.exitDragState();
+                
+                // Set up map drag with a clean implementation
+                this.mapManager.setupMapDrag();
+                logger.info(LogCategory.MAP, "Map drag functionality reinitialized");
+              }
+            });
+          });
+        } catch (error) {
+          logger.error(LogCategory.MAP, `Error resetting map drag: ${error.message}`);
+        }
+      }
+    }
+    
+    // STEP 2: Restore game state - update positions of all objects
+    
+    // Ensure player position is properly updated
+    if (this.playerManager) {
+      // Update player's pixel position on the map
+      this.playerManager.updatePlayerPosition();
+      
+      // Update any player visuals or animations
+      this.playerManager.update(0);
+      
+      logger.info(LogCategory.PLAYER, "Player position restored");
+    }
+    
+    // Make sure environment objects are in the right positions
+    if (this.environment) {
+      // Update all environment object positions
+      this.environment.updateEnvironmentPositions();
+      
+      // Re-register all environment objects with the map manager
+      this.environment.refreshMapRegistration();
+      
+      logger.info(LogCategory.ENVIRONMENT, "Environment positions restored");
+    }
+    
+    // Update monster positions
+    if (this.monsterSystem) {
+      // Update all monster positions
+      this.monsterSystem.updateMonsterPositions();
+      logger.info(LogCategory.MONSTER, "Monster positions restored");
+    }
+    
+    // Make sure the UI is properly updated
+    if (this.uiManager) {
+      // Force UI elements to update their positions
+      this.uiManager.updateUIPositions();
+      this.uiManager.update();
+      logger.info(LogCategory.UI, "UI elements restored");
+    }
+    
+    // STEP 3: Final refresh of all coordinate-based objects
+    
+    // Use a slightly longer delay to ensure all state is properly reset
+    this.time.delayedCall(300, () => {
+      if (this.mapManager) {
+        // Refresh all coordinate cached objects
+        const cache = this.mapManager.getCoordinateCache();
+        if (cache && typeof cache.refreshAllObjects === 'function') {
+          cache.refreshAllObjects();
+          logger.info(LogCategory.MAP, "Coordinate cache refreshed");
+        }
+        
+        // Final map invalidation after all updates
+        const map = this.mapManager.getMap();
+        if (map) {
+          map.invalidateSize(true);
+          logger.info(LogCategory.MAP, "Final map invalidation complete");
+        }
+      }
+    });
+    
+    // Log completion
+    logger.info(LogCategory.GAME, "Game scene wake process complete");
+  }
 }

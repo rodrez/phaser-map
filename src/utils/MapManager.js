@@ -828,6 +828,9 @@ export class MapManager {
       this.coordinateCache = null;
     }
     
+    // Clean up drag listeners
+    this.cleanupDragListeners();
+    
     // Remove map event listeners
     if (this.map) {
       this.map.off();
@@ -838,6 +841,8 @@ export class MapManager {
     // Clear flags and territories
     this.flags = [];
     this.territories = [];
+    
+    logger.info(LogCategory.MAP, "Map manager destroyed");
   }
 
   /**
@@ -917,43 +922,153 @@ export class MapManager {
 
   /**
    * Setup map drag
+   * This function sets up or refreshes the map drag functionality
    */
   setupMapDrag() {
-    // Allow the map to be dragged
-    this.map.dragging.enable();
+    if (!this.map) {
+      logger.error(LogCategory.MAP, "Cannot setup map drag: map not initialized");
+      return;
+    }
     
-    // Set up a click handler on the map div
-    const mapDiv = document.getElementById("map");
-    if (mapDiv) {
-      mapDiv.addEventListener("mousedown", (e) => {
-        console.log("MAP DEBUG: Map div mousedown detected");
-        // Check if this is a right-click or if target is not the base map
-        // Only consider it a drag if it's the basic map tile, not an object
-        if (e.button === 0 && e.target.classList.contains('leaflet-tile')) {
+    try {
+      // Step 1: First clean up any existing listeners to prevent duplicates
+      this.cleanupDragListeners();
+      
+      // Step 2: Make sure dragging is enabled on the Leaflet map
+      if (this.map.dragging && !this.map.dragging.enabled()) {
+        this.map.dragging.enable();
+        logger.debug(LogCategory.MAP, "Map dragging enabled");
+      }
+      
+      // Step 3: Reset any internal state
+      this.isDragging = false;
+      
+      // Step 4: Set up click handlers on the map div with a clean slate
+      const mapDiv = document.getElementById("map");
+      if (!mapDiv) {
+        logger.error(LogCategory.MAP, "Map div not found");
+        return;
+      }
+      
+      // Store references to the bound event handlers so we can remove them later
+      this.mapMouseDownHandler = (e) => {
+        // Only consider it a drag if it's a left click on the basic map tile, not an object
+        if (e.button === 0 && 
+            (e.target.classList.contains('leaflet-tile') || 
+             e.target.classList.contains('leaflet-container'))) {
           this.isDragging = true;
           if (this.debug) {
             logger.debug(LogCategory.MAP, "Map drag started");
           }
+        } else {
+          // Click on a game object, not the map itself
+          if (this.debug) {
+            logger.debug(LogCategory.MAP, "Click on non-map element - not starting drag");
+          }
         }
-      });
-
-      mapDiv.addEventListener("mouseup", () => {
-        console.log("MAP DEBUG: Map div mouseup detected");
-        this.isDragging = false;
-        if (this.debug) {
-          logger.debug(LogCategory.MAP, "Map drag ended");
-        }
-      });
+      };
       
-      // Add a check to see if we're blocking clicks unintentionally
-      mapDiv.addEventListener("click", (e) => {
-        console.log("MAP DEBUG: Map div click detected, target:", e.target);
+      this.mapMouseUpHandler = () => {
+        if (this.isDragging) {
+          this.isDragging = false;
+          if (this.debug) {
+            logger.debug(LogCategory.MAP, "Map drag ended");
+          }
+        }
+      };
+      
+      this.mapClickHandler = (e) => {
         // We should only handle the click if it's on the base map, not on a sprite
         if (!e.target.classList.contains('leaflet-tile')) {
-          console.log("MAP DEBUG: Click was on an overlay element, not handling");
-          // Don't prevent default or stop propagation here to allow sprites to receive the click
+          if (this.debug) {
+            logger.debug(LogCategory.MAP, "Click was on an overlay element, not handling");
+          }
         }
-      });
+      };
+      
+      // Add the event listeners
+      mapDiv.addEventListener("mousedown", this.mapMouseDownHandler);
+      mapDiv.addEventListener("mouseup", this.mapMouseUpHandler);
+      mapDiv.addEventListener("click", this.mapClickHandler);
+      
+      // Add touch event handlers for mobile
+      mapDiv.addEventListener("touchstart", this.mapMouseDownHandler);
+      mapDiv.addEventListener("touchend", this.mapMouseUpHandler);
+      
+      // Add a global mouseup handler to catch mouseup events outside the map
+      // This prevents the map from getting stuck in a dragging state
+      document.addEventListener("mouseup", this.mapMouseUpHandler);
+      
+      // Handle map container visibility changes (like when returning from dungeon)
+      // This helps reset drag state when the map becomes visible again
+      if (typeof MutationObserver !== 'undefined') {
+        if (this.mapVisibilityObserver) {
+          this.mapVisibilityObserver.disconnect();
+        }
+        
+        this.mapVisibilityObserver = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && 
+                mutation.attributeName === 'style' && 
+                !mutation.target.style.display) {
+              // Map became visible again, reset drag state
+              this.isDragging = false;
+              this.exitDragState();
+            }
+          });
+        });
+        
+        this.mapVisibilityObserver.observe(mapDiv, { 
+          attributes: true, 
+          attributeFilter: ['style'] 
+        });
+      }
+      
+      logger.info(LogCategory.MAP, "Map drag setup completed successfully");
+    } catch (error) {
+      logger.error(LogCategory.MAP, `Error setting up map drag: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Clean up map drag event listeners
+   * This prevents duplicate listeners when re-initializing
+   */
+  cleanupDragListeners() {
+    try {
+      const mapDiv = document.getElementById("map");
+      if (!mapDiv) return;
+      
+      // Remove existing event listeners if they exist
+      if (this.mapMouseDownHandler) {
+        mapDiv.removeEventListener("mousedown", this.mapMouseDownHandler);
+        mapDiv.removeEventListener("touchstart", this.mapMouseDownHandler);
+      }
+      
+      if (this.mapMouseUpHandler) {
+        mapDiv.removeEventListener("mouseup", this.mapMouseUpHandler);
+        mapDiv.removeEventListener("touchend", this.mapMouseUpHandler);
+        document.removeEventListener("mouseup", this.mapMouseUpHandler);
+      }
+      
+      if (this.mapClickHandler) {
+        mapDiv.removeEventListener("click", this.mapClickHandler);
+      }
+      
+      // Clear listener references
+      this.mapMouseDownHandler = null;
+      this.mapMouseUpHandler = null;
+      this.mapClickHandler = null;
+      
+      // Stop observing map visibility changes
+      if (this.mapVisibilityObserver) {
+        this.mapVisibilityObserver.disconnect();
+        this.mapVisibilityObserver = null;
+      }
+      
+      logger.debug(LogCategory.MAP, "Map drag listeners cleaned up");
+    } catch (error) {
+      logger.error(LogCategory.MAP, `Error cleaning up map drag listeners: ${error.message}`);
     }
   }
 }

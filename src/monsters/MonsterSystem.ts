@@ -371,4 +371,73 @@ export class MonsterSystem {
     public setEnvironment(environment: any): void {
         this.environment = environment;
     }
+
+    /**
+     * Update the positions of all monsters based on their lat/lng coordinates
+     * This is used when returning from the dungeon to ensure monsters are correctly positioned
+     */
+    public updateMonsterPositions(): void {
+        logger.info(LogCategory.MONSTER, `Updating positions for ${this.monsters.length} monsters`);
+        
+        for (const monster of this.monsters) {
+            try {
+                // Skip if monster doesn't have lat/lng data
+                const lat = monster.getData('lat');
+                const lng = monster.getData('lng');
+                
+                if (!lat || !lng) {
+                    logger.warn(LogCategory.MONSTER, `Monster ${monster.monsterType} has no lat/lng data`);
+                    continue;
+                }
+                
+                // Check if monster uses coordinate cache
+                const cacheId = monster.getData('cacheId');
+                const useCache = monster.useCoordinateCache || false;
+                
+                // Update position based on the method being used
+                if (useCache && cacheId && this.coordinateCache) {
+                    // Use coordinate cache directly 
+                    // No need to manually update position as the cache system will handle it
+                    this.coordinateCache.updateLatLng(cacheId, lat, lng);
+                    
+                    // Force a position update via the cache system
+                    const pixelPos = this.coordinateCache.getPixelPosition(cacheId);
+                    if (pixelPos) {
+                        monster.x = pixelPos.x;
+                        monster.y = pixelPos.y;
+                    }
+                    
+                    logger.debug(LogCategory.MONSTER, `Updated monster ${monster.monsterType} position via cache: ${lat}, ${lng} -> ${monster.x}, ${monster.y}`);
+                } 
+                else if (this.positionManager) {
+                    // Use position manager's method
+                    this.positionManager.updateMonsterPosition(monster, lat, lng);
+                    logger.debug(LogCategory.MONSTER, `Updated monster ${monster.monsterType} position via position manager: ${lat}, ${lng} -> ${monster.x}, ${monster.y}`);
+                } 
+                else if (this.mapManager) {
+                    // Direct conversion using map manager
+                    const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+                    if (pixelPos && pixelPos.x !== undefined && pixelPos.y !== undefined) {
+                        monster.setPosition(pixelPos.x, pixelPos.y);
+                        logger.debug(LogCategory.MONSTER, `Updated monster ${monster.monsterType} position via direct conversion: ${lat}, ${lng} -> ${pixelPos.x}, ${pixelPos.y}`);
+                    } else {
+                        logger.warn(LogCategory.MONSTER, `Invalid pixel position for monster at ${lat}, ${lng}`);
+                    }
+                }
+                
+                // Ensure monster is visible and active
+                monster.visible = true;
+                monster.active = true;
+                
+                // Ensure health bars and other UI elements are updated
+                if (typeof monster.updatePositionFromLatLng === 'function') {
+                    monster.updatePositionFromLatLng();
+                }
+            } catch (error) {
+                logger.error(LogCategory.MONSTER, `Error updating monster position: ${error}`);
+            }
+        }
+        
+        logger.info(LogCategory.MONSTER, "Monster positions updated");
+    }
 } 
