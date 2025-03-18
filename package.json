@@ -1,48 +1,52 @@
 {
-    "name": "template-vite",
-    "description": "A Phaser 3 template using Vite.",
-    "version": "1.3.2",
+    "name": "mmo-phaser-game",
+    "description": "An MMO RPG game built with Phaser and TypeScript",
+    "version": "0.1.0",
     "type": "module",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/phaserjs/template-vite.git"
-    },
-    "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
-    "license": "MIT",
-    "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
-    "bugs": {
-        "url": "https://github.com/phaserjs/template-vite/issues"
-    },
-    "homepage": "https://github.com/phaserjs/template-vite#readme",
+    "private": true,
+    "workspaces": [
+        "client",
+        "server",
+        "shared"
+    ],
     "scripts": {
-        "dev": "node log.js dev & vite --config vite/config.dev.mjs",
-        "build": "node log.js build & vite build --config vite/config.prod.mjs",
-        "dev-nolog": "vite --config vite/config.dev.mjs",
-        "build-nolog": "vite build --config vite/config.prod.mjs",
-        "test-skills": "node --loader ts-node/esm src/test-skills.ts",
-        "server": "node server/start.js",
-        "db:reset": "node server/scripts/db-manager.js reset",
-        "db:seed": "node server/scripts/db-manager.js seed",
-        "db:backup": "node server/scripts/db-manager.js backup",
-        "db:restore": "node server/scripts/db-manager.js restore",
-        "db:stats": "node server/scripts/db-manager.js stats"
+        "dev": "npm-run-all --parallel dev:client dev:server",
+        "dev:client": "cd client && vite --config ../vite/config.dev.mjs",
+        "dev:server": "cd server && node --loader ts-node/esm src/index.ts",
+        "build": "npm-run-all --parallel build:shared build:server build:client",
+        "build:client": "cd client && vite build --config ../vite/config.prod.mjs",
+        "build:server": "cd server && tsc -b",
+        "build:shared": "cd shared && tsc -b",
+        "start": "cd server && node dist/index.js",
+        "clean": "rimraf */dist",
+        "db:generate": "cd server && drizzle-kit generate:pg",
+        "db:migrate": "cd server && node --loader ts-node/esm src/database/migrate.ts",
+        "db:studio": "cd server && drizzle-kit studio"
     },
     "devDependencies": {
         "@types/node": "^20.11.24",
+        "@types/pg": "^8.11.11",
+        "@types/ws": "^8.18.0",
+        "drizzle-kit": "^0.20.14",
+        "fastify": "^4.29.0",
+        "npm-run-all": "^4.1.5",
+        "rimraf": "^5.0.5",
         "terser": "^5.31.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.3.3",
         "vite": "^5.3.1"
     },
     "dependencies": {
+        "@fastify/cors": "^9.0.1",
+        "@fastify/websocket": "^8.3.1",
         "better-sqlite3": "^11.9.0",
-        "cors": "^2.8.5",
         "dotenv": "^16.4.7",
-        "express": "^4.21.2",
+        "drizzle-orm": "^0.29.4",
         "leaflet": "^1.9.4",
+        "pg": "^8.11.3",
         "phaser": "^3.88.2",
-        "socket.io": "^4.8.1",
-        "socket.io-client": "^4.8.1",
-        "sqlite3": "^5.1.7"
+        "redis": "^4.6.13",
+        "sqlite3": "^5.1.7",
+        "ws": "^8.16.0"
     }
 }
