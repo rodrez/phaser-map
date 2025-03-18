@@ -4,6 +4,7 @@ import { ItemType } from '../items/item-types';
 import { MonsterType, MonsterBehavior, MonsterAttributes, MonsterLoot, MonsterState, MonsterData } from './MonsterTypes';
 import { logger, LogCategory } from '../utils/Logger';
 import playerReferenceService from '../utils/player/PlayerReferenceService';
+import { makeInteractive } from '../utils/interactionUtils';
 
 export abstract class BaseMonster extends Physics.Arcade.Sprite {
     public monsterType: MonsterType;
@@ -70,26 +71,22 @@ export abstract class BaseMonster extends Physics.Arcade.Sprite {
             this.setScale(monsterData.scale);
         }
         
-        // Make monster interactive (clickable)
-        this.setInteractive({ useHandCursor: true, draggable: false });
-        
-        // Instead of trying to prevent default on passive events,
-        // we'll handle the click in a way that doesn't require preventDefault
-        this.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            // Stop event propagation to prevent map drag
-            if (pointer.event) {
-                pointer.event.stopPropagation();
+        // Set up interactive behaviors using the utility
+        makeInteractive(scene, this, 
+            // Single click handler
+            () => this.handleMonsterClick(),
+            // Options
+            {
+                objectType: 'monster',
+                hitArea: { useHandCursor: true, draggable: false },
+                getDoubleClickData: () => ({
+                    x: this.x,
+                    y: this.y,
+                    source: 'monster',
+                    name: this.monsterName
+                })
             }
-            
-            // Force exit any existing map drag state if available
-            if (this.scene && (this.scene as any).mapManager && typeof (this.scene as any).mapManager.exitDragState === 'function') {
-                (this.scene as any).mapManager.exitDragState();
-            }
-            
-            // Handle the monster click here
-            // This approach doesn't rely on preventDefault
-            this.handleMonsterClick();
-        });
+        );
         
         // Set appropriate depth to ensure monsters are visible
         // We want monsters to be above the map but below the player (player depth is 100)

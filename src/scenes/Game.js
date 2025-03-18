@@ -225,6 +225,11 @@ export class Game extends Scene {
       this.handlePlayerClick();
     });
     
+    // Listen for player-hitarea-clicked event from PlayerInteractionManager
+    this.events.on("player-hitarea-clicked", () => {
+      this.handlePlayerClick();
+    });
+    
     // Listen for double-click-move event from interactive objects
     this.events.on("double-click-move", (data) => {
       this.handleDoubleClickMove(data);
@@ -299,27 +304,9 @@ export class Game extends Scene {
 
     canvas.addEventListener("click", this.canvasClickListener);
     
-    // Add a double-click event listener to the canvas for movement
-    this.canvasDoubleClickListener = (e) => {
-      // Get the click position
-      const clickX = e.offsetX;
-      const clickY = e.offsetY;
-      
-      logger.info(LogCategory.GAME, "Double-click detected at:", clickX, clickY);
-      
-      // Handle double-click movement
-      this.handleDoubleClickMove({
-        x: clickX,
-        y: clickY
-      });
-      
-      // Prevent default behavior and stop propagation
-      e.preventDefault();
-      e.stopPropagation();
-    };
+    // The double-click handler is now managed by the GeoPlayerManager
+    // We don't need to set it up here anymore
     
-    canvas.addEventListener("dblclick", this.canvasDoubleClickListener);
-
     // Add a class to the canvas for CSS targeting
     canvas.classList.add("game-canvas");
   }
@@ -328,16 +315,8 @@ export class Game extends Scene {
     // Try to place a flag using the player manager
     const flag = this.playerManager.handleClick();
 
-    if (flag) {
-      // Update flag counter
-      this.uiManager.updateFlagCounter();
-
-      // Show success message
-      this.uiManager.showMedievalMessage("Flag placed successfully!", "success");
-    } else {
-      // Show error message
-      this.uiManager.showMedievalMessage("Cannot place flag here!", "error");
-    }
+    // The message is now handled in the GeoPlayerManager.handleClick
+    // We don't need to show messages here anymore
   }
 
   /**
@@ -345,33 +324,15 @@ export class Game extends Scene {
    * @param {Object} data - Data containing target position
    */
   handleDoubleClickMove(data) {
-    if (!data || !this.mapManager) return;
-    
-    // Get the target position in lat/lng
-    const targetLatLng = this.mapManager.pixelToLatLng(data.x, data.y);
-    
-    // Check if the position is valid (within boundaries)
-    const success = this.mapManager.isPositionValid(targetLatLng.lat, targetLatLng.lng);
-    
-    if (success) {
-      try {
-        // Set the target position for player movement
-        this.mapManager.setTargetPosition(targetLatLng.lat, targetLatLng.lng);
-        
-        // Get pixel coordinates for the target position
-        const pixelPos = this.mapManager.latLngToPixel(targetLatLng.lat, targetLatLng.lng);
-        
-        // Use the playerManager to move the player
-        this.playerManager.movePlayerToPosition(pixelPos.x, pixelPos.y, 500);
-        
-        logger.info(LogCategory.GAME, "Moving player to double-clicked position:", targetLatLng);
-      } catch (error) {
-        logger.error(LogCategory.GAME, "Error during player movement:", error);
-        this.uiManager.showMedievalMessage("Movement error occurred!", "error");
-      }
+    // Log the source of the double-click if available
+    if (data.source) {
+      logger.info(LogCategory.GAME, `Processing double-click movement from ${data.source}:`, data);
     } else {
-      this.uiManager.showMedievalMessage("Cannot move to that location!", "error");
+      logger.info(LogCategory.GAME, "Processing double-click movement:", data);
     }
+    
+    // Delegate to the player manager's handle double click move method
+    this.playerManager.handleDoubleClickMove(data);
   }
 
   /**
@@ -655,10 +616,8 @@ export class Game extends Scene {
       canvas.removeEventListener("click", this.canvasClickListener);
     }
     
-    // Clean up double-click event listener
-    if (canvas && this.canvasDoubleClickListener) {
-      canvas.removeEventListener("dblclick", this.canvasDoubleClickListener);
-    }
+    // We don't need to clean up the double-click listener here anymore
+    // It's now managed by the GeoPlayerManager
     
     // Clean up custom event listeners
     this.events.off("double-click-move");
@@ -666,6 +625,7 @@ export class Game extends Scene {
     this.events.off("monster-click");
     this.events.off("openInventory");
     this.events.off("openEquipment");
+    this.events.off("player-hitarea-clicked"); // Clean up player hitarea event
 
     // Clean up managers
     if (this.playerManager) {

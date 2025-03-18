@@ -55,10 +55,11 @@ export class PlayerInteractionManager extends CorePlayerManager {
         // Store a reference to the hitarea
         this.playerHitarea = hitarea;
 
-        // Add a double-click event listener to the hitarea (replacing the click event)
-        hitarea.addEventListener("dblclick", (e) => {
-            logger.info(LogCategory.PLAYER, "Player hitarea double-clicked");
-            this.handleClick();
+        // Add a click event listener to the hitarea (replacing the double-click event)
+        hitarea.addEventListener("click", (e) => {
+            logger.info(LogCategory.PLAYER, "Player hitarea clicked");
+            // Emit an event to handle this click through the GeoPlayerManager
+            this.scene.events.emit('player-hitarea-clicked');
             e.stopPropagation();
         });
 

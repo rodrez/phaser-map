@@ -1,4 +1,6 @@
 import { LogCategory, logger } from "../utils/Logger";
+import { makeInteractive } from "../utils/interactionUtils";
+import { InteractiveSprite } from "../utils/InteractiveGameObject";
 
 /**
  * System to handle tree-related functionality
@@ -70,29 +72,28 @@ export class TreeSystem {
     setupTreeInteractionsForTree(tree) {
         if (!tree) return;
         
-        // Make tree interactive with proper hitbox
-        tree.setInteractive({ useHandCursor: true, pixelPerfect: false });
-
-        // Set up hover effects
-        tree.on('pointerover', () => {
-            tree.setTint(0xDDDDDD);
-        });
+        // If this is already an interactive tree, we don't need to do anything
+        if (tree instanceof InteractiveSprite) return;
         
-        tree.on('pointerout', () => {
-            tree.clearTint();
-        });
-        
-        // Set up click handler
-        tree.on('pointerdown', () => {
-            logger.info(LogCategory.ENVIRONMENT, "Tree clicked:", tree.x, tree.y);
-            
-            // Prevent event propagation to avoid map interaction
-            if (this.scene?.input?.activePointer) {
-                this.scene.input.activePointer.event?.stopPropagation();
+        // Use the makeInteractive utility to setup both hover and click handlers
+        // for regular sprites that are not interactive
+        makeInteractive(this.scene, tree, 
+            // Single click handler
+            (treeObj) => {
+                this.scene.events.emit('tree-interact', treeObj);
+            },
+            // Options
+            {
+                objectType: 'tree',
+                hitArea: { useHandCursor: true, pixelPerfect: false },
+                getDoubleClickData: () => ({
+                    x: tree.x,
+                    y: tree.y,
+                    source: 'tree',
+                    type: tree.getData('treeType') || 'oak'
+                })
             }
-            
-            this.scene.events.emit('tree-interact', tree);
-        });
+        );
     }
 
     /**
@@ -198,8 +199,19 @@ export class TreeSystem {
         const treeData = isHealingSpruce ? this.treeTypes.healingSpruce : this.treeTypes.oak;
         const textureKey = treeData.texture;
         
-        // Create tree sprite
-        const tree = this.scene.add.sprite(pixelPos.x, pixelPos.y, textureKey);
+        // Create tree using InteractiveSprite instead of a custom class
+        const tree = new InteractiveSprite(
+            this.scene, 
+            pixelPos.x, 
+            pixelPos.y, 
+            textureKey,
+            {
+                objectType: 'tree',
+                hitArea: { useHandCursor: true, pixelPerfect: false }
+            }
+        );
+        
+        // Configure the tree's basic properties
         tree.setOrigin(0.5, 1); // Set origin to bottom center for proper placement
         tree.setScale(treeData.scale || 1);
         tree.setDepth(pixelPos.y); // Use y position for depth sorting
@@ -213,16 +225,41 @@ export class TreeSystem {
         tree.setData('woodYield', treeData.woodYield || 1);
         tree.setData('lat', lat);
         tree.setData('lng', lng);
+        tree.setData('treeType', isHealingSpruce ? 'healingSpruce' : 'oak');
+        
+        // Set up single-click behavior
+        tree.onSingleClick = () => {
+            this.scene.events.emit('tree-interact', tree);
+        };
+        
+        // Set up double-click data
+        tree.getDoubleClickData = () => {
+            return {
+                x: tree.x,
+                y: tree.y,
+                source: 'tree',
+                type: tree.getData('treeType') || 'oak'
+            };
+        };
         
         // Add to environment group
         this.environmentGroup.add(tree);
         
-        // Make tree interactive
-        this.setupTreeInteractionsForTree(tree);
+        // Register with environment's coordinate cache if available
+        if (this.environment?.registerEnvironmentObject) {
+            this.environment.registerEnvironmentObject(tree, lat, lng);
+        }
         
         // Add healing aura if this is a spruce
         if (isHealingSpruce) {
             this.createHealingAura(tree);
+        }
+        
+        // Generate fruits on spruce trees
+        if (isHealingSpruce && this.environment?.fruitSystem) {
+            this.scene.time.delayedCall(100, () => {
+                this.environment.fruitSystem.generateFruitsOnTree(tree);
+            });
         }
         
         return tree;
@@ -242,6 +279,7 @@ export class TreeSystem {
         healingAura.setDepth(tree.depth - 1);
         healingAura.setData('healingPower', 5);
         healingAura.setData('parentTree', tree);
+        tree.healingAura = healingAura;  // Store direct reference for easy access
         tree.setData('healingAura', healingAura);
         
         // Add pulsing effect to the aura
@@ -342,8 +380,8 @@ export class TreeSystem {
             duration: 800,
             ease: 'Quad.easeIn',
             onComplete: () => {
-                // Remove any healing aura
-                const healingAura = tree.getData('healingAura');
+                // Remove healing aura if it exists
+                const healingAura = tree.healingAura || tree.getData('healingAura');
                 if (healingAura) {
                     healingAura.destroy();
                 }
@@ -504,12 +542,15 @@ export class TreeSystem {
             
             if (lat && lng) {
                 const pixelPos = this.mapManager.latLngToPixel(lat, lng);
+                
+                // Update tree position
                 tree.x = pixelPos.x;
                 tree.y = pixelPos.y;
                 tree.setDepth(pixelPos.y); // Update depth based on new y position
                 
                 // Update healing aura position if it exists
-                const healingAura = tree.getData('healingAura');
+                // Check both direct reference and data property for compatibility
+                const healingAura = tree.healingAura || tree.getData('healingAura');
                 if (healingAura) {
                     healingAura.x = pixelPos.x;
                     healingAura.y = pixelPos.y - tree.height * 0.5;
@@ -619,7 +660,24 @@ export class TreeSystem {
      * Clean up resources when destroying the system
      */
     destroy() {
+        // Clean up event listeners
         this.scene.events.off('tree-interact');
+        
+        // Get all trees and remove them properly
+        const trees = this.environmentGroup?.getChildren().filter(obj => obj.getData('isTree') === true);
+        
+        // Clean up each tree
+        for (const tree of trees || []) {
+            if (tree.removeAllListeners) {
+                tree.removeAllListeners();
+            }
+            
+            // Remove any healing aura
+            const healingAura = tree.healingAura || tree.getData('healingAura');
+            if (healingAura) {
+                healingAura.destroy();
+            }
+        }
     }
 
     /**

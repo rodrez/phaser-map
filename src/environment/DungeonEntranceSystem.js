@@ -2,6 +2,8 @@ import { logger, LogCategory } from '../utils/Logger';
 import { dungeonConfigRegistry } from '../dungeons/core/DungeonConfig';
 import { DungeonFactory } from '../dungeons/core/DungeonFactory';
 import { lostSwampDungeonConfig } from '../dungeons/types/LostSwampDungeon';
+import { InteractiveSprite } from '../utils/InteractiveGameObject';
+import { makeInteractive } from '../utils/interactionUtils';
 
 /**
  * DungeonEntranceSystem - Manages dungeon entrances in the game world
@@ -207,115 +209,7 @@ export class DungeonEntranceSystem {
         const entranceTexture = `${dungeonConfig.id}-entrance`;
         logger.info(LogCategory.DUNGEON, `Creating entrance with texture key: ${entranceTexture} for dungeon: ${dungeonConfig.name}`);
         
-        // Helper function to set up entrance
-        const setupEntrance = (entranceSprite) => {
-            // Set appropriate scale and depth
-            entranceSprite.setScale(0.5);
-            entranceSprite.setDepth(5);
-            
-            // Store dungeon info and coordinates in the entrance
-            logger.info(LogCategory.DUNGEON, "Storing dungeon info in entrance sprite");
-            entranceSprite.setData('dungeonId', dungeonConfig.id);
-            entranceSprite.setData('dungeonName', dungeonConfig.name);
-            entranceSprite.setData('dungeonDescription', dungeonConfig.description);
-            entranceSprite.setData('lat', lat);
-            entranceSprite.setData('lng', lng);
-            entranceSprite.setData('type', 'dungeon-entrance');
-            
-            // IMPORTANT FIX: Check for trees at this position and ensure we don't interfere with them
-            const nearbyTrees = this.findNearbyTrees(entranceSprite.x, entranceSprite.y, 50);
-            if (nearbyTrees.length > 0) {
-                console.log(`DUNGEON DEBUG: Found ${nearbyTrees.length} trees near dungeon entrance. Adding special handling.`);
-                
-                // Make the entrance interactive with a very specific hit area - just the center 
-                // This ensures we don't accidentally capture tree clicks
-                entranceSprite.setInteractive({
-                    hitArea: new Phaser.Geom.Circle(entranceSprite.width/2, entranceSprite.height/2, entranceSprite.width/4),
-                    hitAreaCallback: Phaser.Geom.Circle.Contains,
-                    useHandCursor: true
-                });
-            } else {
-                // No trees nearby, use standard (but still precise) interaction area
-                entranceSprite.setInteractive({ 
-                    useHandCursor: true,
-                    pixelPerfect: true,
-                    alphaTolerance: 128
-                });
-            }
-            
-            // Add click handler with debug logging
-            entranceSprite.on('pointerdown', (pointer) => {
-                // Log that entrance was directly clicked
-                console.log("DUNGEON DEBUG: Dungeon entrance directly clicked!");
-                
-                // Only prevent propagation if this is a direct click on the entrance
-                // This allows clicks on trees to propagate correctly
-                if (pointer?.event) {
-                    // Check if the click is within the inner part of the entrance
-                    const localX = pointer.x - entranceSprite.x + entranceSprite.width / 2;
-                    const localY = pointer.y - entranceSprite.y + entranceSprite.height / 2;
-                    
-                    // Only if click is well within the entrance sprite
-                    if (localX > entranceSprite.width * 0.2 && 
-                        localX < entranceSprite.width * 0.8 &&
-                        localY > entranceSprite.height * 0.2 && 
-                        localY < entranceSprite.height * 0.8) {
-                        // Stop propagation for direct hits
-                        pointer.event?.stopPropagation();
-                    }
-                }
-                
-                this.handleDungeonEntranceClick(entranceSprite);
-            });
-            
-            // Add hover effect
-            entranceSprite.on('pointerover', () => {
-                entranceSprite.setScale(0.55);
-            });
-            
-            entranceSprite.on('pointerout', () => {
-                entranceSprite.setScale(0.5);
-            });
-            
-            // Add to environment group
-            if (this.environmentGroup) {
-                this.environmentGroup.add(entranceSprite);
-            }
-            
-            // Add to dungeonEntrances array
-            this.dungeonEntrances.push(entranceSprite);
-            
-            // Add a method to update the position based on map changes
-            entranceSprite.updatePosition = () => {
-                const newPixelPos = this.mapManager.latLngToPixel(lat, lng);
-                if (newPixelPos) {
-                    entranceSprite.x = newPixelPos.x;
-                    entranceSprite.y = newPixelPos.y;
-                }
-            };
-            
-            return entranceSprite;
-        };
-        
-        // HELPER METHOD: Find trees near a given coordinate
-        this.findNearbyTrees = (x, y, radius = 50) => {
-            if (!this.environmentGroup) return [];
-            
-            const trees = [];
-            for (const obj of this.environmentGroup.getChildren()) {
-                if (obj.getData && obj.getData('type') === 'tree') {
-                    const dist = Phaser.Math.Distance.Between(x, y, obj.x, obj.y);
-                    if (dist <= radius) {
-                        trees.push(obj);
-                    }
-                }
-            }
-            return trees;
-        };
-        
-        // Create the entrance sprite
-        const entrance = this.scene.add.sprite(pixelPos.x, pixelPos.y, entranceTexture);
-        
+
         // Check if the texture exists
         if (!this.scene.textures.exists(entranceTexture)) {
             logger.error(LogCategory.DUNGEON, `Texture not found: ${entranceTexture}`);
@@ -326,15 +220,178 @@ export class DungeonEntranceSystem {
             
             if (this.scene.textures.exists(fallbackTexture)) {
                 logger.info(LogCategory.DUNGEON, `Using fallback texture: ${fallbackTexture}`);
-                const fallbackEntrance = this.scene.add.sprite(pixelPos.x, pixelPos.y, fallbackTexture);
-                return setupEntrance(fallbackEntrance);
+                
+                // Create as InteractiveSprite instead of basic sprite
+                const entrance = new InteractiveSprite(
+                    this.scene, 
+                    pixelPos.x, 
+                    pixelPos.y, 
+                    fallbackTexture,
+                    {
+                        objectType: 'dungeon-entrance',
+                        hitArea: {
+                            useHandCursor: true,
+                            pixelPerfect: true,
+                            alphaTolerance: 128
+                        }
+                    }
+                );
+                
+                return this.setupEntranceData(entrance, lat, lng, dungeonConfig);
             }
             
             logger.error(LogCategory.DUNGEON, `Fallback texture not found: ${fallbackTexture}`);
             return null;
         }
         
-        return setupEntrance(entrance);
+        // Create as InteractiveSprite instead of basic sprite
+        const entrance = new InteractiveSprite(
+            this.scene, 
+            pixelPos.x, 
+            pixelPos.y, 
+            entranceTexture,
+            {
+                objectType: 'dungeon-entrance',
+                hitArea: {
+                    useHandCursor: true,
+                    pixelPerfect: true,
+                    alphaTolerance: 128
+                }
+            }
+        );
+        
+        return this.setupEntranceData(entrance, lat, lng, dungeonConfig);
+    }
+    
+    /**
+     * Set up entrance data and interaction behavior
+     * @param {InteractiveSprite} entrance - The entrance sprite to set up
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {Object} dungeonConfig - The dungeon configuration
+     * @returns {InteractiveSprite} The configured entrance sprite
+     */
+    setupEntranceData(entrance, lat, lng, dungeonConfig) {
+        // Set appropriate scale and depth
+        entrance.setScale(0.5);
+        entrance.setDepth(5);
+        
+        // Store dungeon info and coordinates in the entrance
+        logger.info(LogCategory.DUNGEON, "Storing dungeon info in entrance sprite");
+        entrance.setData('dungeonId', dungeonConfig.id);
+        entrance.setData('dungeonName', dungeonConfig.name);
+        entrance.setData('dungeonDescription', dungeonConfig.description);
+        entrance.setData('lat', lat);
+        entrance.setData('lng', lng);
+        entrance.setData('type', 'dungeon-entrance');
+        
+        // Override the onSingleClick method (from InteractiveSprite)
+        entrance.onSingleClick = () => {
+            // Log that entrance was directly clicked
+            console.log("DUNGEON DEBUG: Dungeon entrance directly clicked!");
+            this.handleDungeonEntranceClick(entrance);
+        };
+        
+        // Add hover effect by overriding handlePointerOver/Out
+        const originalHandlePointerOver = entrance.handlePointerOver;
+        entrance.handlePointerOver = function() {
+            originalHandlePointerOver.call(this);
+            this.setScale(0.55);
+        };
+        
+        const originalHandlePointerOut = entrance.handlePointerOut;
+        entrance.handlePointerOut = function() {
+            originalHandlePointerOut.call(this);
+            this.setScale(0.5);
+        };
+        
+        // Add to environment group
+        if (this.environmentGroup) {
+            this.environmentGroup.add(entrance);
+        }
+        
+        // Add to dungeonEntrances array
+        this.dungeonEntrances.push(entrance);
+        
+        // Add a method to update the position based on map changes
+        entrance.updatePosition = () => {
+            const newPixelPos = this.mapManager.latLngToPixel(lat, lng);
+            if (newPixelPos) {
+                entrance.x = newPixelPos.x;
+                entrance.y = newPixelPos.y;
+            }
+        };
+        
+        return entrance;
+    }
+    
+    /**
+     * Alternative method to make an existing sprite into an interactive dungeon entrance
+     * @param {Phaser.GameObjects.Sprite} sprite - Existing sprite to convert
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {Object} dungeonConfig - The dungeon configuration
+     * @returns {Phaser.GameObjects.Sprite} The configured sprite
+     */
+    makeInteractiveDungeonEntrance(sprite, lat, lng, dungeonConfig) {
+        if (!sprite) return null;
+        
+        // Store dungeon info and coordinates
+        sprite.setData('dungeonId', dungeonConfig.id);
+        sprite.setData('dungeonName', dungeonConfig.name);
+        sprite.setData('dungeonDescription', dungeonConfig.description);
+        sprite.setData('lat', lat);
+        sprite.setData('lng', lng);
+        sprite.setData('type', 'dungeon-entrance');
+        
+        // Set depth and scale
+        sprite.setScale(0.5);
+        sprite.setDepth(5);
+        
+        // Use makeInteractive utility to add interaction behavior
+        makeInteractive(this.scene, sprite, 
+            // Single click handler
+            (entranceObj) => {
+                console.log("DUNGEON DEBUG: Dungeon entrance clicked via makeInteractive!");
+                this.handleDungeonEntranceClick(entranceObj);
+            },
+            // Options
+            {
+                objectType: 'dungeon-entrance',
+                hitArea: {
+                    useHandCursor: true,
+                    pixelPerfect: true,
+                    alphaTolerance: 128
+                }
+            }
+        );
+        
+        // Add custom hover effects
+        sprite.on('pointerover', () => {
+            sprite.setScale(0.55);
+        });
+        
+        sprite.on('pointerout', () => {
+            sprite.setScale(0.5);
+        });
+        
+        // Add to collections
+        if (this.environmentGroup) {
+            this.environmentGroup.add(sprite);
+        }
+        
+        this.dungeonEntrances.push(sprite);
+        
+        // Add position update method
+        sprite.updatePosition = () => {
+            const newPixelPos = this.mapManager.latLngToPixel(lat, lng);
+            if (newPixelPos) {
+                sprite.x = newPixelPos.x;
+                sprite.y = newPixelPos.y;
+            }
+        };
+        
+        return sprite;
     }
     
     /**
@@ -343,12 +400,10 @@ export class DungeonEntranceSystem {
      */
     handleDungeonEntranceClick(entrance) {
         logger.info(LogCategory.DUNGEON, '=== Dungeon entrance clicked ===');
-        console.log("DIRECT LOG: handleDungeonEntranceClick called");
         
         // Check if entrance is valid
         if (!entrance) {
             logger.error(LogCategory.DUNGEON, 'Invalid entrance object: null or undefined');
-            console.log("DIRECT LOG: Invalid entrance object: null or undefined");
             return;
         }
         
@@ -358,59 +413,88 @@ export class DungeonEntranceSystem {
         const dungeonDescription = entrance.getData('dungeonDescription');
         
         logger.info(LogCategory.DUNGEON, `Dungeon entrance clicked: ${dungeonName} (${dungeonId})`);
-        console.log(`DIRECT LOG: Dungeon entrance clicked: ${dungeonName} (${dungeonId})`);
-        logger.info(LogCategory.DUNGEON, `Entrance data: id=${dungeonId}, name=${dungeonName}, description=${dungeonDescription ? 'present' : 'missing'}`);
         
         // Check if we have valid dungeon data
         if (!dungeonId) {
             logger.error(LogCategory.DUNGEON, 'Entrance missing dungeonId data');
-            console.log("DIRECT LOG: Entrance missing dungeonId data");
             return;
         }
         
-        // Check if popupSystem is available and has the showPopup method
-        if (!this.popupSystem || typeof this.popupSystem.showPopup !== 'function') {
-            logger.warn(LogCategory.DUNGEON, 'Cannot show dungeon entrance popup: popupSystem is not available or missing showPopup method');
-            console.log("DIRECT LOG: Cannot show dungeon entrance popup: popupSystem is not available or missing showPopup method, entering dungeon directly");
-            this.enterDungeon(dungeonId);
+        // Try to get popupSystem from the scene if our local reference is null
+        if (!this.popupSystem && this.scene && this.scene.popupSystem) {
+            logger.info(LogCategory.DUNGEON, 'Local popupSystem reference is null, using scene.popupSystem instead');
+            this.popupSystem = this.scene.popupSystem;
+        }
+        
+        // Also try from uiManager as a fallback
+        if (!this.popupSystem && this.scene && this.scene.uiManager && this.scene.uiManager.popupSystem) {
+            logger.info(LogCategory.DUNGEON, 'Using uiManager.popupSystem as fallback');
+            this.popupSystem = this.scene.uiManager.popupSystem;
+        }
+        
+        // Check if popupSystem is available
+        if (!this.popupSystem) {
+            logger.warn(LogCategory.DUNGEON, 'Cannot show dungeon entrance popup: popupSystem is not available');
+            
+            // Show error message to the player if possible instead of entering the dungeon directly
+            if (this.scene?.uiManager?.showMedievalMessage) {
+                this.scene.uiManager.showMedievalMessage(
+                    `Discovered ${dungeonName}! The popup system is not available.`,
+                    'warning',
+                    3000
+                );
+            }
             return;
         }
         
-        // Show a popup with dungeon info and enter option
+        // Create dungeon icon SVG
+        const dungeonIcon = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8B4513" stroke-width="2">
+            <rect x="3" y="10" width="18" height="11" />
+            <path d="M2 10 L12 3 L22 10" />
+            <rect x="9" y="13" width="6" height="8" />
+        </svg>`;
+        
+        // Show a popup with dungeon info and enter option using the standard popup
         logger.info(LogCategory.DUNGEON, 'Showing dungeon entrance popup');
         try {
-            this.popupSystem.showPopup({
+            // Use createCenteredStandardPopup for consistent styling with trees and monsters
+            this.popupSystem.createCenteredStandardPopup({
                 title: dungeonName,
-                content: dungeonDescription,
-                buttons: [
+                description: dungeonDescription,
+                icon: dungeonIcon,
+                actions: [
                     {
                         text: 'Enter Dungeon',
-                        callback: () => {
+                        onClick: () => {
                             logger.info(LogCategory.DUNGEON, 'Player chose to enter dungeon');
                             this.enterDungeon(dungeonId);
-                        }
+                        },
+                        className: "popup-button-success"
                     },
                     {
                         text: 'Info',
-                        callback: () => {
+                        onClick: () => {
                             logger.info(LogCategory.DUNGEON, 'Player chose to view dungeon info');
                             this.showDungeonInfo(dungeonId);
-                        }
-                    },
-                    {
-                        text: 'Cancel',
-                        callback: () => {
-                            logger.info(LogCategory.DUNGEON, 'Player cancelled dungeon entrance');
-                            // Just close the popup
-                        }
+                        },
+                        className: "popup-button-info"
                     }
-                ]
+                ],
+                className: 'dungeon-popup',
+                closeButton: true,
+                width: 400
             });
         } catch (error) {
             logger.error(LogCategory.DUNGEON, `Error showing popup: ${error.message}`);
-            console.log(`DIRECT LOG: Error showing popup: ${error.message}`);
-            // Fall back to entering the dungeon directly
-            this.enterDungeon(dungeonId);
+            
+            // Show error message instead of entering the dungeon directly
+            if (this.scene?.uiManager?.showMedievalMessage) {
+                this.scene.uiManager.showMedievalMessage(
+                    `Cannot show information for ${dungeonName}. Try again later.`,
+                    'error',
+                    3000
+                );
+            }
         }
     }
     
@@ -429,46 +513,78 @@ export class DungeonEntranceSystem {
         
         // Create a more detailed description
         const detailedInfo = `
-            <h3>${dungeonConfig.name}</h3>
             <p>${dungeonConfig.description}</p>
             <p>Difficulty: ${this.getDifficultyText(dungeonConfig.difficulty)}</p>
             <p>Recommended Level: ${dungeonConfig.minLevel}+</p>
             <p>Special Features: ${dungeonConfig.specialMechanics.join(', ')}</p>
         `;
         
-        // Check if popupSystem is available and has the showPopup method
-        if (!this.popupSystem || typeof this.popupSystem.showPopup !== 'function') {
-            logger.warn(LogCategory.DUNGEON, 'Cannot show dungeon info popup: popupSystem is not available or missing showPopup method');
-            console.log("DIRECT LOG: Cannot show dungeon info popup: popupSystem is not available or missing showPopup method, entering dungeon directly");
-            this.enterDungeon(dungeonId);
+        // Try to get popupSystem from the scene if our local reference is null
+        if (!this.popupSystem && this.scene && this.scene.popupSystem) {
+            logger.info(LogCategory.DUNGEON, 'Local popupSystem reference is null, using scene.popupSystem instead');
+            this.popupSystem = this.scene.popupSystem;
+        }
+        
+        // Also try from uiManager as a fallback
+        if (!this.popupSystem && this.scene && this.scene.uiManager && this.scene.uiManager.popupSystem) {
+            logger.info(LogCategory.DUNGEON, 'Using uiManager.popupSystem as fallback');
+            this.popupSystem = this.scene.uiManager.popupSystem;
+        }
+        
+        // Check if popupSystem is available
+        if (!this.popupSystem) {
+            logger.warn(LogCategory.DUNGEON, 'Cannot show dungeon info popup: popupSystem is not available');
+            
+            // Show error message instead
+            if (this.scene?.uiManager?.showMedievalMessage) {
+                this.scene.uiManager.showMedievalMessage(
+                    `Cannot show information for ${dungeonConfig.name}. Try again later.`,
+                    'warning',
+                    3000
+                );
+            }
             return;
         }
         
+        // Create dungeon icon SVG
+        const dungeonIcon = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8B4513" stroke-width="2">
+            <rect x="3" y="10" width="18" height="11" />
+            <path d="M2 10 L12 3 L22 10" />
+            <rect x="9" y="13" width="6" height="8" />
+        </svg>`;
+        
         // Show a popup with the detailed info
+        logger.info(LogCategory.DUNGEON, 'Showing dungeon info popup');
         try {
-            this.popupSystem.showPopup({
+            // Use createCenteredStandardPopup for consistent styling with trees and monsters
+            this.popupSystem.createCenteredStandardPopup({
                 title: `About ${dungeonConfig.name}`,
-                content: detailedInfo,
-                buttons: [
+                description: detailedInfo,
+                icon: dungeonIcon,
+                actions: [
                     {
                         text: 'Enter Dungeon',
-                        callback: () => {
+                        onClick: () => {
                             this.enterDungeon(dungeonId);
-                        }
-                    },
-                    {
-                        text: 'Close',
-                        callback: () => {
-                            // Just close the popup
-                        }
+                        },
+                        className: "popup-button-success"
                     }
-                ]
+                ],
+                className: 'dungeon-info-popup',
+                closeButton: true,
+                width: 500
             });
         } catch (error) {
             logger.error(LogCategory.DUNGEON, `Error showing info popup: ${error.message}`);
-            console.log(`DIRECT LOG: Error showing info popup: ${error.message}`);
-            // Fall back to entering the dungeon directly
-            this.enterDungeon(dungeonId);
+            
+            // Show error message
+            if (this.scene?.uiManager?.showMedievalMessage) {
+                this.scene.uiManager.showMedievalMessage(
+                    `Cannot show detailed information for ${dungeonConfig.name}. Try again later.`,
+                    'error',
+                    3000
+                );
+            }
         }
     }
     

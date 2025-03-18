@@ -836,5 +836,22 @@ export class PopupSystem {
       return null;
     }
   }
+
+  /**
+   * Alias for createCenteredPopup to provide compatibility with systems that expect showPopup
+   * @param content The content to display in the popup
+   * @param options Options for the popup
+   * @returns The created popup element or null if creation failed
+   */
+  showPopup(
+    content: PopupContent | any,
+    options: PopupOptions = {},
+  ): HTMLElement | null {
+    // Log that we're using the alias method
+    logger.info(LogCategory.UI, "Using showPopup alias for createCenteredPopup");
+    
+    // Just pass through to createCenteredPopup
+    return this.createCenteredPopup(content, options);
+  }
 }
 

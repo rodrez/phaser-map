@@ -106,7 +106,7 @@ export class PlayerManager {
         // Set up basic player properties
         this.player.setCollideWorldBounds(true);
         this.player.setBounce(0.1);
-        this.player.setDepth(100); // Ensure player is above monsters (monsters are at depth 50)
+        this.player.setDepth(2000); // Ensure player is above monsters (monsters are at depth 50)
         
         // Enable physics on the player
         this.scene.physics.world.enable(this.player);
