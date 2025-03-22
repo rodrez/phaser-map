@@ -8,6 +8,8 @@ import { LoginScene } from './scenes/LoginScene'; // Import the LoginScene
 import { DungeonScene } from './scenes/DungeonScene'; // Import the DungeonScene
 import { loggerPanel } from './ui/logger-panel'; // Import the logger panel
 import { getSkillInitializer } from './skills'; // Import the skill initializer
+import { MMOGame } from './scenes/MMOGame';
+import initializeConsoleCommands from './utils/ConsoleCommands'; // Import console commands
 
 // Import Leaflet
 import 'leaflet';
@@ -48,6 +50,7 @@ const config = {
         Preloader,
         MainMenu,
         Game,
+        MMOGame,
         DungeonScene, // Add DungeonScene
         GameOver,
         ChatScene,
@@ -60,6 +63,10 @@ const gameInstance = new Phaser.Game(config);
 // Initialize the logger panel
 // The panel is already created as a singleton in the import
 // The toggle button will appear at the top left of the screen
+loggerPanel.initPanel();
+
+// Initialize console commands for development
+initializeConsoleCommands(gameInstance);
 
 // Handle window resize
 window.addEventListener('resize', () => {

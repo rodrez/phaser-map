@@ -12,6 +12,8 @@ import { MonsterFactory } from './MonsterFactory';
 import { logger, LogCategory } from '../utils/Logger';
 import { MonsterRegistry, initializeMonsterDefinitions } from './definitions';
 import { MonsterPositionManager } from './MonsterPositionManager';
+// @ts-expect-error - No type definitions available
+import configManager from '../utils/ConfigManager';
 
 export class MonsterSystem {
     private scene: Scene;
@@ -26,6 +28,8 @@ export class MonsterSystem {
     private positionManager: MonsterPositionManager;
     private environment: any; // Using any type since Environment doesn't have TypeScript definitions
     private coordinateCache: any; // Using any type since CoordinateCache doesn't have TypeScript definitions
+    private monstersEnabled = true; // Flag to track if monsters are enabled
+    private configSubscriptionId: string | null = null; // Subscription ID for config changes
 
     constructor(scene: Scene, mapManager: MapManager, playerManager: PlayerManager, itemSystem: ItemSystem) {
         this.scene = scene;
@@ -54,8 +58,19 @@ export class MonsterSystem {
             this.handlePlayerCollision.bind(this) as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback
         );
         
-        // Spawn initial monsters
-        this.spawnRandomMonsters(8, 600);
+        // Get the initial monsters enabled state from config
+        this.monstersEnabled = configManager.isFeatureEnabled('monsters');
+        
+        // Subscribe to config changes
+        this.configSubscriptionId = configManager.subscribe('monsters', (enabled: boolean) => {
+            this.setMonstersEnabled(enabled);
+        });
+        
+        // Only spawn monsters if they're enabled
+        if (this.monstersEnabled) {
+            // Spawn initial monsters
+            this.spawnRandomMonsters(8, 600);
+        }
     }
     
     private initializeMonsterRegistry(): void {
@@ -156,6 +171,11 @@ export class MonsterSystem {
     
     // Spawn a monster of the given type at the specified position
     public spawnMonster(type: MonsterType, x: number, y: number): BaseMonster | null {
+        // Don't spawn monsters if disabled
+        if (!this.monstersEnabled) {
+            return null;
+        }
+        
         // Get monster data from registry
         const data = this.monsterRegistry.getDefinition(type);
         
@@ -263,6 +283,11 @@ export class MonsterSystem {
     
     // Update all monsters
     public update(time: number, delta: number): void {
+        // Skip updates if monsters are disabled
+        if (!this.monstersEnabled) {
+            return;
+        }
+        
         // Update all monsters
         for (let i = this.monsters.length - 1; i >= 0; i--) {
             const monster = this.monsters[i];
@@ -301,11 +326,19 @@ export class MonsterSystem {
             }
         }
         
-        // Spawn new monsters periodically
+        // Handle monster spawning
         this.spawnTimer += delta;
-        if (this.spawnTimer > 10000 && this.monsters.length < this.maxMonsters) { // Every 10 seconds
+        if (this.spawnTimer > 15000) { // Every 15 seconds
             this.spawnTimer = 0;
-            this.spawnRandomMonsters(1, 600);
+            
+            // Only spawn new monsters if we're under the limit
+            if (this.monsters.length < this.maxMonsters) {
+                // Performance: use the configured maximum monster count
+                const maxMonsters = configManager.getPerformanceSetting('maxMonsters') || this.maxMonsters;
+                if (this.monsters.length < maxMonsters) {
+                    this.spawnRandomMonsters(2, 600);
+                }
+            }
         }
     }
     
@@ -343,11 +376,24 @@ export class MonsterSystem {
      * Clean up resources when destroying the system
      */
     public destroy(): void {
+        // Unsubscribe from config changes
+        if (this.configSubscriptionId) {
+            configManager.unsubscribe('monsters', this.configSubscriptionId);
+            this.configSubscriptionId = null;
+        }
+        
         // Clean up position manager
         this.positionManager.destroy();
         
         // Clean up monsters
         for (const monster of this.monsters) {
+            // Remove from coordinate cache if applicable
+            const cacheId = monster.getData('cacheId');
+            if (cacheId && this.coordinateCache) {
+                this.coordinateCache.unregister(cacheId);
+            }
+            
+            // Destroy the monster sprite
             monster.destroy();
         }
         
@@ -439,5 +485,58 @@ export class MonsterSystem {
         }
         
         logger.info(LogCategory.MONSTER, "Monster positions updated");
+    }
+
+    // New method to set monsters enabled/disabled
+    public setMonstersEnabled(enabled: boolean): void {
+        if (this.monstersEnabled === enabled) {
+            return; // No change needed
+        }
+        
+        this.monstersEnabled = enabled;
+        logger.info(LogCategory.MONSTER, `Monsters ${enabled ? 'enabled' : 'disabled'}`);
+        
+        if (!enabled) {
+            // Hide all monsters when disabled
+            this.hideAllMonsters();
+        } else {
+            // Show monsters when enabled
+            this.showAllMonsters();
+        }
+    }
+    
+    // Hide all monsters (when monsters are disabled)
+    private hideAllMonsters(): void {
+        for (const monster of this.monsters) {
+            monster.setVisible(false);
+            // Disable physics body
+            if (monster.body) {
+                (monster.body as Physics.Arcade.Body).enable = false;
+            }
+        }
+    }
+    
+    // Show all monsters (when monsters are enabled)
+    private showAllMonsters(): void {
+        for (const monster of this.monsters) {
+            monster.setVisible(true);
+            // Enable physics body
+            if (monster.body) {
+                (monster.body as Physics.Arcade.Body).enable = true;
+            }
+        }
+    }
+
+    // Remove all monsters (useful when disabling monsters)
+    public removeAllMonsters(): void {
+        // Destroy each monster
+        for (const monster of this.monsters) {
+            monster.destroy();
+        }
+        
+        // Clear the array
+        this.monsters = [];
+        
+        logger.info(LogCategory.MONSTER, 'All monsters removed');
     }
 } 

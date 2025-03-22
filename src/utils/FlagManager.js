@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { logger, LogCategory } from './Logger';
+import configManager from './ConfigManager';
 
 /**
  * FlagManager class to handle all flag-related functionality
@@ -21,11 +22,21 @@ export class FlagManager {
     // Array to store flag hitareas for DOM interaction
     this.flagHitareas = [];
     
+    // Track whether flags are enabled
+    this.flagsEnabled = configManager.isFeatureEnabled('flags');
+    
+    // Subscribe to flag configuration changes
+    this.configSubscriptionId = configManager.subscribe('flags', (enabled) => {
+      this.setFlagsEnabled(enabled);
+    });
+    
     // Set up callbacks for flag interaction
     this.setupFlagCallbacks();
 
-    // Generate initial flag positions
-    this.generateFlags();
+    // Generate initial flag positions if flags are enabled
+    if (this.flagsEnabled) {
+      this.generateFlags();
+    }
   }
 
   /**
@@ -36,6 +47,12 @@ export class FlagManager {
     this.mapManager.addFlag.bind(this.mapManager);
     
     this.mapManager.addFlag = (lat, lng) => {
+      // Don't add flags if flags are disabled
+      if (!this.flagsEnabled) {
+        logger.info(LogCategory.FLAG, 'Flag placement skipped (flags disabled)');
+        return null;
+      }
+      
       // First check if we can place a flag here using the original logic
       if (!this.mapManager.canPlaceFlag(lat, lng)) {
         return null;
@@ -275,16 +292,19 @@ export class FlagManager {
   
 
   /**
-   * Generate flags at random positions
+   * Generate random flags
    * @param {number} count - Number of flags to generate
    */
   generateFlags(count = 5) {
-    // Get available flag positions
-    const positions = this.mapManager.getAvailableFlagPositions(count);
-
-    // Add flags
-    for (const position of positions) {
-      this.mapManager.addFlag(position.lat, position.lng);
+    // Skip if flags are disabled
+    if (!this.flagsEnabled) {
+      logger.info(LogCategory.FLAG, 'Flag generation skipped (flags disabled)');
+      return;
+    }
+    
+    logger.info(LogCategory.FLAG, `Generating ${count} random flags`);
+    for (let i = 0; i < count; i++) {
+      this.placeFlag();
     }
   }
 
@@ -332,25 +352,132 @@ export class FlagManager {
   }
   
   /**
-   * Clean up resources when destroying the manager
+   * Set whether flags are enabled or disabled
+   * @param {boolean} enabled - Whether flags should be enabled
+   */
+  setFlagsEnabled(enabled) {
+    if (this.flagsEnabled === enabled) {
+      return; // No change needed
+    }
+    
+    this.flagsEnabled = enabled;
+    logger.info(LogCategory.FLAG, `Flags ${enabled ? 'enabled' : 'disabled'}`);
+    
+    if (enabled) {
+      // Show flags if enabled
+      this.showFlags();
+      
+      // Generate flags if we don't have any
+      if (this.flagSprites.length === 0) {
+        this.generateFlags();
+      }
+    } else {
+      // Hide flags if disabled
+      this.hideFlags();
+    }
+  }
+  
+  /**
+   * Hide all flags (when flags are disabled)
+   */
+  hideFlags() {
+    // Hide Phaser flag sprites
+    for (const flagSprite of this.flagSprites) {
+      flagSprite.setVisible(false);
+    }
+    
+    // Hide flag hitareas
+    for (const hitarea of this.flagHitareas) {
+      hitarea.style.display = 'none';
+    }
+    
+    // Hide territory circles on the map
+    if (this.mapManager && this.mapManager.territories) {
+      for (const territory of this.mapManager.territories) {
+        territory.setStyle({ opacity: 0, fillOpacity: 0 });
+      }
+    }
+    
+    logger.info(LogCategory.FLAG, 'Flags hidden');
+  }
+  
+  /**
+   * Show all flags (when flags are enabled)
+   */
+  showFlags() {
+    // Show Phaser flag sprites
+    for (const flagSprite of this.flagSprites) {
+      flagSprite.setVisible(true);
+    }
+    
+    // Show flag hitareas
+    for (const hitarea of this.flagHitareas) {
+      hitarea.style.display = 'block';
+    }
+    
+    // Show territory circles on the map
+    if (this.mapManager && this.mapManager.territories) {
+      for (const territory of this.mapManager.territories) {
+        territory.setStyle({ 
+          opacity: 1, 
+          fillOpacity: 0.1,
+          color: "#FF5252",
+          fillColor: "#FF5252",
+          weight: 1,
+          dashArray: "5, 5"
+        });
+      }
+    }
+    
+    logger.info(LogCategory.FLAG, 'Flags shown');
+  }
+  
+  /**
+   * Clean up the FlagManager
    */
   destroy() {
+    // Unsubscribe from config changes
+    if (this.configSubscriptionId) {
+      configManager.unsubscribe('flags', this.configSubscriptionId);
+      this.configSubscriptionId = null;
+    }
+    
     // Remove all flag sprites
     for (const sprite of this.flagSprites) {
-      if (sprite.shadow) {
-        sprite.shadow.destroy();
-      }
       sprite.destroy();
     }
+    this.flagSprites = [];
     
-    // Remove all hitareas
+    // Remove all flag hitareas
     for (const hitarea of this.flagHitareas) {
-      hitarea.remove();
+      if (hitarea.parentNode) {
+        hitarea.parentNode.removeChild(hitarea);
+      }
+    }
+    this.flagHitareas = [];
+    
+    // Clear map manager references
+    if (this.mapManager) {
+      // Remove territories
+      for (const territory of this.mapManager.territories) {
+        if (territory && this.mapManager.map) {
+          territory.remove();
+        }
+      }
+      
+      // Remove flag markers
+      for (const flag of this.mapManager.flags) {
+        if (flag.marker && this.mapManager.map) {
+          flag.marker.remove();
+        }
+      }
+      
+      // Clear arrays
+      this.mapManager.flags = [];
+      this.mapManager.territories = [];
     }
     
-    // Clear arrays
-    this.flagSprites = [];
-    this.flagHitareas = [];
+    logger.info(LogCategory.FLAG, 'Flag manager destroyed');
   }
 }
 

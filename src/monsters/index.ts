@@ -20,9 +20,9 @@ export { MonsterRegistry } from './definitions';
 export { MonsterPositionManager } from './MonsterPositionManager';
 
 // Export monster implementations
-export * from './Stag';
-export * from './Wolf';
-export * from './Boar';
-export * from './Lizardfolk';
-export * from './Dragon';
-export * from './Ogre'; 
+export * from './types/Stag';
+export * from './types/Wolf';
+export * from './types/Boar';
+export * from './types/Lizardfolk';
+export * from './types/Dragon';
+export * from './types/Ogre'; 

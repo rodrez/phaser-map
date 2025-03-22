@@ -1,0 +1,91 @@
+# Node.js dependencies and build artifacts
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+.pnpm-store/
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+.dockerignore
+docker/
+
+# Version control
+.git
+.gitignore
+.github
+
+# Build artifacts and bundled files
+dist
+build
+*.bundle.js
+*.min.js
+*.chunk.js
+
+# Development artifacts
+coverage
+.coverage
+.nyc_output
+.DS_Store
+*.log
+logs
+*.swp
+*.bak
+*.tmp
+*~
+
+# Environment files (except for server/.env which might be needed)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Don't ignore server/.env as it's needed for configuration
+!server/.env
+
+# IDE and editor files
+.idea
+.vscode
+*.sublime-*
+*.code-workspace
+.project
+.classpath
+.settings
+
+# Test files
+test
+tests
+__tests__
+**/*.test.js
+**/*.spec.js
+jest.config.js
+karma.conf.js
+mocha.opts
+
+# Data directories that should be mounted as volumes
+postgres-data
+redis-data
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Assets that are not needed for build
+*.sketch
+*.fig
+*.xd
+*.psd
+*.ai
+design
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 

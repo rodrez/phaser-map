@@ -95,6 +95,6 @@ export class Preloader extends Scene {
 		// For example, you can define global animations here, so we can use them in other scenes.
 
 		// Move to the MainMenu
-		this.scene.start("Game");
+		this.scene.start("MMOGame");
 	}
 }

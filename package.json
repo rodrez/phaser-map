@@ -1,48 +1,53 @@
 {
-    "name": "template-vite",
-    "description": "A Phaser 3 template using Vite.",
-    "version": "1.3.2",
-    "type": "module",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/phaserjs/template-vite.git"
-    },
-    "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
-    "license": "MIT",
-    "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
-    "bugs": {
-        "url": "https://github.com/phaserjs/template-vite/issues"
-    },
-    "homepage": "https://github.com/phaserjs/template-vite#readme",
-    "scripts": {
-        "dev": "node log.js dev & vite --config vite/config.dev.mjs",
-        "build": "node log.js build & vite build --config vite/config.prod.mjs",
-        "dev-nolog": "vite --config vite/config.dev.mjs",
-        "build-nolog": "vite build --config vite/config.prod.mjs",
-        "test-skills": "node --loader ts-node/esm src/test-skills.ts",
-        "server": "node server/start.js",
-        "db:reset": "node server/scripts/db-manager.js reset",
-        "db:seed": "node server/scripts/db-manager.js seed",
-        "db:backup": "node server/scripts/db-manager.js backup",
-        "db:restore": "node server/scripts/db-manager.js restore",
-        "db:stats": "node server/scripts/db-manager.js stats"
-    },
-    "devDependencies": {
-        "@types/node": "^20.11.24",
-        "terser": "^5.31.0",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.3.3",
-        "vite": "^5.3.1"
-    },
-    "dependencies": {
-        "better-sqlite3": "^11.9.0",
-        "cors": "^2.8.5",
-        "dotenv": "^16.4.7",
-        "express": "^4.21.2",
-        "leaflet": "^1.9.4",
-        "phaser": "^3.88.2",
-        "socket.io": "^4.8.1",
-        "socket.io-client": "^4.8.1",
-        "sqlite3": "^5.1.7"
-    }
+  "name": "template-vite",
+  "description": "A Phaser 3 template using Vite.",
+  "version": "1.3.2",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phaserjs/template-vite.git"
+  },
+  "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
+  "license": "MIT",
+  "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
+  "bugs": {
+    "url": "https://github.com/phaserjs/template-vite/issues"
+  },
+  "homepage": "https://github.com/phaserjs/template-vite#readme",
+  "scripts": {
+    "dev": "node dev & vite --config vite/config.dev.mjs",
+    "build": "node build & vite build --config vite/config.prod.mjs",
+    "dev-nolog": "vite --config vite/config.dev.mjs",
+    "build-nolog": "vite build --config vite/config.prod.mjs",
+    "test-skills": "node --loader ts-node/esm src/test-skills.ts",
+    "server": "node server/start.js",
+    "db:reset": "node server/scripts/db-manager.js reset",
+    "db:seed": "node server/scripts/db-manager.js seed",
+    "db:backup": "node server/scripts/db-manager.js backup",
+    "db:restore": "node server/scripts/db-manager.js restore",
+    "db:stats": "node server/scripts/db-manager.js stats"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "terser": "^5.31.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.3.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "leaflet": "^1.9.4",
+    "pg": "^8.14.1",
+    "phaser": "^3.88.2",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.1"
+  }
 }

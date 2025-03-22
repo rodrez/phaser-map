@@ -50,7 +50,7 @@ export class MainMenu extends Scene
 
         // Start game on click
         startButton.on('pointerdown', () => {
-            this.scene.start('Game');
+            this.scene.start('MMOGame');
         });
     }
 }

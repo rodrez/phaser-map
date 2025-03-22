@@ -26,8 +26,8 @@ import { dungeonConfigRegistry } from "../dungeons/core/DungeonConfig";
 import playerReferenceService from "../utils/player/PlayerReferenceService";
 
 export class Game extends Scene {
-  constructor() {
-    super("Game");
+  constructor(sceneKey = "Game") {
+    super(sceneKey);
   }
 
   preload() {

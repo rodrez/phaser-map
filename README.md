@@ -55,6 +55,8 @@ The game uses a hybrid approach to combine Phaser and Leaflet:
 
 ### Installation
 
+#### Option 1: Local Development
+
 1. Clone the repository:
    ```
    git clone https://github.com/yourusername/map-explorer-game.git
@@ -72,6 +74,35 @@ The game uses a hybrid approach to combine Phaser and Leaflet:
    ```
 
 4. Open your browser and navigate to `http://localhost:5173`
+
+#### Option 2: Docker Development Environment
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/map-explorer-game.git
+   cd map-explorer-game
+   ```
+
+2. Start the development environment with Docker:
+   ```
+   ./dev.sh start
+   ```
+
+3. Open your browser and navigate to `http://localhost:5173` for the client and `http://localhost:3000` for the server API
+
+4. View logs and manage the environment:
+   ```
+   ./dev.sh logs        # View all logs
+   ./dev.sh logs:client # View only client logs
+   ./dev.sh shell:server # Open a shell in the server container
+   ```
+
+5. For more commands, see the helper script documentation:
+   ```
+   ./dev.sh help
+   ```
+
+See the [Docker Development Guide](docker/README.md) for more details on the Docker environment.
 
 ## Building for Production
 

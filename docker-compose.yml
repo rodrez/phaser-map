@@ -1,0 +1,114 @@
+name: mmo-game
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-mmo}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespass}
+      POSTGRES_DB: ${POSTGRES_DB:-mmogamedb}
+      PGDATA: /data/postgres
+    volumes:
+      - postgres-data:/data/postgres
+      - ./server/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - mmo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and real-time data
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-mmo}-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - mmo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js server for the backend
+  server:
+    build:
+      context: .
+      dockerfile: ./docker/server.Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-mmo}-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgrespass}
+      - POSTGRES_DB=${POSTGRES_DB:-mmogamedb}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
+      - USE_REDIS=true
+      - USE_SQLITE=false
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      - CLIENT_URL=http://localhost:5173
+    volumes:
+      - ./server:/app/server
+      - ./node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - mmo-network
+    command: npm run server
+
+  # Vite dev server for the client
+  client:
+    build:
+      context: .
+      dockerfile: ./docker/client.Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-mmo}-client
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3000
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./vite:/app/vite
+      - ./node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - mmo-network
+    command: npm run dev-nolog -- --host 0.0.0.0
+
+networks:
+  mmo-network:
+    name: ${COMPOSE_PROJECT_NAME:-mmo}-network
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: ${COMPOSE_PROJECT_NAME:-mmo}-postgres-data
+  redis-data:
+    name: ${COMPOSE_PROJECT_NAME:-mmo}-redis-data 

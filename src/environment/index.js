@@ -3,6 +3,7 @@ import { FruitSystem } from './fruit';
 import { logger, LogCategory } from '../utils/Logger';
 import { DungeonPortalSystem } from './portal';
 import { DungeonEntranceSystem } from './DungeonEntranceSystem';
+import configManager from '../utils/ConfigManager';
 
 /**
  * Main environment system that coordinates all environment-related subsystems
@@ -17,6 +18,8 @@ export class Environment {
     popupSystem;
     mapManager;
     coordinateCache;
+    environmentEnabled = true;
+    configSubscriptionId = null;
     
     constructor(scene) {
         this.scene = scene;
@@ -28,11 +31,22 @@ export class Environment {
             this.coordinateCache = this.mapManager.getCoordinateCache();
         }
         
-        // Initialize subsystems after environment is set up
-        this.initializeSubsystems();
+        // Get the initial environment enabled state from config
+        this.environmentEnabled = configManager.isFeatureEnabled('environment');
         
-        // Setup interactions between systems
-        this.setupSystemInteractions();
+        // Subscribe to config changes
+        this.configSubscriptionId = configManager.subscribe('environment', (enabled) => {
+            this.setEnvironmentEnabled(enabled);
+        });
+        
+        // Only initialize subsystems if environment is enabled
+        if (this.environmentEnabled) {
+            // Initialize subsystems after environment is set up
+            this.initializeSubsystems();
+            
+            // Setup interactions between systems
+            this.setupSystemInteractions();
+        }
         
         // Add emergency input handler to bypass potential input issues
         this.setupEmergencyTreeHandler();
@@ -332,44 +346,35 @@ export class Environment {
      * @param {number} radius - Radius to generate within
      */
     generateEnvironment(centerX, centerY, radius) {
-        logger.info(LogCategory.ENVIRONMENT, `Starting environment generation at (${centerX}, ${centerY}) with radius ${radius}`);
-        
-        try {
-            // Convert center pixel coordinates to lat/lng
-            const centerLatLng = this.mapManager.pixelToLatLng(centerX, centerY);
-            logger.info(LogCategory.ENVIRONMENT, `Center coordinates: ${centerLatLng.lat.toFixed(6)}, ${centerLatLng.lng.toFixed(6)}`);
-            
-            // Check if tree system is initialized
-            if (!this.treeSystem) {
-                logger.error(LogCategory.ENVIRONMENT, "Tree system not initialized, cannot generate trees");
-            } else {
-                // Generate trees
-                logger.info(LogCategory.ENVIRONMENT, "Generating trees...");
-                this.treeSystem.generateTrees(centerLatLng.lat, centerLatLng.lng, radius);
-            }
-            
-            // Check if fruit system is initialized
-            if (!this.fruitSystem) {
-                logger.error(LogCategory.ENVIRONMENT, "Fruit system not initialized, cannot generate fruits");
-            } else {
-                // Generate fruits
-                logger.info(LogCategory.ENVIRONMENT, "Generating fruits...");
-                this.fruitSystem.generateFruits(centerLatLng.lat, centerLatLng.lng, radius);
-            }
-            
-            // Check if dungeon entrance system is initialized
-            if (!this.dungeonEntranceSystem) {
-                logger.error(LogCategory.ENVIRONMENT, "Dungeon entrance system not initialized, cannot generate dungeon entrances");
-            } else {
-                // Generate dungeon entrances
-                logger.info(LogCategory.ENVIRONMENT, "Generating dungeon entrances...");
-                this.dungeonEntranceSystem.generateDungeonEntrances(centerLatLng.lat, centerLatLng.lng, radius);
-            }
-            
-            logger.info(LogCategory.ENVIRONMENT, "Environment generation complete");
-        } catch (error) {
-            logger.error(LogCategory.ENVIRONMENT, `Error generating environment: ${error}`);
+        // Skip generation if environment is disabled
+        if (!this.environmentEnabled) {
+            logger.info(LogCategory.ENVIRONMENT, "Environment generation skipped (disabled)");
+            return;
         }
+        
+        logger.info(LogCategory.ENVIRONMENT, `Generating environment around (${centerX}, ${centerY}) with radius ${radius}`);
+        
+        // Get the configured maximum number of environment objects
+        const maxObjects = configManager.getPerformanceSetting('maxEnvironmentObjects') || 50;
+        
+        // Generate trees
+        if (this.treeSystem) {
+            const treeCount = Math.floor(maxObjects * 0.6); // 60% of objects are trees
+            this.treeSystem.generateTrees(centerX, centerY, radius, treeCount);
+        }
+        
+        // Generate fruits
+        if (this.fruitSystem) {
+            const fruitCount = Math.floor(maxObjects * 0.2); // 20% of objects are fruits
+            this.fruitSystem.generateFruits(centerX, centerY, radius, fruitCount);
+        }
+        
+        // Generate dungeon entrances (only a few)
+        if (this.dungeonEntranceSystem) {
+            this.dungeonEntranceSystem.generateDungeonEntrances(centerX, centerY, radius, 2);
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, "Environment generation complete");
     }
     
     /**
@@ -397,36 +402,44 @@ export class Environment {
      * Clean up resources when the environment is destroyed
      */
     destroy() {
-        // Clean up subsystems
+        // Unsubscribe from config changes
+        if (this.configSubscriptionId) {
+            configManager.unsubscribe('environment', this.configSubscriptionId);
+            this.configSubscriptionId = null;
+        }
+        
+        // Destroy all environment objects
+        if (this.environmentGroup) {
+            this.environmentGroup.clear(true, true);
+        }
+        
+        // Destroy subsystems
         if (this.treeSystem) {
             this.treeSystem.destroy();
+            this.treeSystem = null;
         }
         
         if (this.fruitSystem) {
             this.fruitSystem.destroy();
+            this.fruitSystem = null;
         }
         
         if (this.portalSystem) {
             this.portalSystem.destroy();
+            this.portalSystem = null;
         }
         
         if (this.dungeonEntranceSystem) {
             this.dungeonEntranceSystem.destroy();
+            this.dungeonEntranceSystem = null;
         }
         
-        // Clean up environment group
-        if (this.environmentGroup) {
-            this.environmentGroup.destroy(true);
-        }
-        
-        // Remove event listeners
-        this.scene.events.off('tree-destroyed');
-        
-        // Clear references
-        this.scene = null;
-        this.mapManager = null;
+        // Clear arrays and references
         this.popupSystem = null;
+        this.mapManager = null;
         this.coordinateCache = null;
+        
+        logger.info(LogCategory.ENVIRONMENT, "Environment system destroyed");
     }
     
     /**
@@ -449,72 +462,61 @@ export class Environment {
         playerStats, 
         scene
     ) {
-        if (!player || !playerStats) return false;
+        // Skip healing auras if disabled in config
+        if (!configManager.isFeatureEnabled('healingAuras')) {
+            return;
+        }
         
-        // Get all healing auras
-        const healingAuras = this.getHealingAuras();
+        if (!player || !playerStats) return;
         
-        // Track if player is in any aura
-        let isInAnyAura = false;
+        // Find trees with healing aura near the player
+        const nearbyTrees = this.findNearbyTrees(player.x, player.y, 40);
         
-        // Check each aura
-        for (const aura of healingAuras) {
-            const auraCircle = aura;
+        // Skip if no trees found
+        if (nearbyTrees.length === 0) return;
+        
+        // Check if player is injured
+        if (playerStats.health < playerStats.maxHealth) {
+            // Apply healing from nearby trees
+            let totalHealing = 0;
             
-            // Calculate distance between player and aura center
-            const distance = Phaser.Math.Distance.Between(
-                player.x, player.y,
-                auraCircle.x, auraCircle.y
-            );
+            for (const tree of nearbyTrees) {
+                // Ensure tree has aura data
+                if (!tree.getData('healingAura')) continue;
+                
+                // Get healing strength
+                const healingStrength = tree.getData('healingStrength') || 0.5;
+                
+                // Add to total healing
+                totalHealing += healingStrength;
+                
+                // Show visual effect
+                this.showHealingAuraEffect(tree);
+            }
             
-            // Check if player is within the aura radius
-            if (distance <= auraCircle.radius) {
-                isInAnyAura = true;
+            // Apply healing (min 1 HP, max 5 HP per tree)
+            if (totalHealing > 0) {
+                // Calculate healing amount based on max health and number of trees
+                const healingAmount = Math.min(
+                    Math.max(1, Math.floor(totalHealing * 2)), // At least 1 HP, scaling with trees
+                    playerStats.maxHealth - playerStats.health, // Don't exceed max health
+                    nearbyTrees.length * 5 // Cap at 5 HP per tree
+                );
                 
-                // Apply healing effect based on time (once per second)
-                const currentTime = scene.time.now;
-                const lastHealTime = aura.getData('lastHealTime') || 0;
-                
-                if (currentTime - lastHealTime >= 1000) { // 1 second interval
-                    // Get healing power
-                    const healingPower = aura.getData('healingPower') || 1;
+                if (healingAmount > 0) {
+                    // Apply healing to player stats
+                    playerStats.health += healingAmount;
                     
-                    // Apply healing if player is not at max health
-                    if (playerStats.health < playerStats.maxHealth) {
-                        // Heal the player
-                        playerStats.health = Math.min(
-                            playerStats.health + healingPower,
-                            playerStats.maxHealth
-                        );
-                        
-                        // Update last heal time
-                        aura.setData('lastHealTime', currentTime);
-                        
-                        // Update health display
-                        scene.events.emit('player-stats-changed');
-                        
-                        // Show healing effects
-                        this.createHealingEffects(player, healingPower, scene);
+                    // Cap health at max
+                    if (playerStats.health > playerStats.maxHealth) {
+                        playerStats.health = playerStats.maxHealth;
                     }
-                }
-                
-                // Make the aura slightly visible when player is inside
-                const parentTree = aura.getData('parentTree');
-                if (parentTree && !parentTree.getData('auraVisible')) {
-                    this.showHealingAuraEffect(parentTree);
-                    parentTree.setData('auraVisible', true);
-                }
-            } else {
-                // Player is outside this aura
-                const parentTree = aura.getData('parentTree');
-                if (parentTree) {
-                    parentTree.setData('auraVisible', false);
+                    
+                    // Create healing effects
+                    this.createHealingEffects(player, healingAmount, scene);
                 }
             }
         }
-        
-        // Return whether player is in any aura (can be used by the caller)
-        return isInAnyAura;
     }
     
     /**
@@ -663,5 +665,76 @@ export class Environment {
         });
         
         return trees;
+    }
+    
+    /**
+     * Set whether the environment is enabled or disabled
+     * @param {boolean} enabled - Whether the environment should be enabled
+     */
+    setEnvironmentEnabled(enabled) {
+        if (this.environmentEnabled === enabled) {
+            return; // No change needed
+        }
+        
+        this.environmentEnabled = enabled;
+        logger.info(LogCategory.ENVIRONMENT, `Environment ${enabled ? 'enabled' : 'disabled'}`);
+        
+        if (enabled) {
+            // If enabling and subsystems aren't initialized, initialize them
+            if (!this.treeSystem) {
+                this.initializeSubsystems();
+                this.setupSystemInteractions();
+            }
+            
+            // Show all environment objects
+            this.showEnvironmentObjects();
+            
+            // Generate environment around player if none exists
+            const player = this.scene.playerManager?.getPlayer();
+            if (player && this.environmentGroup.getChildren().length === 0) {
+                this.generateEnvironment(player.x, player.y, 300);
+            }
+        } else {
+            // Hide all environment objects when disabled
+            this.hideEnvironmentObjects();
+        }
+    }
+    
+    /**
+     * Hide all environment objects (when environment is disabled)
+     */
+    hideEnvironmentObjects() {
+        if (!this.environmentGroup) return;
+        
+        // Hide all environment objects
+        for (const obj of this.environmentGroup.getChildren()) {
+            obj.setVisible(false);
+            
+            // Disable physics body if it exists
+            if (obj.body) {
+                obj.body.enable = false;
+            }
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, "Environment objects hidden");
+    }
+    
+    /**
+     * Show all environment objects (when environment is enabled)
+     */
+    showEnvironmentObjects() {
+        if (!this.environmentGroup) return;
+        
+        // Show all environment objects
+        for (const obj of this.environmentGroup.getChildren()) {
+            obj.setVisible(true);
+            
+            // Re-enable physics body if it exists
+            if (obj.body) {
+                obj.body.enable = true;
+            }
+        }
+        
+        logger.info(LogCategory.ENVIRONMENT, "Environment objects shown");
     }
 } 

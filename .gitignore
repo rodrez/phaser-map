@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-.
+
 node_modules
 dist
 dist-ssr
@@ -22,3 +22,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Docker
+.env
+*.env
+!.env.example
+docker-compose.override.yml
+
+# Docker generated files
+postgres-data
+redis-data
+
+# Data
+server/data/*.db
+server/data/backups
+
+# Temporary files
+*.tmp
+*~
+.pnpm-store

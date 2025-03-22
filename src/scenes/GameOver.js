@@ -56,7 +56,7 @@ export class GameOver extends Scene
 
         // Start game on click
         playAgainButton.on('pointerdown', () => {
-            this.scene.start('Game');
+            this.scene.start('MMOGame');
         });
     }
 }

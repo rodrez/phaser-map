@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMO Testing Instructions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+        .step {
+            background-color: #f5f5f5;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+        }
+        .note {
+            background-color: #fffacd;
+            border-left: 4px solid #f1c40f;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .screenshot {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>MMO Testing Instructions</h1>
+    
+    <p>
+        This document provides instructions for testing the MMO functionality of our geospatial flag-based game.
+        The test environment allows you to verify that multiple players can interact with each other and with flags in real-time.
+    </p>
+
+    <h2>Overview of Test Environment</h2>
+    <p>
+        The test environment consists of:
+    </p>
+    <ul>
+        <li><strong>Backend Server</strong>: Node.js server with WebSocket support</li>
+        <li><strong>PostgreSQL Database</strong>: For storing persistent game data</li>
+        <li><strong>Redis</strong>: For caching and pub/sub functionality</li>
+        <li><strong>Frontend</strong>: Phaser game with MMO capabilities</li>
+    </ul>
+
+    <h2>Setup Instructions</h2>
+    
+    <div class="step">
+        <h3>Step 1: Start the Test Environment</h3>
+        <p>Run the start script to launch all components:</p>
+        <code>./start-test-environment.sh</code>
+        <p>This will start:</p>
+        <ul>
+            <li>PostgreSQL and Redis via Docker Compose</li>
+            <li>Backend server (Node.js)</li>
+            <li>Frontend development server</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Open the Game</h3>
+        <p>
+            Once the servers are running, open your browser to:
+            <a href="http://localhost:3000" target="_blank">http://localhost:3000</a>
+        </p>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Enter MMO Mode</h3>
+        <p>
+            On the login screen, click the <strong>ENTER MMO MODE</strong> button in the bottom-right corner.
+            You can either login with existing credentials or enter as a guest.
+        </p>
+    </div>
+
+    <h2>Testing Multiplayer Features</h2>
+
+    <div class="step">
+        <h3>Testing Multiple Players</h3>
+        <p>To test interaction between multiple players:</p>
+        <ol>
+            <li>Open additional browser windows/tabs to <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+            <li>Enter MMO mode in each window with different usernames</li>
+            <li>Navigate to the same geographic area in each window</li>
+            <li>Verify that players can see each other (represented by avatars with usernames)</li>
+            <li>Move around and verify positions update in real-time across all clients</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h3>Testing Flag System</h3>
+        <p>To test flag placement and interactions:</p>
+        <ol>
+            <li>Click anywhere on the map to place a flag</li>
+            <li>Verify the flag appears for all connected clients</li>
+            <li>Click on a flag to bring up the flag menu</li>
+            <li>Test teleporting to flags using the "Teleport Here" button</li>
+            <li>If you own a flag, test hardening it using the "Harden Flag" button</li>
+            <li>Test removing your own flags</li>
+        </ol>
+    </div>
+
+    <div class="note">
+        <h3>Note on Initial Setup</h3>
+        <p>
+            When you first enter the MMO mode, you'll start at default coordinates (London).
+            Each player begins with the ability to move within a 600-meter radius of their starting position.
+            To expand territory, place flags to create new travel points.
+        </p>
+    </div>
+
+    <h2>Troubleshooting</h2>
+
+    <div class="step">
+        <h3>Common Issues</h3>
+        <ul>
+            <li>
+                <strong>Server Connection Issues</strong>: Check the server status indicator in the top-right corner of the game.
+                <ul>
+                    <li>Green: Connected and authenticated</li>
+                    <li>Yellow: Connected but not authenticated</li>
+                    <li>Red: Not connected</li>
+                </ul>
+            </li>
+            <li>
+                <strong>Database Connection Issues</strong>: Check server logs for PostgreSQL connection errors.
+            </li>
+            <li>
+                <strong>Flag Placement Failures</strong>: Ensure you are placing flags within the allowed radius from existing flags or your starting point.
+            </li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>Restarting the Test Environment</h3>
+        <p>If you encounter issues, you can restart the entire test environment:</p>
+        <ol>
+            <li>Stop the running servers with Ctrl+C in the terminal where you started the test environment</li>
+            <li>Run <code>docker-compose down</code> to ensure all Docker containers are stopped</li>
+            <li>Start the environment again with <code>./start-test-environment.sh</code></li>
+        </ol>
+    </div>
+
+    <h2>Next Steps</h2>
+    <p>
+        After testing the basic functionality, consider:
+    </p>
+    <ul>
+        <li>Testing with more players to evaluate performance</li>
+        <li>Testing flag interaction edge cases (e.g., what happens when a player disconnects while teleporting)</li>
+        <li>Testing territorial control and flag density</li>
+    </ul>
+
+    <footer>
+        <p><small>&copy; 2023 Geospatial Flag Game - Test Documentation</small></p>
+    </footer>
+</body>
+</html> 

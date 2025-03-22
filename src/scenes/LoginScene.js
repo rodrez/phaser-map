@@ -41,24 +41,24 @@ export class LoginScene extends Scene {
                 
                 // Here you would typically validate the credentials with a server
                 // For this example, we'll just check if both fields are filled
-                if (username && password) {
-                    // Store the username for use in the game
-                    this.storeUserData(username, rememberMe);
-                    
-                    // Show success message
-                    this.showLoginMessage('Welcome, brave adventurer!');
-                    
-                    // Transition to the main game after a short delay
-                    this.time.delayedCall(1500, () => {
-                        this.startGame();
-                    });
-                    
-                    return true; // Return true to close the login screen
-                } else {
+                if (!username || !password) {
                     // Show error message
                     this.showLoginMessage('Please enter both username and password!', 'error');
                     return false; // Return false to keep the login screen open
                 }
+                
+                // Store the username for use in the game
+                this.storeUserData(username, rememberMe);
+                
+                // Show success message
+                this.showLoginMessage('Welcome, brave adventurer!');
+                
+                // Transition to the main game after a short delay
+                this.time.delayedCall(1500, () => {
+                    this.startGame();
+                });
+                
+                return true; // Return true to close the login screen
             },
             
             // Handle create account
@@ -89,24 +89,24 @@ export class LoginScene extends Scene {
                 
                 // Here you would typically send the registration data to a server
                 // For this example, we'll just check if all fields are filled
-                if (username && password && email) {
-                    // Store the username for use in the game
-                    this.storeUserData(username, true);
-                    
-                    // Show success message
-                    this.showLoginMessage('Account created successfully!', 'success');
-                    
-                    // Transition to the main game after a short delay
-                    this.time.delayedCall(1500, () => {
-                        this.startGame();
-                    });
-                    
-                    return true; // Return true to close the registration screen
-                } else {
+                if (!username || !password || !email) {
                     // Show error message
                     this.showLoginMessage('Please fill in all fields!', 'error');
                     return false; // Return false to keep the registration screen open
                 }
+                
+                // Store the username for use in the game
+                this.storeUserData(username, true);
+                
+                // Show success message
+                this.showLoginMessage('Account created successfully!', 'success');
+                
+                // Transition to the main game after a short delay
+                this.time.delayedCall(1500, () => {
+                    this.startGame();
+                });
+                
+                return true; // Return true to close the registration screen
             },
             
             // Handle cancel
@@ -118,6 +118,12 @@ export class LoginScene extends Scene {
                 this.loginScreen.show();
             }
         });
+        
+        // Create password recovery screen (initially hidden)
+        this.createPasswordRecoveryScreen();
+        
+        // Add MMO mode button
+        this.createMMOButton();
         
         // Show the login screen
         this.loginScreen.show();
@@ -332,5 +338,99 @@ export class LoginScene extends Scene {
             clearTimeout(this.messageTimeout);
             this.messageTimeout = null;
         }
+    }
+
+    /**
+     * Create the MMO mode button
+     */
+    createMMOButton() {
+        const btnWidth = 200;
+        const btnHeight = 50;
+        const btnX = this.cameras.main.width - btnWidth - 20;
+        const btnY = this.cameras.main.height - btnHeight - 20;
+        
+        // Create MMO button
+        const mmoBtn = this.add.rectangle(btnX, btnY, btnWidth, btnHeight, 0x3498db);
+        mmoBtn.setOrigin(0, 0);
+        mmoBtn.setInteractive({ useHandCursor: true });
+        
+        // Add text
+        const mmoText = this.add.text(btnX + btnWidth / 2, btnY + btnHeight / 2, 'ENTER MMO MODE', {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        mmoText.setOrigin(0.5);
+        
+        // Add glow effect
+        const mmoGlow = this.add.rectangle(btnX, btnY, btnWidth, btnHeight, 0x3498db);
+        mmoGlow.setOrigin(0, 0);
+        mmoGlow.setAlpha(0.5);
+        mmoGlow.setBlendMode(Phaser.BlendModes.ADD);
+        
+        // Set up tweens
+        this.tweens.add({
+            targets: mmoGlow,
+            alpha: { from: 0.5, to: 0.8 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1
+        });
+        
+        // Add click listener
+        mmoBtn.on('pointerdown', () => {
+            this.enterMMOMode();
+        });
+        
+        // Add hover effects
+        mmoBtn.on('pointerover', () => {
+            mmoBtn.fillColor = 0x2980b9;
+            mmoText.setScale(1.1);
+        });
+        
+        mmoBtn.on('pointerout', () => {
+            mmoBtn.fillColor = 0x3498db;
+            mmoText.setScale(1);
+        });
+    }
+
+    /**
+     * Enter MMO mode
+     */
+    enterMMOMode() {
+        // Check if logged in or use guest mode
+        const usernameInput = document.getElementById('username-input');
+        const username = usernameInput?.value || `Guest_${Math.floor(Math.random() * 10000)}`;
+        
+        // Set username in registry
+        this.registry.set('username', username);
+        
+        // Show loading message
+        this.showLoginMessage('Connecting to MMO server...');
+        
+        // Simulate loading delay
+        this.time.delayedCall(1500, () => {
+            // Switch to MMO game scene
+            this.scene.start('MMOGame');
+        });
+    }
+
+    /**
+     * Handle successful login
+     * @param {string} username - The username
+     * @param {object} userData - User data from storage
+     */
+    handleSuccessfulLogin(username, userData) {
+        // ... existing code ...
+    }
+
+    /**
+     * Create the password recovery screen
+     */
+    createPasswordRecoveryScreen() {
+        // This is a placeholder for the password recovery screen
+        // It will be implemented in a future update
+        logger.info(LogCategory.AUTH, 'Password recovery screen placeholder created');
     }
 } 
